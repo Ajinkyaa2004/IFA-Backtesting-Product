@@ -33,10 +33,22 @@ export default function BacktestDetailPage() {
   const vamEnabled = useAuth((s) => s.me?.vam_enabled ?? false);
   const setSidebarOverride = useSidebarOverride((s) => s.setOverride);
 
+  // Reset state at the top of every id change so the user never sees the
+  // previous backtest's data or error while the new one loads. Cancellation
+  // flag drops a stale response if the user clicks a third backtest before
+  // the second fetch returns. See sweep finding #5.
   useEffect(() => {
+    let cancelled = false;
+    setBt(null);
+    setErr(null);
     fetchBacktest(id)
-      .then(setBt)
-      .catch((e) => setErr(e?.response?.data?.detail ?? "Failed to load"));
+      .then((d) => { if (!cancelled) setBt(d); })
+      .catch((e) => {
+        if (cancelled) return;
+        const detail = e?.response?.data?.detail;
+        setErr(typeof detail === "string" ? detail : "Failed to load backtest");
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   // For a VAM-engine result viewed by a VAM-enabled client, swap the layout
@@ -59,7 +71,21 @@ export default function BacktestDetailPage() {
     return () => setSidebarOverride(null);
   }, [bt, vamEnabled, setSidebarOverride]);
 
-  if (err) return <div className="text-sm text-red-600">{err}</div>;
+  if (err) {
+    return (
+      <div className="space-y-4">
+        <Link to="/backtests" className="text-xs text-ink-500 hover:text-ink-900 inline-flex items-center gap-1.5">
+          <ArrowLeft size={13}/> Back to backtests
+        </Link>
+        <Card>
+          <div className="text-sm font-medium text-red-700 dark:text-red-300">{err}</div>
+          <p className="mt-1 text-xs text-ink-500">
+            The backtest may have been removed, or there's a temporary issue reaching the server.
+          </p>
+        </Card>
+      </div>
+    );
+  }
   if (!bt) return <div className="text-sm text-ink-500">Loading…</div>;
 
   // VAM-engine results have a completely different shape. Render the VAM-native

@@ -17,7 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { auth } from "../lib/firebase";
-import { fetchAdminInbox, type AdminInbox } from "../lib/api";
+import { api, fetchAdminInbox, type AdminInbox } from "../lib/api";
 import { useAuth } from "../store/auth";
 
 const NAV_ADMIN = [
@@ -55,7 +55,10 @@ export default function AdminLayout() {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // Revoke refresh token server-side first (sweep #18) so any captured ID
+    // token can't outlive the click.
+    try { await api.post("/auth/logout"); } catch { /* best-effort */ }
+    try { await signOut(auth); } catch { /* best-effort */ }
     setMe(null);
     navigate("/admin/login");
   };

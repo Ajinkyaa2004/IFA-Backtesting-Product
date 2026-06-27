@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { auth } from "../lib/firebase";
+import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { useSidebarOverride } from "../store/sidebarOverride";
 
@@ -47,7 +48,11 @@ export default function Layout() {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // Ask the backend to revoke our refresh token FIRST so any captured ID
+    // token can't outlive the click. Sweep finding #18. Don't block the
+    // local-signout flow if the network call fails (offline, server down).
+    try { await api.post("/auth/logout"); } catch { /* best-effort */ }
+    try { await signOut(auth); } catch { /* best-effort */ }
     setMe(null);
     navigate("/login");
   };

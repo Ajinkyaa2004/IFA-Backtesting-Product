@@ -31,7 +31,8 @@ import {
   type VamSymbol,
 } from "../../lib/api";
 import { useAuth } from "../../store/auth";
-import { VAM_STEP_OPTIONS, VamParamForm, defaultsFromSchema } from "./VamParamForm";
+import { VamParamForm } from "./VamParamForm";
+import { VAM_STEP_OPTIONS, defaultsFromSchema } from "./vamParams";
 
 type RunErr = {
   kind: "config" | "ratelimit" | "validation" | "engine" | "unknown";
@@ -41,15 +42,16 @@ type RunErr = {
 };
 
 export default function ClientRunBacktestPage() {
+  // HOOKS MUST ALL RUN ON EVERY RENDER. The hard route guard for non-VAM
+  // clients used to live up here before the hook calls, but if useAuth ever
+  // re-rendered with vamEnabled flipping (admin promoting mid-session,
+  // /me re-fetch on token refresh, sign-out from Layout), React would see
+  // a different hook count and crash with
+  //   "Rendered fewer hooks than expected".
+  // The fix is the canonical one: declare every hook FIRST, run the guard
+  // LAST. See sweep finding #1.
   const nav = useNavigate();
   const vamEnabled = useAuth((s) => s.me?.vam_enabled ?? false);
-
-  // Hard route guard: even if a non-VAM client lands here via URL, bounce them
-  // back. The backend would also 403 every call below, but this gives an
-  // instant redirect instead of a series of error banners.
-  if (!vamEnabled) {
-    return <Navigate to="/backtests" replace />;
-  }
 
   const [vamStrategies, setVamStrategies] = useState<VamStrategy[] | null>(null);
   const [vamSymbols, setVamSymbols] = useState<VamSymbol[]>([]);
@@ -132,6 +134,12 @@ export default function ClientRunBacktestPage() {
       setSubmitting(false);
     }
   }, [step, params, strategyId, nav]);
+
+  // ── Guards (run AFTER all hooks so React's hook order stays stable when
+  //    upstream state flips, e.g. admin revoking vam_enabled mid-session) ──
+  if (!vamEnabled) {
+    return <Navigate to="/backtests" replace />;
+  }
 
   if (bootError) {
     return (

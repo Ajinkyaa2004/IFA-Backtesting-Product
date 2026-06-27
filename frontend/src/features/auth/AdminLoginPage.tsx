@@ -19,8 +19,14 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+    // See LoginPage for the two-phase rationale — we must NOT signOut on
+    // a pre-signIn failure or the next attempt's signIn races with the
+    // stale signOut and the new session gets ripped out.
+    let signedIn = false;
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      signedIn = true;
+
       const me = await fetchMe();
       // Role-gate: admin console only accepts admins
       const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
@@ -33,6 +39,10 @@ export default function AdminLoginPage() {
       setMe(me);
       navigate("/admin");
     } catch (err: unknown) {
+      if (signedIn) {
+        try { await signOut(auth); } catch { /* ignore */ }
+        setMe(null);
+      }
       setError(friendlyAuthError(err));
     } finally {
       setSubmitting(false);

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from firebase_admin import auth as fb_auth
+from loguru import logger
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -14,6 +16,33 @@ from app.core.security import create_firebase_user, get_firebase_user_by_email
 from app.db.models import Client, User
 from app.db.session import get_db
 from app.services import audit
+
+
+def _sync_firebase_disabled(client_id: uuid.UUID, db: Session, disabled: bool) -> None:
+    """Set Firebase user.disabled = `disabled` for every User row tied to
+    this client, and (if disabling) revoke their refresh tokens so any live
+    ID token becomes invalid within ~1h instead of staying alive until
+    natural expiry.
+
+    Without this sync, when an admin suspended a client the backend would
+    keep rejecting their API calls but Firebase would keep minting new ID
+    tokens — the user could repeatedly "log in" and see a confusing error
+    instead of a clear account-disabled message. Sweep finding #17.
+
+    Best-effort: a Firebase API failure does NOT block the DB update. The
+    failure is logged for ops follow-up.
+    """
+    users = db.query(User).filter(User.client_id == client_id, User.deleted_at.is_(None)).all()
+    for u in users:
+        try:
+            fb_auth.update_user(u.firebase_uid, disabled=disabled)
+            if disabled:
+                fb_auth.revoke_refresh_tokens(u.firebase_uid)
+        except Exception as e:
+            logger.warning(
+                "Firebase sync failed for user {} client {} disabled={}: {}",
+                u.id, client_id, disabled, e,
+            )
 
 router = APIRouter()
 
@@ -146,6 +175,7 @@ def update_client(
     if not c:
         raise HTTPException(status_code=404, detail="Client not found")
     changes = payload.model_dump(exclude_none=True)
+    old_status = c.status
     for k, v in changes.items():
         setattr(c, k, v)
     audit.record(
@@ -159,6 +189,10 @@ def update_client(
     )
     db.commit()
     db.refresh(c)
+    # If the admin just flipped client status, propagate to Firebase so
+    # suspended users can't keep generating fresh ID tokens. Sweep #17.
+    if "status" in changes and changes["status"] != old_status:
+        _sync_firebase_disabled(c.id, db, disabled=(c.status != "active"))
     return _client_out(c)
 
 
@@ -185,6 +219,8 @@ def soft_delete_client(
         ip=request.client.host if request.client else None,
     )
     db.commit()
+    # Soft-delete implies suspended → lock Firebase users too. Sweep #17.
+    _sync_firebase_disabled(c.id, db, disabled=True)
 
 
 @router.post("/clients/{client_id}/restore", response_model=ClientOut)
@@ -210,4 +246,6 @@ def restore_client(
     )
     db.commit()
     db.refresh(c)
+    # Re-enable Firebase users so the client can sign in again. Sweep #17.
+    _sync_firebase_disabled(c.id, db, disabled=False)
     return _client_out(c)

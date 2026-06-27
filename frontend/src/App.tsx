@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoginPage from "./features/auth/LoginPage";
@@ -19,7 +19,7 @@ import AdminNotificationsPage from "./features/admin/AdminNotificationsPage";
 import AdminAuditPage from "./features/admin/AdminAuditPage";
 import AdminTermsPage from "./features/admin/AdminTermsPage";
 import { auth } from "./lib/firebase";
-import { fetchMe } from "./lib/api";
+import { classifyAuthGateError, fetchMe } from "./lib/api";
 import { useAuth } from "./store/auth";
 
 function Protected({
@@ -35,7 +35,16 @@ function Protected({
 }) {
   const me = useAuth((s) => s.me);
   const loading = useAuth((s) => s.loading);
+  const authError = useAuth((s) => s.authError);
   if (loading) return <div className="p-6 text-sm text-ink-500">Loading…</div>;
+
+  // Distinguish failure modes from "no session" so the user sees the actual
+  // problem instead of being bounced to /login on every kind of error.
+  // See sweep finding #3.
+  if (authError && authError !== "unauthenticated") {
+    return <AuthErrorScreen reason={authError} />;
+  }
+
   // Send unauthenticated users to the appropriate login page based on which area
   // they tried to enter. /admin/* → /admin/login. Everything else → /login.
   if (!me) {
@@ -51,44 +60,108 @@ function Protected({
   return <>{children}</>;
 }
 
+function AuthErrorScreen({ reason }: { reason: string }) {
+  const setAuthError = useAuth((s) => s.setAuthError);
+  const messages: Record<string, { title: string; body: string }> = {
+    not_provisioned: {
+      title: "Your account isn't set up yet",
+      body: "Your sign-in worked, but your portal account hasn't been provisioned. Please contact your IFA account manager.",
+    },
+    suspended: {
+      title: "Account suspended",
+      body: "Your account has been suspended. Please contact your IFA account manager to re-activate it.",
+    },
+    backend_unavailable: {
+      title: "We can't reach the server",
+      body: "The backend is temporarily unavailable. Try again in a moment.",
+    },
+    unknown: {
+      title: "Something went wrong",
+      body: "Unexpected sign-in error. Try again, or contact support if this persists.",
+    },
+  };
+  const m = messages[reason] ?? messages.unknown;
+  const retry = async () => {
+    setAuthError(null);
+    // Sign the firebase session out so the user can re-authenticate cleanly.
+    // The onAuthStateChanged listener picks up the null and lands them on
+    // /login (or the area-specific login page).
+    try { await signOut(auth); } catch { /* ignore */ }
+    // Hard reload so any in-memory state from the failed boot is gone.
+    window.location.reload();
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-ink-50 dark:bg-ink-950 p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="text-xl font-semibold text-ink-900 dark:text-ink-50">{m.title}</h1>
+        <p className="text-sm text-ink-600 dark:text-ink-300">{m.body}</p>
+        <button
+          onClick={retry}
+          className="mt-2 inline-flex items-center px-4 h-9 rounded-lg bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 text-sm font-medium"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const setMe = useAuth((s) => s.setMe);
   const setLoading = useAuth((s) => s.setLoading);
+  const setAuthError = useAuth((s) => s.setAuthError);
 
   useEffect(() => {
     let cancelled = false;
+    // Generation counter so a stale fetchMe (from an older auth-state event)
+    // cannot overwrite the current one. See sweep finding #9 (race condition).
+    let generation = 0;
 
     const resolve = async (user: typeof auth.currentUser) => {
+      const myGen = ++generation;
       if (cancelled) return;
       if (!user) {
         setMe(null);
-      } else {
-        try {
-          const me = await fetchMe();
-          if (!cancelled) setMe(me);
-        } catch {
-          if (!cancelled) setMe(null);
+        setAuthError(null);
+        if (!cancelled) setLoading(false);
+        return;
+      }
+      try {
+        const me = await fetchMe();
+        if (cancelled || myGen !== generation) return;  // newer event in flight; discard
+        setMe(me);
+      } catch (e) {
+        if (cancelled || myGen !== generation) return;
+        const reason = classifyAuthGateError(e);
+        if (reason === "unauthenticated") {
+          // 401 — token expired/revoked. Sign out so the listener fires again
+          // with user=null, landing the user at /login cleanly.
+          try { await signOut(auth); } catch { /* ignore */ }
+          setMe(null);
+        } else {
+          // 403 (suspended), 404 (not provisioned), 5xx, network: keep the
+          // firebase session intact and render the dedicated error screen so
+          // the user can read why and choose to retry.
+          setMe(null);
+          setAuthError(reason);
         }
       }
-      if (!cancelled) setLoading(false);
+      if (!cancelled && myGen === generation) setLoading(false);
     };
 
-    // Subscribe for ongoing auth changes
+    // Subscribe for ongoing auth changes. authStateReady() handles persisted
+    // sessions on first load; the listener handles every change after that.
+    // We deliberately do NOT add a setTimeout failsafe — that used to fire on
+    // slow networks and flash-redirect authenticated users to /login. See
+    // sweep finding #10.
     const unsub = onAuthStateChanged(auth, (user) => resolve(user));
-    // Hard-resolve on initial load via authStateReady (handles persisted sessions)
     auth.authStateReady().then(() => resolve(auth.currentUser));
-
-    // Safety net: if neither fires within 4s, stop spinning
-    const failsafe = window.setTimeout(() => {
-      if (!cancelled) setLoading(false);
-    }, 4000);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(failsafe);
       unsub();
     };
-  }, [setMe, setLoading]);
+  }, [setMe, setLoading, setAuthError]);
 
   return (
     <BrowserRouter>

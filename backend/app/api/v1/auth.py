@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from firebase_admin import auth as fb_auth
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.deps import _TOKEN_PUBLIC_MESSAGES
+from app.core.deps import _TOKEN_PUBLIC_MESSAGES, current_user
 from app.core.security import TokenError, verify_id_token
 from app.db.models import User
 from app.db.session import get_db
@@ -59,6 +61,20 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
 
 
 @router.post("/logout")
-def logout():
-    """Stateless on the server. Frontend clears local Firebase session."""
+def logout(user: User = Depends(current_user)):
+    """Revoke the Firebase refresh token for the user, so an ID token captured
+    before logout becomes invalid the next time the backend verifies it (any
+    request with check_revoked=True, plus all refresh attempts).
+
+    Without this, an ID token snapshot (devtools, malicious extension)
+    remained server-valid for up to ~1h after the user clicked Sign Out —
+    a real shared-device leak. Sweep finding #18.
+    """
+    try:
+        fb_auth.revoke_refresh_tokens(user.firebase_uid)
+    except Exception as e:
+        # Don't refuse logout if the Firebase call fails — the client-side
+        # signOut still drops the local credentials. But log it loudly so
+        # we notice ops issues.
+        logger.warning("Failed to revoke Firebase refresh tokens for {}: {}", user.id, e)
     return {"ok": True}

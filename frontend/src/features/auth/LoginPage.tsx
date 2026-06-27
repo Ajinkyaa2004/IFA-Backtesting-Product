@@ -18,8 +18,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+
+    // Two-phase try/catch so signOut(auth) only fires when there IS a session
+    // to tear down. Calling signOut unconditionally on a failed Firebase
+    // signIn caused a race: the in-flight signOut from a wrong-password
+    // attempt would resolve AFTER the next good signIn, ripping out the
+    // freshly-minted session. Selenium caught this — see VAM-suite finding.
+    let signedIn = false;
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      signedIn = true;
+
       const me = await fetchMe();
       // Role-gate: client portal only accepts clients
       const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
@@ -33,6 +42,15 @@ export default function LoginPage() {
       if (me.needs_tnc_acceptance) navigate("/terms");
       else navigate("/");
     } catch (err: unknown) {
+      // Only tear down the Firebase session if we actually established one
+      // (i.e. signIn succeeded but a downstream call — fetchMe, role check —
+      // failed). For pre-signIn failures (wrong password, network error)
+      // there's nothing to sign out and calling signOut unconditionally
+      // races with the next submit's signIn. Sweep finding #16 + selenium.
+      if (signedIn) {
+        try { await signOut(auth); } catch { /* ignore */ }
+        setMe(null);
+      }
       setError(friendlyAuthError(err));
     } finally {
       setSubmitting(false);

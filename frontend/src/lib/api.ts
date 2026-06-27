@@ -1,10 +1,29 @@
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
+import { signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1",
-});
+// ── Base URL resolution ────────────────────────────────────────────────────
+// In dev (Vite serves with import.meta.env.DEV === true) we fall back to
+// localhost so `npm run dev` Just Works. In a production build the env var
+// MUST be set at build time — silently shipping a bundle that points at
+// http://localhost:8000 would 100% break for every real user (mixed-content
+// blocked on https, connection-refused everywhere else). See sweep finding #4.
+function resolveBaseURL(): string {
+  const v = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (v) return v;
+  if (import.meta.env.DEV) return "http://localhost:8000/api/v1";
+  throw new Error(
+    "VITE_API_BASE_URL is not set. This is a production build — refusing " +
+      "to silently fall back to localhost. Set the env var at build time " +
+      "(Vercel project / docker-compose build args) and rebuild.",
+  );
+}
 
+export const api = axios.create({ baseURL: resolveBaseURL() });
+
+// ── Auth header injection ──────────────────────────────────────────────────
+// Firebase's getIdToken() auto-refreshes when the token is within 5 min of
+// expiry, so we don't need our own refresh logic on top.
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {
@@ -14,6 +33,57 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// ── Response interceptor: auth-failure handling ────────────────────────────
+// On 401 we tear down the session client-side so the user is bounced back to
+// /login instead of seeing a generic "Network Error" from whichever component
+// triggered the request. See sweep finding #2.
+//
+// The handler must be wired LATER (after `useAuth` is defined) — the store
+// import here would create a cycle. We expose `installAuthFailureHandler`
+// for the auth store to call once it's ready (see store/auth.ts).
+let onAuthFailure: (() => void) | null = null;
+export function installAuthFailureHandler(fn: () => void) {
+  onAuthFailure = fn;
+}
+
+api.interceptors.response.use(
+  (r) => r,
+  async (err: AxiosError) => {
+    const status = err.response?.status;
+    if (status === 401) {
+      // Only sign out + bounce on a TRUE 401 (token expired / revoked / no
+      // Firebase user). Other 4xx (403 suspended, 404 not provisioned) leave
+      // the session intact so the page can render a meaningful error state.
+      try { await signOut(auth); } catch { /* ignore */ }
+      if (onAuthFailure) onAuthFailure();
+    }
+    return Promise.reject(err);
+  },
+);
+
+// ── Error helpers used by callers ──────────────────────────────────────────
+// Distinguishes the three "fetchMe failed" cases the sweep called out
+// (finding #3): 401 = unauthenticated (sign-out happens above), 403 =
+// suspended, 404 = not provisioned, 5xx / network = backend transient.
+export type AuthGateReason =
+  | "unauthenticated"
+  | "not_provisioned"
+  | "suspended"
+  | "backend_unavailable"
+  | "unknown";
+
+export function classifyAuthGateError(e: unknown): AuthGateReason {
+  if (!e || typeof e !== "object" || !("isAxiosError" in e)) return "unknown";
+  const ax = e as AxiosError;
+  const s = ax.response?.status;
+  if (s === 401) return "unauthenticated";
+  if (s === 403) return "suspended";
+  if (s === 404) return "not_provisioned";
+  if (s && s >= 500) return "backend_unavailable";
+  if (!ax.response) return "backend_unavailable";  // network error, no response
+  return "unknown";
+}
 
 export type Me = {
   id: string;

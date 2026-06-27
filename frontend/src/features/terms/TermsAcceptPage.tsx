@@ -147,11 +147,23 @@ export default function TermsAcceptPage() {
           )}
         </div>
 
+        {/* Error banner — always rendered (was only inside review step before),
+            so a submit failure followed by a back-navigation still tells the
+            user what's wrong. Sweep finding #13. */}
+        {error && (
+          <div className="px-7 pb-3 -mt-1 text-xs text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-7 py-4 border-t border-ink-100 dark:border-ink-800 bg-ink-50 dark:bg-ink-950/40 flex items-center justify-between">
           <button
             onClick={() => setStep((s) => Math.max(0, s - 1))}
-            disabled={step === 0}
+            // Disable Back during submit so the user can't pop to an earlier
+            // step mid-flight and lose sight of an error that would otherwise
+            // only render on the review step. Sweep finding #13.
+            disabled={step === 0 || submitting}
             className="inline-flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-lg text-ink-600 dark:text-ink-300 hover:bg-ink-100 dark:hover:bg-ink-800 disabled:opacity-40 disabled:pointer-events-none"
           >
             <ChevronLeft size={14} /> Back

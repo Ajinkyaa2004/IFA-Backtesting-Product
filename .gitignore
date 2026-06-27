@@ -44,3 +44,5 @@ logs/
 # Misc
 .cache/
 .parcel-cache/
+*.local.txt
+storage-local/

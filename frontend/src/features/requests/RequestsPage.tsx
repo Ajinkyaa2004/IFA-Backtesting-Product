@@ -14,8 +14,10 @@ const TABS: { id: RequestType; label: string }[] = [
 export default function RequestsPage() {
   const [tab, setTab] = useState<RequestType>("change");
   const fetcher = useCallback(() => fetchRequests(), []);
-  const { data, refresh, lastUpdated } = usePolling<ClientRequest[]>(fetcher, 15_000);
+  const { data, loading, refresh, lastUpdated } = usePolling<ClientRequest[]>(fetcher, 15_000);
   const history = data ?? [];
+  const showSkeleton = loading && data === null;
+  const showEmpty = !loading && data !== null && history.length === 0;
 
   return (
     <div className="space-y-6">
@@ -89,7 +91,17 @@ export default function RequestsPage() {
               <Badge status={r.status} dot>{r.status.replace("_", " ")}</Badge>
             </li>
           ))}
-          {history.length === 0 && (
+          {showSkeleton && [0, 1, 2].map((i) => (
+            <li key={`skel-${i}`} className="py-3 flex items-start gap-4 animate-pulse">
+              <div className="h-3 w-24 bg-ink-100 dark:bg-ink-800 rounded mt-0.5"/>
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-32 bg-ink-100 dark:bg-ink-800 rounded"/>
+                <div className="h-3 w-48 bg-ink-100 dark:bg-ink-800 rounded"/>
+              </div>
+              <div className="h-5 w-16 bg-ink-100 dark:bg-ink-800 rounded-full"/>
+            </li>
+          ))}
+          {showEmpty && (
             <li className="py-8 text-center text-sm text-ink-500">No requests yet.</li>
           )}
         </ul>

@@ -19,8 +19,10 @@ export default function AdminClientsPage() {
   const [selected, setSelected] = useState<AdminClient | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const fetcher = useCallback(() => fetchAdminClients(), []);
-  const { data, refresh, lastUpdated } = usePolling<AdminClient[]>(fetcher, 15_000);
+  const { data, loading, refresh, lastUpdated } = usePolling<AdminClient[]>(fetcher, 15_000);
   const rows = data ?? [];
+  const showSkeleton = loading && data === null;
+  const showEmpty = !loading && data !== null && rows.length === 0;
 
   return (
     <div className="space-y-6">
@@ -68,7 +70,17 @@ export default function AdminClientsPage() {
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && (
+              {showSkeleton && [0, 1, 2].map((i) => (
+                <tr key={`skel-${i}`} className="animate-pulse">
+                  <td className="px-5 py-3"><div className="h-3 w-40 bg-ink-100 dark:bg-ink-800 rounded"/></td>
+                  <td className="px-5 py-3"><div className="h-3 w-32 bg-ink-100 dark:bg-ink-800 rounded"/></td>
+                  <td className="px-5 py-3"><div className="h-3 w-14 bg-ink-100 dark:bg-ink-800 rounded"/></td>
+                  <td className="px-5 py-3"><div className="h-5 w-16 bg-ink-100 dark:bg-ink-800 rounded-full"/></td>
+                  <td className="px-5 py-3"><div className="h-3 w-20 bg-ink-100 dark:bg-ink-800 rounded"/></td>
+                  <td className="px-5 py-3"></td>
+                </tr>
+              ))}
+              {showEmpty && (
                 <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-ink-500">No clients yet.</td></tr>
               )}
             </tbody>

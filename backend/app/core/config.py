@@ -18,10 +18,22 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
 
     # Supabase
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_BUCKET: str = "ifa-private"
+
+    # Storage backend: "supabase" (default, talks to SUPABASE_URL/Storage) or "local"
+    # (writes/reads under <repo>/storage-local/). Use "local" for fully-offline dev
+    # when Supabase is paused or unreachable.
+    STORAGE_BACKEND: str = "supabase"
+    # HMAC secret used to sign upload/download URLs in local mode. Any string works
+    # as long as it's the same across the backend and the URLs it issues. Auto-generated
+    # if empty — but then signed URLs are not portable across process restarts.
+    STORAGE_LOCAL_SECRET: str = "dev-local-storage-secret-change-me"
+    # Where the frontend will send PUT/GET for signed URLs in local mode. Must include
+    # the API prefix because /local-storage lives under the API router.
+    LOCAL_BACKEND_BASE_URL: str = "http://localhost:8000"
 
     # Postgres
     DATABASE_URL_SYNC: str = Field(..., description="psycopg2 connection string")

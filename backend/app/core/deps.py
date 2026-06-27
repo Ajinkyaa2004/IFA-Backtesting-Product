@@ -50,8 +50,17 @@ def current_user(
     if user.status != "active":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User suspended")
 
-    user.last_login_at = datetime.now(timezone.utc)
-    db.commit()
+    # Throttle the last_login_at write to at most once every 5 minutes per
+    # user. Without this every authenticated request (every poll of the
+    # admin inbox, every list refresh) was issuing an UPDATE + COMMIT on the
+    # User row — write amplification with no functional gain, and it muddied
+    # the semantics of last_login_at (which should mark sign-ins, not every
+    # API call). The real sign-in event is also captured in app/api/v1/auth.py
+    # at /auth/login. Sweep finding #12 / #15.
+    now = datetime.now(timezone.utc)
+    if user.last_login_at is None or (now - user.last_login_at).total_seconds() > 300:
+        user.last_login_at = now
+        db.commit()
     return user
 
 
