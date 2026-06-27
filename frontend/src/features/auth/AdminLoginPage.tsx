@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield } from "lucide-react";
 import { auth } from "../../lib/firebase";
-import { fetchMe } from "../../lib/api";
+import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
 import { useAuth } from "../../store/auth";
 
@@ -14,6 +14,7 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const setMe = useAuth((s) => s.setMe);
+  const setAuthError = useAuth((s) => s.setAuthError);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +41,16 @@ export default function AdminLoginPage() {
       navigate("/admin");
     } catch (err: unknown) {
       if (signedIn) {
+        // POST-signIn failure: route 5xx/403/404 to the dedicated
+        // AuthErrorScreen via the auth store rather than dumping an
+        // inline error on the admin login form. See LoginPage rationale.
+        const reason = classifyAuthGateError(err);
+        if (reason !== "unauthenticated" && reason !== "unknown") {
+          setMe(null);
+          setAuthError(reason);
+          navigate("/admin");
+          return;
+        }
         try { await signOut(auth); } catch { /* ignore */ }
         setMe(null);
       }

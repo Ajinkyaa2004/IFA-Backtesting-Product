@@ -2,7 +2,7 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
-import { fetchMe } from "../../lib/api";
+import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
 import { useAuth } from "../../store/auth";
 
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const setMe = useAuth((s) => s.setMe);
+  const setAuthError = useAuth((s) => s.setAuthError);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +49,23 @@ export default function LoginPage() {
       // there's nothing to sign out and calling signOut unconditionally
       // races with the next submit's signIn. Sweep finding #16 + selenium.
       if (signedIn) {
+        // POST-signIn failure: classify so we route to the dedicated
+        // AuthErrorScreen instead of dumping a confusing "Internal server
+        // error" on the login form. The App.tsx listener has also seen this
+        // failure via its own fetchMe and set authError to the same reason —
+        // we just need to navigate off /login so Protected can render the
+        // AuthErrorScreen. Deployment-smoke caught this regression.
+        const reason = classifyAuthGateError(err);
+        if (reason !== "unauthenticated" && reason !== "unknown") {
+          // 403 suspended, 404 not-provisioned, 5xx, network: keep the
+          // Firebase session intact (the screen's "Try again" handles cleanup)
+          // and navigate so Protected sees authError → AuthErrorScreen.
+          setMe(null);
+          setAuthError(reason);
+          navigate("/");
+          return;
+        }
+        // 401 / unknown — sign out + show inline error
         try { await signOut(auth); } catch { /* ignore */ }
         setMe(null);
       }
