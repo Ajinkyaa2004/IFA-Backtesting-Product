@@ -41,6 +41,46 @@ def backtest_example_template(
     return json.loads(EXAMPLE_PATH.read_text())
 
 
+class AdminBacktestSummary(BaseModel):
+    id: str
+    code: str
+    name: str
+    status: str
+    engine: str
+    completed_at: datetime | None
+    created_at: datetime
+
+
+@router.get("/clients/{client_id}/backtests", response_model=list[AdminBacktestSummary])
+def list_client_backtests(
+    client_id: uuid.UUID,
+    _admin=Depends(require_role("main_admin", "sub_admin")),
+    db: Session = Depends(get_db),
+):
+    """Admin per-client backtest listing. Powers the status-change dropdown
+    in the admin client drawer — admins need to see every backtest at a
+    glance and flip its status without hunting through the general list.
+    """
+    rows = (
+        db.query(Backtest)
+        .filter(Backtest.client_id == client_id)
+        .order_by(Backtest.created_at.desc())
+        .all()
+    )
+    return [
+        AdminBacktestSummary(
+            id=str(r.id),
+            code=r.code,
+            name=r.name,
+            status=r.status,
+            engine=r.engine,
+            completed_at=r.completed_at,
+            created_at=r.created_at,
+        )
+        for r in rows
+    ]
+
+
 class UploadResultIn(BaseModel):
     client_id: str
     result: dict  # full v1.0 JSON
@@ -174,4 +214,105 @@ def upload_backtest_result(
         name=backtest.name,
         storage_key=storage_key,
         strategy_version_id=str(strategy_version_id) if strategy_version_id else None,
+    )
+
+
+# ─── Status transitions ────────────────────────────────────────────
+# Legal lifecycle graph. Not strictly required (admin is trusted), but the map
+# blocks the common footgun where an admin fat-fingers "completed" on a draft
+# backtest and skips 5 statuses. Pass `override=true` in the body to bypass.
+_LEGAL_TRANSITIONS: dict[str, set[str]] = {
+    "draft":              {"quote_requested", "cancelled"},
+    "quote_requested":    {"quote_sent", "cancelled"},
+    "quote_sent":         {"approved", "cancelled"},
+    "approved":           {"in_progress", "cancelled"},
+    "in_progress":        {"completed", "revision_requested", "cancelled"},
+    "completed":          {"revision_requested"},
+    "revision_requested": {"in_progress", "cancelled"},
+    "cancelled":          set(),  # terminal
+}
+_VALID_STATUSES = set(_LEGAL_TRANSITIONS.keys())
+
+
+class StatusChangeIn(BaseModel):
+    new_status: str
+    note: str | None = None
+    override: bool = False   # bypass the transition map if the admin knows better
+
+
+class StatusChangeOut(BaseModel):
+    ok: bool
+    backtest_id: str
+    from_status: str
+    to_status: str
+
+
+@router.post("/backtests/{backtest_id}/status", response_model=StatusChangeOut)
+def change_backtest_status(
+    backtest_id: uuid.UUID,
+    payload: StatusChangeIn,
+    request: Request,
+    admin=Depends(require_role("main_admin", "sub_admin")),
+    db: Session = Depends(get_db),
+):
+    if payload.new_status not in _VALID_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status '{payload.new_status}'. Must be one of: {sorted(_VALID_STATUSES)}",
+        )
+
+    row = db.query(Backtest).filter(Backtest.id == backtest_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+
+    from_status = row.status
+    if from_status == payload.new_status:
+        # No-op, but not an error — return the current state.
+        return StatusChangeOut(ok=True, backtest_id=str(row.id), from_status=from_status, to_status=from_status)
+
+    if not payload.override:
+        allowed = _LEGAL_TRANSITIONS.get(from_status, set())
+        if payload.new_status not in allowed:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Illegal transition {from_status} → {payload.new_status}. "
+                    f"Allowed from '{from_status}': {sorted(allowed) or ['(terminal)']}. "
+                    f"Pass override=true to force."
+                ),
+            )
+
+    row.status = payload.new_status
+    # If we're marking completed, stamp completed_at (unless already set — preserve
+    # historical timestamps if an admin flips completed → revision_requested → completed).
+    if payload.new_status == "completed" and row.completed_at is None:
+        row.completed_at = datetime.now(timezone.utc)
+
+    audit.record(
+        db,
+        actor_user_id=admin.id,
+        action="backtest.status.change",
+        target_type="backtest",
+        target_id=row.id,
+        payload={
+            "from": from_status,
+            "to": payload.new_status,
+            "override": payload.override,
+            "note": payload.note,
+            "client_id": str(row.client_id),
+            "code": row.code,
+        },
+        ip=request.client.host if request.client else None,
+    )
+    db.commit()
+    logger.info(
+        "Admin changed backtest {} status: {} → {}{}",
+        row.code, from_status, payload.new_status,
+        " (override)" if payload.override else "",
+    )
+    return StatusChangeOut(
+        ok=True,
+        backtest_id=str(row.id),
+        from_status=from_status,
+        to_status=payload.new_status,
     )

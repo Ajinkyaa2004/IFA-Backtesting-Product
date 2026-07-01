@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, Download, FileText, MessageSquare, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import {
+  type AdminBacktestSummary,
   type AdminClient,
   type AdminStrategy,
+  BACKTEST_STATUSES,
+  type BacktestStatus,
+  changeBacktestStatus,
   type ClientRequest,
   createAdminClient,
   deleteAdminClient,
   fetchAdminClients,
+  fetchClientBacktests,
   fetchClientRequests,
   fetchClientStrategies,
   getStrategyDownloadUrl,
@@ -101,9 +106,21 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
   const [msg, setMsg] = useState<string | null>(null);
   const [strategies, setStrategies] = useState<AdminStrategy[]>([]);
   const [requests, setRequests] = useState<ClientRequest[]>([]);
+  const [backtests, setBacktests] = useState<AdminBacktestSummary[]>([]);
   const [stratsLoading, setStratsLoading] = useState(true);
   const [reqsLoading, setReqsLoading] = useState(true);
+  const [btsLoading, setBtsLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [statusPending, setStatusPending] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  const loadBacktests = useCallback(() => {
+    setBtsLoading(true);
+    fetchClientBacktests(client.id)
+      .then(setBacktests)
+      .catch(() => setBacktests([]))
+      .finally(() => setBtsLoading(false));
+  }, [client.id]);
 
   useEffect(() => {
     setStratsLoading(true);
@@ -116,7 +133,35 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
       .then(setRequests)
       .catch(() => setRequests([]))
       .finally(() => setReqsLoading(false));
-  }, [client.id]);
+    loadBacktests();
+  }, [client.id, loadBacktests]);
+
+  const flipStatus = async (bt: AdminBacktestSummary, target: BacktestStatus) => {
+    setStatusPending(bt.id);
+    setStatusError(null);
+    try {
+      await changeBacktestStatus(bt.id, target);
+      loadBacktests();
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      // Backend returns a hint about illegal transitions — offer override
+      if (typeof detail === "string" && detail.includes("Illegal transition")) {
+        const proceed = confirm(`${detail}\n\nForce this change anyway?`);
+        if (proceed) {
+          try {
+            await changeBacktestStatus(bt.id, target, { override: true });
+            loadBacktests();
+          } catch (e2: any) {
+            setStatusError(e2?.response?.data?.detail ?? "Status change failed");
+          }
+        }
+      } else {
+        setStatusError(typeof detail === "string" ? detail : "Status change failed");
+      }
+    } finally {
+      setStatusPending(null);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -269,6 +314,55 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+
+          {/* Backtests submitted for this client + per-row status dropdown */}
+          <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
+            <div className="text-xs font-medium text-ink-600 dark:text-ink-300 mb-2 flex items-center justify-between">
+              <span>Backtests</span>
+              {backtests.filter((b) => b.status === "completed").length > 0 && (
+                <span className="text-[10px] px-1.5 h-4 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 inline-flex items-center font-semibold">
+                  {backtests.filter((b) => b.status === "completed").length} completed
+                </span>
+              )}
+            </div>
+            {btsLoading ? (
+              <div className="text-xs text-ink-500">Loading…</div>
+            ) : backtests.length === 0 ? (
+              <div className="text-xs text-ink-500 italic">No backtests yet.</div>
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-y-auto">
+                {backtests.map((b) => (
+                  <li key={b.id} className="flex items-start gap-2.5 p-2.5 rounded-lg border border-ink-200 dark:border-ink-700">
+                    <span className="size-8 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center text-ink-500 shrink-0">
+                      <LineChart size={14}/>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{b.name}</div>
+                      <div className="text-[11px] text-ink-500 tabular">
+                        {b.code} · {b.engine} · {new Date(b.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <select
+                      value={b.status}
+                      disabled={statusPending === b.id}
+                      onChange={(e) => flipStatus(b, e.target.value as BacktestStatus)}
+                      className="text-xs h-7 px-2 rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 shrink-0"
+                      title="Change status"
+                    >
+                      {BACKTEST_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s.replace("_", " ")}</option>
+                      ))}
+                    </select>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {statusError && (
+              <div className="mt-2 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg px-2 py-1">
+                {statusError}
+              </div>
             )}
           </div>
 

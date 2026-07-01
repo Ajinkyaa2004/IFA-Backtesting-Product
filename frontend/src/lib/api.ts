@@ -138,9 +138,11 @@ export type Strategy = {
   storage_key: string;
   size_bytes: number | null;
   mime_type: string | null;
+  checksum: string | null;
   is_source_of_truth: boolean;
   status: string;
   uploaded_at: string;
+  uploaded_by_email: string | null;
 };
 
 export async function fetchStrategies(): Promise<Strategy[]> {
@@ -436,6 +438,46 @@ export async function getStrategyDownloadUrl(strategyId: string): Promise<string
     `/admin/strategies/${strategyId}/download-url`
   );
   return r.data.signed_url;
+}
+
+// ── Admin backtests per client ──────────────────────────────────
+export type AdminBacktestSummary = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  engine: string;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export async function fetchClientBacktests(clientId: string): Promise<AdminBacktestSummary[]> {
+  const r = await api.get<AdminBacktestSummary[]>(`/admin/clients/${clientId}/backtests`);
+  return r.data;
+}
+
+export const BACKTEST_STATUSES = [
+  "draft",
+  "quote_requested",
+  "quote_sent",
+  "approved",
+  "in_progress",
+  "completed",
+  "revision_requested",
+  "cancelled",
+] as const;
+export type BacktestStatus = (typeof BACKTEST_STATUSES)[number];
+
+export async function changeBacktestStatus(
+  backtestId: string,
+  newStatus: BacktestStatus,
+  opts: { note?: string; override?: boolean } = {},
+): Promise<{ ok: boolean; from_status: string; to_status: string }> {
+  const r = await api.post<{ ok: boolean; from_status: string; to_status: string; backtest_id: string }>(
+    `/admin/backtests/${backtestId}/status`,
+    { new_status: newStatus, note: opts.note ?? null, override: opts.override ?? false },
+  );
+  return r.data;
 }
 
 // ───────────────────────────────────────────────────────────────────────────

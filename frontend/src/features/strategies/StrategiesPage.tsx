@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { BadgeCheck, FileText, RefreshCw, Upload, UploadCloud } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { BadgeCheck, ChevronDown, ChevronRight, FileText, History, RefreshCw, Upload, UploadCloud } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import { fetchStrategies, finalizeStrategyUpload, initStrategyUpload, type Strategy } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
@@ -12,13 +12,51 @@ async function sha256(file: File): Promise<string> {
     .join("");
 }
 
+// Group strategies by name; within each group, sort by descending version so
+// v1 sits at the bottom and the current source-of-truth is on top.
+type StrategyGroup = {
+  name: string;
+  versions: Strategy[];       // descending by version
+  latest: Strategy;           // versions[0]
+  sourceOfTruth: Strategy;    // usually === latest, but keep separate
+};
+
+function groupByName(rows: Strategy[]): StrategyGroup[] {
+  const map = new Map<string, Strategy[]>();
+  for (const s of rows) {
+    if (!map.has(s.name)) map.set(s.name, []);
+    map.get(s.name)!.push(s);
+  }
+  const groups: StrategyGroup[] = [];
+  for (const [name, versions] of map) {
+    versions.sort((a, b) => b.version - a.version);
+    const latest = versions[0];
+    const sot = versions.find((v) => v.is_source_of_truth) ?? latest;
+    groups.push({ name, versions, latest, sourceOfTruth: sot });
+  }
+  // Newest strategy (by latest upload date) first
+  groups.sort((a, b) => (a.latest.uploaded_at < b.latest.uploaded_at ? 1 : -1));
+  return groups;
+}
+
 export default function StrategiesPage() {
   const [modal, setModal] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const fetcher = useCallback(() => fetchStrategies(), []);
   const { data, loading, refresh, lastUpdated } = usePolling<Strategy[]>(fetcher, 15_000);
   const rows = data ?? [];
+  const groups = useMemo(() => groupByName(rows), [rows]);
   const showSkeleton = loading && data === null;
   const showEmpty = !loading && data !== null && rows.length === 0;
+
+  const toggle = (name: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -45,42 +83,104 @@ export default function StrategiesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-ink-500 dark:text-ink-400">
-                <th className="text-left font-medium px-5 py-2.5">Filename</th>
-                <th className="text-left font-medium px-5 py-2.5">Version</th>
+                <th className="text-left font-medium px-5 py-2.5 w-8"></th>
+                <th className="text-left font-medium px-5 py-2.5">Strategy</th>
+                <th className="text-left font-medium px-5 py-2.5">Latest version</th>
                 <th className="text-left font-medium px-5 py-2.5">Uploaded</th>
                 <th className="text-left font-medium px-5 py-2.5">Status</th>
                 <th className="text-left font-medium px-5 py-2.5">Source of Truth</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100 dark:divide-ink-800">
-              {rows.map((s) => (
-                <tr key={s.id} className="hover:bg-ink-50/70 dark:hover:bg-ink-800/30">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="size-8 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center text-ink-500">
-                        <FileText size={14} />
-                      </span>
-                      <span className="font-medium text-ink-900 dark:text-ink-50">{s.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 font-mono text-xs text-ink-600 dark:text-ink-300">v{s.version}</td>
-                  <td className="px-5 py-3 text-ink-500 dark:text-ink-400 tabular">
-                    {new Date(s.uploaded_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-5 py-3"><Badge status={s.status} dot>{s.status}</Badge></td>
-                  <td className="px-5 py-3">
-                    {s.is_source_of_truth ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-700 dark:text-accent-300">
-                        <BadgeCheck size={14}/> SoT
-                      </span>
-                    ) : (
-                      <span className="text-xs text-ink-400">—</span>
+              {groups.map((g) => {
+                const isOpen = expanded.has(g.name);
+                const hasHistory = g.versions.length > 1;
+                return (
+                  <>
+                    <tr
+                      key={g.name}
+                      className={`hover:bg-ink-50/70 dark:hover:bg-ink-800/30 ${hasHistory ? "cursor-pointer" : ""}`}
+                      onClick={hasHistory ? () => toggle(g.name) : undefined}
+                    >
+                      <td className="px-5 py-3 text-ink-400">
+                        {hasHistory ? (isOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>) : <span className="inline-block w-3.5"/>}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="size-8 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center text-ink-500">
+                            <FileText size={14} />
+                          </span>
+                          <div>
+                            <div className="font-medium text-ink-900 dark:text-ink-50">{g.name}</div>
+                            {hasHistory && (
+                              <div className="text-[11px] text-ink-500 dark:text-ink-400 inline-flex items-center gap-1 mt-0.5">
+                                <History size={11}/>
+                                {g.versions.length} versions
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 font-mono text-xs text-ink-600 dark:text-ink-300">v{g.latest.version}</td>
+                      <td className="px-5 py-3 text-ink-500 dark:text-ink-400 tabular">
+                        {new Date(g.latest.uploaded_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-3"><Badge status={g.latest.status} dot>{g.latest.status}</Badge></td>
+                      <td className="px-5 py-3">
+                        {g.sourceOfTruth.is_source_of_truth ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-700 dark:text-accent-300">
+                            <BadgeCheck size={14}/> v{g.sourceOfTruth.version}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-ink-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`${g.name}-history`} className="bg-ink-50/40 dark:bg-ink-900/30">
+                        <td></td>
+                        <td colSpan={5} className="px-5 py-3">
+                          <div className="text-[11px] uppercase tracking-wider text-ink-500 dark:text-ink-400 mb-2">Version history</div>
+                          <div className="space-y-1.5">
+                            {g.versions.map((v) => (
+                              <div key={v.id} className="flex items-center justify-between gap-4 text-xs">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="font-mono text-ink-700 dark:text-ink-200 shrink-0 w-8">v{v.version}</span>
+                                  <span className="text-ink-500 tabular shrink-0">
+                                    {new Date(v.uploaded_at).toLocaleDateString()}
+                                  </span>
+                                  <span className="text-ink-500 truncate">
+                                    by {v.uploaded_by_email ?? "unknown"}
+                                  </span>
+                                  {v.checksum && (
+                                    <span className="font-mono text-ink-400 text-[10px] shrink-0">
+                                      {v.checksum.slice(0, 8)}…
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge status={v.status} dot>{v.status}</Badge>
+                                  {v.is_source_of_truth && (
+                                    <span className="inline-flex items-center gap-1 text-accent-700 dark:text-accent-300 font-medium">
+                                      <BadgeCheck size={11}/> SoT
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-3 text-[11px] text-ink-500 dark:text-ink-400 italic">
+                            The current source-of-truth version is the one used for every new backtest. Older versions are kept as an immutable record for dispute defence.
+                          </p>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </>
+                );
+              })}
               {showSkeleton && [0, 1].map((i) => (
                 <tr key={`skel-${i}`} className="animate-pulse">
+                  <td className="px-5 py-3"></td>
                   <td className="px-5 py-3"><div className="h-3 w-40 bg-ink-100 dark:bg-ink-800 rounded"/></td>
                   <td className="px-5 py-3"><div className="h-3 w-12 bg-ink-100 dark:bg-ink-800 rounded"/></td>
                   <td className="px-5 py-3"><div className="h-3 w-20 bg-ink-100 dark:bg-ink-800 rounded"/></td>
@@ -89,7 +189,7 @@ export default function StrategiesPage() {
                 </tr>
               ))}
               {showEmpty && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-ink-500">No strategies uploaded yet.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-ink-500">No strategies uploaded yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -167,6 +267,7 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     >
       <p className="text-sm text-ink-600 dark:text-ink-300 mb-4">
         Attach a PDF or DOCX (max 25MB) describing your strategy. We'll review and reach out within one business day.
+        If a strategy with the same name already exists, this creates a new version — history is preserved.
       </p>
 
       <label className="block">

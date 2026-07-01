@@ -66,9 +66,14 @@ class StrategyOut(BaseModel):
     storage_key: str
     size_bytes: int | None
     mime_type: str | None
+    checksum: str | None
     is_source_of_truth: bool
     status: str
     uploaded_at: datetime
+    # Included so the version-history UI can show "uploaded by X on Y" without
+    # a second round-trip. Nullable because the User row may have been deleted
+    # (uploaded_by is SET NULL on ondelete).
+    uploaded_by_email: str | None
 
 
 class UploadIn(BaseModel):
@@ -99,23 +104,27 @@ class FinalizeOut(BaseModel):
 def list_strategies(
     client_id: uuid.UUID = Depends(client_scope), db: Session = Depends(get_db)
 ):
+    # LEFT JOIN so a document whose uploader was deleted still shows up.
     rows = (
-        db.query(StrategyDocument)
+        db.query(StrategyDocument, User.email)
+        .outerjoin(User, User.id == StrategyDocument.uploaded_by)
         .filter(StrategyDocument.client_id == client_id)
         .order_by(desc(StrategyDocument.created_at))
         .all()
     )
     return [
         StrategyOut(
-            id=str(r.id),
-            name=r.name,
-            version=r.version,
-            storage_key=r.storage_key,
-            size_bytes=r.size_bytes,
-            mime_type=r.mime_type,
-            is_source_of_truth=r.is_source_of_truth,
-            status=r.status,
-            uploaded_at=r.created_at,
+            id=str(r.StrategyDocument.id),
+            name=r.StrategyDocument.name,
+            version=r.StrategyDocument.version,
+            storage_key=r.StrategyDocument.storage_key,
+            size_bytes=r.StrategyDocument.size_bytes,
+            mime_type=r.StrategyDocument.mime_type,
+            checksum=r.StrategyDocument.checksum,
+            is_source_of_truth=r.StrategyDocument.is_source_of_truth,
+            status=r.StrategyDocument.status,
+            uploaded_at=r.StrategyDocument.created_at,
+            uploaded_by_email=r.email,
         )
         for r in rows
     ]
@@ -238,8 +247,10 @@ def finalize_upload(
             storage_key=row.storage_key,
             size_bytes=row.size_bytes,
             mime_type=row.mime_type,
+            checksum=row.checksum,
             is_source_of_truth=row.is_source_of_truth,
             status=row.status,
             uploaded_at=row.created_at,
+            uploaded_by_email=user.email,
         ),
     )
