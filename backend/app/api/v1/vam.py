@@ -72,13 +72,16 @@ _rate_lock = Lock()
 _rate_log: dict[uuid.UUID, deque[float]] = defaultdict(deque)
 
 
-def _check_rate_limit(client_id: uuid.UUID) -> None:
+def _check_rate_limit(client_id: uuid.UUID, db: "Session | None" = None) -> None:
     """Raise 429 if this client has exceeded VAM_CLIENT_RUNS_PER_MINUTE in the last 60s.
 
     Why in-memory: the rate limit is a politeness throttle (stop runaway
     sliders from spamming VAM), not a security boundary. A process restart
     resetting the window is acceptable. If we add a second backend instance
     we should switch to Redis or per-client DB counters.
+
+    Ratelimit hits are audit-logged so admins can spot spammy clients from
+    the Audit page without needing to trawl uvicorn access logs.
     """
     cap = get_settings().VAM_CLIENT_RUNS_PER_MINUTE
     now = time.time()
@@ -90,6 +93,20 @@ def _check_rate_limit(client_id: uuid.UUID) -> None:
         if len(log) >= cap:
             # Compute retry-after: how long until the oldest entry exits the window.
             retry_after = max(1, int(log[0] + _RATE_WINDOW_S - now))
+            if db is not None:
+                try:
+                    from app.services import audit
+                    audit.record(
+                        db, actor_user_id=None,
+                        action="ratelimit.hit",
+                        target_type="client",
+                        target_id=client_id,
+                        payload={"scope": "vam.run", "cap": cap, "window_s": _RATE_WINDOW_S, "retry_after": retry_after},
+                        ip=None,
+                    )
+                    db.commit()
+                except Exception as e:
+                    logger.warning("audit write failed on ratelimit hit: {}", e)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit: {cap} VAM runs per {_RATE_WINDOW_S}s. Retry in {retry_after}s.",
@@ -158,7 +175,7 @@ async def client_run_via_vam(
       * requires Client.vam_enabled = True (enforced by vam_client_scope)
       * subject to the tier's monthly backtest cap + vam_engine feature gate
     """
-    _check_rate_limit(client_id)
+    _check_rate_limit(client_id, db)
 
     # Tier gates — feature check + monthly count. Both raise HTTPException with
     # the standard tier-gate detail body so the frontend can render an upgrade

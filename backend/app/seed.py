@@ -301,9 +301,37 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
     db.flush()
 
 
+def _reset_local_state(db: Session) -> None:
+    """Wipe backtests + strategies + requests + T&C acceptances for local
+    dev. Keeps clients + users so re-seeding is fast. NEVER runs in
+    production — refuses if APP_ENV != 'local'.
+    """
+    from app.core.config import get_settings
+    from app.db.models import (
+        Backtest, BacktestFile, StrategyDocument, Request,
+        TermsAcceptance, AuditLog,
+    )
+
+    settings = get_settings()
+    if settings.APP_ENV != "local":
+        raise RuntimeError(
+            f"seed --reset refuses to run in APP_ENV={settings.APP_ENV!r}. "
+            "This is a destructive operation. If you REALLY want it, edit seed.py."
+        )
+    logger.warning("--reset requested — wiping local state (except clients + users)")
+    for model in (BacktestFile, Backtest, StrategyDocument, Request, TermsAcceptance, AuditLog):
+        n = db.query(model).delete()
+        logger.info("  wiped {} × {}", n, model.__tablename__)
+    db.commit()
+
+
 if __name__ == "__main__":
+    import sys
+    reset = "--reset" in sys.argv
     db = SessionLocal()
     try:
+        if reset:
+            _reset_local_state(db)
         seed(db)
     finally:
         db.close()

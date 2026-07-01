@@ -406,8 +406,8 @@ export type AdminClient = {
   created_at: string;
 };
 
-export async function fetchAdminClients(): Promise<AdminClient[]> {
-  return (await api.get<AdminClient[]>("/admin/clients")).data;
+export async function fetchAdminClients(opts: { q?: string; limit?: number; offset?: number } = {}): Promise<AdminClient[]> {
+  return (await api.get<AdminClient[]>("/admin/clients", { params: opts })).data;
 }
 
 export async function createAdminClient(args: {
@@ -526,9 +526,12 @@ export type AuditEntry = {
   occurred_at: string;
 };
 
-export async function fetchAuditLog(action_prefix?: string): Promise<AuditEntry[]> {
+export async function fetchAuditLog(
+  action_prefix?: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<AuditEntry[]> {
   return (await api.get<AuditEntry[]>("/admin/audit", {
-    params: action_prefix ? { action_prefix } : {},
+    params: { ...(action_prefix ? { action_prefix } : {}), ...opts },
   })).data;
 }
 

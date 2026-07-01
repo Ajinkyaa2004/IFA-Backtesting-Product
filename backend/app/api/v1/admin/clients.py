@@ -198,13 +198,34 @@ def _describe_audit_row(a) -> tuple[str, str | None]:
 @router.get("/clients", response_model=list[ClientOut])
 def list_clients(
     include_deleted: bool = False,
+    q: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     _admin=Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Client)
+    """Paginated + searchable client list.
+
+    Optional `q` matches (case-insensitive) against name + primary_contact.
+    Frontend passes limit=50 and paginates via offset. Ordering is
+    newest-first so 'Load more' visually stacks under recent rows.
+    """
+    query = db.query(Client)
     if not include_deleted:
-        q = q.filter(Client.deleted_at.is_(None))
-    return [_client_out(c) for c in q.order_by(desc(Client.created_at)).all()]
+        query = query.filter(Client.deleted_at.is_(None))
+    if q:
+        term = f"%{q.strip().lower()}%"
+        from sqlalchemy import func, or_
+        query = query.filter(
+            or_(
+                func.lower(Client.name).like(term),
+                func.lower(Client.primary_contact).like(term),
+            )
+        )
+    limit = max(1, min(limit, 500))
+    offset = max(0, offset)
+    rows = query.order_by(desc(Client.created_at)).offset(offset).limit(limit).all()
+    return [_client_out(c) for c in rows]
 
 
 @router.get("/clients/{client_id}", response_model=ClientWithUsers)

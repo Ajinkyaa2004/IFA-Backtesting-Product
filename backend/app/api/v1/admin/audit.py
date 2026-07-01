@@ -27,6 +27,7 @@ class AuditOut(BaseModel):
 @router.get("/audit", response_model=list[AuditOut])
 def list_audit(
     limit: int = Query(default=100, le=500),
+    offset: int = Query(default=0, ge=0),
     action_prefix: str | None = None,
     _admin=Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
@@ -34,7 +35,7 @@ def list_audit(
     q = db.query(AuditLog, User.email).outerjoin(User, User.id == AuditLog.actor_user_id)
     if action_prefix:
         q = q.filter(AuditLog.action.startswith(action_prefix))
-    rows = q.order_by(desc(AuditLog.created_at)).limit(limit).all()
+    rows = q.order_by(desc(AuditLog.created_at)).offset(offset).limit(limit).all()
     return [
         AuditOut(
             id=str(a.id),

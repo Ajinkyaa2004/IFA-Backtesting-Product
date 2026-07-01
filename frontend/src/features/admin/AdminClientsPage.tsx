@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, UserRound, X } from "lucide-react";
+import { Activity, BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Search, Trash2, UserRound, X } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import {
   type ActivityEvent,
@@ -24,17 +24,71 @@ import {
   updateAdminClient,
 } from "../../lib/api";
 import { toast } from "../../store/toast";
-import { usePolling } from "../../lib/usePolling";
 import { useImpersonate } from "../../store/impersonate";
+
+const PAGE_SIZE = 50;
 
 export default function AdminClientsPage() {
   const [selected, setSelected] = useState<AdminClient | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const fetcher = useCallback(() => fetchAdminClients(), []);
-  const { data, loading, refresh, lastUpdated } = usePolling<AdminClient[]>(fetcher, 15_000);
-  const rows = data ?? [];
-  const showSkeleton = loading && data === null;
-  const showEmpty = !loading && data !== null && rows.length === 0;
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [rows, setRows] = useState<AdminClient[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Debounce search input (250ms) so we don't hammer the API on every keystroke.
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  // Whenever the search term changes, reset pagination + refetch page 1.
+  useEffect(() => {
+    setOffset(0);
+    setInitialLoading(true);
+    fetchAdminClients({ q: debouncedSearch || undefined, limit: PAGE_SIZE, offset: 0 })
+      .then((page) => {
+        setRows(page);
+        setHasMore(page.length === PAGE_SIZE);
+        setLastUpdated(new Date());
+      })
+      .catch(() => { setRows([]); setHasMore(false); })
+      .finally(() => setInitialLoading(false));
+  }, [debouncedSearch]);
+
+  const refresh = () => {
+    setInitialLoading(true);
+    fetchAdminClients({ q: debouncedSearch || undefined, limit: PAGE_SIZE, offset: 0 })
+      .then((page) => {
+        setRows(page);
+        setHasMore(page.length === PAGE_SIZE);
+        setOffset(0);
+        setLastUpdated(new Date());
+      })
+      .catch(() => setRows([]))
+      .finally(() => setInitialLoading(false));
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextOffset = offset + PAGE_SIZE;
+      const page = await fetchAdminClients({ q: debouncedSearch || undefined, limit: PAGE_SIZE, offset: nextOffset });
+      setRows((prev) => [...prev, ...page]);
+      setOffset(nextOffset);
+      setHasMore(page.length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const showSkeleton = initialLoading && rows.length === 0;
+  const showEmpty = !initialLoading && rows.length === 0;
 
   return (
     <div className="space-y-6">
@@ -42,7 +96,7 @@ export default function AdminClientsPage() {
         <SectionTitle
           sub={
             lastUpdated
-              ? `Provision new clients, change tiers, suspend or soft-delete · auto-refreshes · last ${lastUpdated.toLocaleTimeString()}`
+              ? `${rows.length} shown · last refreshed ${lastUpdated.toLocaleTimeString()}`
               : "Provision new clients, change tiers, suspend or soft-delete."
           }
           action={
@@ -63,6 +117,17 @@ export default function AdminClientsPage() {
         >
           Clients
         </SectionTitle>
+
+        <div className="mb-3 relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400"/>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or primary contact"
+            className="w-full sm:max-w-md h-9 pl-8 pr-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+          />
+        </div>
 
         <div className="overflow-x-auto -mx-5">
           <table className="w-full text-sm">
@@ -100,11 +165,25 @@ export default function AdminClientsPage() {
                 </tr>
               ))}
               {showEmpty && (
-                <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-ink-500">No clients yet.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-ink-500">
+                  {debouncedSearch ? `No clients matched "${debouncedSearch}".` : "No clients yet."}
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {rows.length > 0 && hasMore && (
+          <div className="mt-3 flex justify-center">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="h-8 px-4 rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-xs font-medium text-ink-700 dark:text-ink-200 disabled:opacity-50"
+            >
+              {loadingMore ? "Loading…" : `Load more (${PAGE_SIZE})`}
+            </button>
+          </div>
+        )}
       </Card>
 
       {selected && <ClientDrawer client={selected} onClose={() => { setSelected(null); refresh(); }} />}
@@ -130,6 +209,9 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
   const [downloading, setDownloading] = useState<string | null>(null);
   const [statusPending, setStatusPending] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [selectedBts, setSelectedBts] = useState<Set<string>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState<BacktestStatus>("completed");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const loadBacktests = useCallback(() => {
     setBtsLoading(true);
@@ -157,6 +239,41 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
       .finally(() => setActivityLoading(false));
     loadBacktests();
   }, [client.id, loadBacktests]);
+
+  const toggleBt = (id: string) => {
+    setSelectedBts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkFlip = async () => {
+    const ids = Array.from(selectedBts);
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    let succeeded = 0;
+    let failed = 0;
+    // Serial with override=true so we don't get blocked by legal-transition guards
+    // on some rows and succeed on others (that would confuse the admin). The
+    // override flag mirrors what the existing per-row confirm() offers.
+    for (const id of ids) {
+      try {
+        await changeBacktestStatus(id, bulkTarget, { override: true });
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    setBulkBusy(false);
+    setSelectedBts(new Set());
+    loadBacktests();
+    toast.success(
+      `Updated ${succeeded} of ${ids.length}`,
+      failed > 0 ? `${failed} failed — refresh to see current state.` : undefined,
+    );
+  };
 
   const flipStatus = async (bt: AdminBacktestSummary, target: BacktestStatus) => {
     setStatusPending(bt.id);
@@ -383,9 +500,48 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
             ) : backtests.length === 0 ? (
               <div className="text-xs text-ink-500 italic">No backtests yet.</div>
             ) : (
+              <>
+              {selectedBts.size > 0 && (
+                <div className="mb-2 p-2 rounded-lg border border-accent-300 dark:border-accent-500/40 bg-accent-50/60 dark:bg-accent-500/10 flex items-center justify-between gap-3">
+                  <div className="text-[11px] text-ink-700 dark:text-ink-200">
+                    {selectedBts.size} selected · bulk change to:
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      value={bulkTarget}
+                      onChange={(e) => setBulkTarget(e.target.value as BacktestStatus)}
+                      className="text-xs h-7 px-2 rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+                    >
+                      {BACKTEST_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s.replace("_", " ")}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={bulkFlip}
+                      disabled={bulkBusy}
+                      className="h-7 px-3 rounded-md bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white text-xs font-semibold"
+                    >
+                      {bulkBusy ? "Updating…" : "Apply"}
+                    </button>
+                    <button
+                      onClick={() => setSelectedBts(new Set())}
+                      className="text-[11px] text-ink-500 hover:text-ink-900 dark:hover:text-ink-100"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
               <ul className="space-y-2 max-h-72 overflow-y-auto">
                 {backtests.map((b) => (
                   <li key={b.id} className="flex items-start gap-2.5 p-2.5 rounded-lg border border-ink-200 dark:border-ink-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedBts.has(b.id)}
+                      onChange={() => toggleBt(b.id)}
+                      className="mt-2 shrink-0"
+                      aria-label={`Select ${b.code}`}
+                    />
                     <span className="size-8 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center text-ink-500 shrink-0">
                       <LineChart size={14}/>
                     </span>
@@ -409,6 +565,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
                   </li>
                 ))}
               </ul>
+              </>
             )}
             {statusError && (
               <div className="mt-2 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg px-2 py-1">
