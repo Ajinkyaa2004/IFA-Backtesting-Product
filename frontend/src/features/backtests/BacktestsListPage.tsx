@@ -6,7 +6,20 @@ import { fetchBacktests, type BacktestListItem } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
 import { useAuth } from "../../store/auth";
 
-const FILTERS = ["all", "draft", "in_progress", "completed", "approved", "cancelled"] as const;
+// Full status set — matches the 8-value CheckConstraint on backend Backtest.status.
+// Order chosen to flow left-to-right along the lifecycle so a client can scan
+// their pipeline: request → quote → build → deliver → wrap-up.
+const FILTERS = [
+  "all",
+  "draft",
+  "quote_requested",
+  "quote_sent",
+  "approved",
+  "in_progress",
+  "completed",
+  "revision_requested",
+  "cancelled",
+] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function BacktestsListPage() {

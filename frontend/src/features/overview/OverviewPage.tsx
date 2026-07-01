@@ -1,18 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, BarChart3, CheckCircle2, FileText, Inbox, LineChart, RefreshCw } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CheckCircle2, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
 import { fetchBacktests, fetchRequests, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
 
 const POLL_INTERVAL_MS = 20_000;
+// Per-browser first-visit flag. Cheap, no backend migration. If a client uses
+// two browsers we show the welcome twice — acceptable for a demo-oriented banner.
+const FIRST_VISIT_KEY = "ifa.welcome_dismissed";
 
 export default function OverviewPage() {
   const me = useAuth((s) => s.me);
   const [backtests, setBacktests] = useState<BacktestListItem[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(FIRST_VISIT_KEY) !== "1";
+  });
   const pollRef = useRef<number | null>(null);
+
+  const dismissWelcome = () => {
+    window.localStorage.setItem(FIRST_VISIT_KEY, "1");
+    setShowWelcome(false);
+  };
 
   const refresh = async () => {
     try {
@@ -40,11 +52,45 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
+      {showWelcome && demo && (
+        <Card padding="p-0">
+          <div className="px-6 py-4 flex items-start gap-4 bg-accent-50 dark:bg-accent-500/10 border-l-4 border-accent-500 rounded-2xl">
+            <span className="mt-0.5 size-8 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0">
+              <Sparkles size={16}/>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
+                Welcome to the IFA Backtest Engine
+              </div>
+              <p className="mt-0.5 text-xs text-ink-600 dark:text-ink-300">
+                We've preloaded a demo backtest — <span className="font-medium">{demo.name}</span> —
+                so you can explore the full report view. When you're ready, upload your first strategy
+                document or open a new request.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Link to={`/backtests/${demo.id}`}>
+                  <Button variant="accent" icon={<ArrowRight size={14}/>}>Open demo report</Button>
+                </Link>
+                <Link to="/strategies">
+                  <Button variant="secondary" icon={<FileText size={14}/>}>Upload strategy</Button>
+                </Link>
+              </div>
+            </div>
+            <button
+              onClick={dismissWelcome}
+              aria-label="Dismiss welcome"
+              className="text-ink-400 hover:text-ink-900 dark:hover:text-ink-100 shrink-0"
+            >
+              <X size={16}/>
+            </button>
+          </div>
+        </Card>
+      )}
       <Card padding="p-0">
         <div className="px-7 py-6 flex items-start justify-between gap-6 flex-wrap">
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.16em] text-ink-500 dark:text-ink-400">
-              Welcome back
+              {showWelcome ? "Getting started" : "Welcome back"}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">
               {me?.client?.name}

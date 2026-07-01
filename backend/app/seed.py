@@ -185,12 +185,105 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
         db.flush()
         logger.info("Seeded demo backtest BT-2026-0001 ({}) + result JSON in bucket", backtest.id)
 
-    # Dummy backtests in various statuses so the list page has variety
+    # ── 3 more FULLY-POPULATED example backtests. Each is a mutated copy of
+    # example.json with a different strategy name, symbol set, date range, and
+    # slightly altered metrics so the report page shows meaningful variety.
+    # Kills the "Example real strategies preloaded" Todoist item — the list is
+    # now demo-ready without hand-crafting every field.
+    variants = [
+        {
+            "code": "BT-2026-0006",
+            "name": "RSI Mean Reversion — Nifty Midcap",
+            "type": "long_only",
+            "description": "Long-only mean reversion on Nifty Midcap 100. Enter when RSI(14) < 30 AND close > 200-day SMA. Exit when RSI(14) crosses 55 OR 10-day trailing stop.",
+            "tags": ["mean-reversion", "midcap", "swing"],
+            "symbols": ["POLYCAB.NS", "AUBANK.NS", "TATAPOWER.NS", "DELHIVERY.NS", "COFORGE.NS"],
+            "date_range": {"from": "2024-01-02", "to": "2025-12-31"},
+            "metrics_delta": {"total_return_pct": 27.4, "sharpe": 1.31, "max_dd": -14.2},
+        },
+        {
+            "code": "BT-2026-0007",
+            "name": "Pairs Trade — HDFC / ICICI Bank",
+            "type": "market_neutral",
+            "description": "Market-neutral pairs trade on HDFC Bank vs ICICI Bank. Enter when z-score of the log-price spread exceeds ±2σ. Exit at reversion to 0.5σ.",
+            "tags": ["pairs", "market-neutral", "stat-arb"],
+            "symbols": ["HDFCBANK.NS", "ICICIBANK.NS"],
+            "date_range": {"from": "2024-06-01", "to": "2025-12-31"},
+            "metrics_delta": {"total_return_pct": 18.9, "sharpe": 1.72, "max_dd": -6.8},
+        },
+        {
+            "code": "BT-2026-0008",
+            "name": "Breakout Momentum — Nifty 50",
+            "type": "long_only",
+            "description": "Long-only 20-day high breakout on Nifty 50 constituents with 10-day ATR-based sizing. Exit on close below 10-day SMA.",
+            "tags": ["breakout", "momentum", "nifty50"],
+            "symbols": ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "BHARTIARTL.NS"],
+            "date_range": {"from": "2023-01-02", "to": "2025-12-31"},
+            "metrics_delta": {"total_return_pct": 42.6, "sharpe": 1.05, "max_dd": -18.7},
+        },
+    ]
+    if not EXAMPLE_PATH.exists():
+        return
+    example_template = json.loads(EXAMPLE_PATH.read_text())
+    for v in variants:
+        if db.query(Backtest).filter(Backtest.client_id == client.id, Backtest.code == v["code"]).first():
+            continue
+        # Deep-mutate the example. The v1.0 schema only cares about structural
+        # validity; the metrics_delta values are surface-level tweaks so the UI
+        # renders differently per row rather than 3 identical charts.
+        payload = json.loads(json.dumps(example_template))  # deep copy
+        payload["backtest_id"] = v["code"]
+        payload["strategy"]["name"] = v["name"]
+        payload["strategy"]["type"] = v["type"]
+        payload["strategy"]["description"] = v["description"]
+        payload["strategy"]["tags"] = v["tags"]
+        payload["universe"]["symbols"] = v["symbols"]
+        payload["universe"]["name"] = f"equity universe ({len(v['symbols'])} symbols)"
+        payload["assumptions"]["date_range"] = v["date_range"]
+        payload["client"] = {"client_id": str(client.id), "client_name": client.name}
+        # Surface-level metric tweaks so cards don't look identical
+        if "summary" in payload.get("metrics", {}):
+            payload["metrics"]["summary"]["total_return_pct"] = v["metrics_delta"]["total_return_pct"]
+            payload["metrics"]["summary"]["sharpe_ratio"] = v["metrics_delta"]["sharpe"]
+            payload["metrics"]["summary"]["max_drawdown_pct"] = v["metrics_delta"]["max_dd"]
+
+        bt_id = uuid.uuid4()
+        raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        checksum = hashlib.sha256(raw).hexdigest()
+        storage_key = f"clients/{client.id}/backtests/{bt_id}/result.json"
+        storage.upload_bytes(storage_key, raw, "application/json")
+
+        bt = Backtest(
+            id=bt_id,
+            client_id=client.id,
+            name=v["name"],
+            code=v["code"],
+            status="completed",
+            assumptions=payload["assumptions"],
+            metrics=payload["metrics"],
+            completed_at=datetime.now(timezone.utc),
+        )
+        db.add(bt)
+        db.flush()
+        db.add(BacktestFile(
+            backtest_id=bt.id,
+            file_type="result_json",
+            storage_key=storage_key,
+            size_bytes=len(raw),
+            checksum=checksum,
+        ))
+        logger.info("Seeded backtest {} ({}) — {}", v["code"], bt.id, v["name"])
+    db.flush()
+
+    # ── Status-variety stubs (no JSON, minimal fields) so the filter chips have
+    # something to show under quote/draft/in_progress/etc.
     dummies = [
         ("BT-2026-0002", "Mean Reversion BankNifty", "in_progress"),
         ("BT-2026-0003", "Momentum Smallcap",        "approved"),
         ("BT-2026-0004", "Pairs HDFC/ICICI",          "quote_sent"),
         ("BT-2026-0005", "Volatility Carry",          "draft"),
+        ("BT-2026-0009", "Sector Rotation Trial",     "revision_requested"),
+        ("BT-2026-0010", "Failed Momentum Test",      "cancelled"),
     ]
     for code, name, status_ in dummies:
         if db.query(Backtest).filter(Backtest.client_id == client.id, Backtest.code == code).first():
