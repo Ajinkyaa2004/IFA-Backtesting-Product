@@ -32,7 +32,7 @@ CLIENT_B_EMAIL = "secondary.client@isolation.test"
 CLIENT_B_PASS = "IsolationTest!2026"
 
 ADMIN_EMAIL = "insightfusionanalytics@gmail.com"
-ADMIN_PASS = "ChangeMeOnFirstLogin!"
+ADMIN_PASS = "sg&^XpSP9GAu2PmBYcrE"
 
 
 @dataclass

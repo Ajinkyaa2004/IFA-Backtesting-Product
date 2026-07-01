@@ -32,7 +32,7 @@ FRONTEND = "http://localhost:5173"
 BACKEND  = "http://127.0.0.1:8000"
 
 ADMIN_EMAIL    = "insightfusionanalytics@gmail.com"
-ADMIN_PASSWORD = "ChangeMeOnFirstLogin!"
+ADMIN_PASSWORD = "sg&^XpSP9GAu2PmBYcrE"
 RAVI_EMAIL     = "ravi@ifa.com"
 RAVI_PASSWORD  = "Admin@2025"
 DEMO_EMAIL     = "demo.client@sterlingcap.test"

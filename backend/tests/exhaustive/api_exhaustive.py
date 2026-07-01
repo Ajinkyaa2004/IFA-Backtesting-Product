@@ -25,7 +25,7 @@ BACKEND = "http://localhost:8000/api/v1"
 FIREBASE_KEY = "AIzaSyD_CmcpWcgjk9QoWpE6lxat1PbQ_bVVU18"
 
 ADMIN_EMAIL = "insightfusionanalytics@gmail.com"
-ADMIN_PASS = "ChangeMeOnFirstLogin!"
+ADMIN_PASS = "sg&^XpSP9GAu2PmBYcrE"
 DEMO_CLIENT_EMAIL = "demo.client@sterlingcap.test"
 DEMO_CLIENT_PASS = "DemoClient!2026"
 

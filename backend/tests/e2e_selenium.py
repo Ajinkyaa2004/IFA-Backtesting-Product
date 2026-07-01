@@ -26,7 +26,7 @@ FRONTEND = "http://localhost:5173"
 DEMO_EMAIL = "demo.client@sterlingcap.test"
 DEMO_PASSWORD = "DemoClient!2026"
 ADMIN_EMAIL = "insightfusionanalytics@gmail.com"
-ADMIN_PASSWORD = "ChangeMeOnFirstLogin!"
+ADMIN_PASSWORD = "sg&^XpSP9GAu2PmBYcrE"
 BAD_PASSWORD = "wrongpassword"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # ifa-backtest-product/
