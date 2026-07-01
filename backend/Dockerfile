@@ -29,7 +29,8 @@ RUN pip install --upgrade pip && pip install \
     "fastapi>=0.115" "uvicorn[standard]>=0.30" "sqlalchemy>=2.0" "alembic>=1.13" \
     "psycopg2-binary>=2.9" "pydantic>=2.7" "pydantic-settings>=2.4" "python-dotenv>=1.0" \
     "firebase-admin>=6.5" "supabase>=2.7" "loguru>=0.7" "python-multipart>=0.0.9" \
-    "httpx>=0.27" "jsonschema>=4.23" "pydantic[email]"
+    "httpx>=0.27" "jsonschema>=4.23" "pydantic[email]" \
+    "slowapi>=0.1.9" "sentry-sdk[fastapi]>=2.14"
 
 # ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.12-slim
