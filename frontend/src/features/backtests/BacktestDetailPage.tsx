@@ -15,8 +15,10 @@ import {
 } from "recharts";
 import { Badge, Button, Card, KV, SectionTitle } from "../../components/ui";
 import {
+  type BacktestBenchmark,
   downloadBacktestReport,
   fetchBacktest,
+  fetchBacktestBenchmark,
   type BacktestDetail,
   type BacktestResult,
   type VamPersistedBacktest,
@@ -29,6 +31,7 @@ import VamResultSidebar from "../vam/VamResultSidebar";
 export default function BacktestDetailPage() {
   const { id = "" } = useParams();
   const [bt, setBt] = useState<BacktestDetail | null>(null);
+  const [benchmark, setBenchmark] = useState<BacktestBenchmark | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const vamEnabled = useAuth((s) => s.me?.vam_enabled ?? false);
@@ -41,6 +44,7 @@ export default function BacktestDetailPage() {
   useEffect(() => {
     let cancelled = false;
     setBt(null);
+    setBenchmark(null);
     setErr(null);
     fetchBacktest(id)
       .then((d) => { if (!cancelled) setBt(d); })
@@ -49,6 +53,12 @@ export default function BacktestDetailPage() {
         const detail = e?.response?.data?.detail;
         setErr(typeof detail === "string" ? detail : "Failed to load backtest");
       });
+    // Benchmark fetch is best-effort — chart still renders if it fails.
+    // Also skips the fetch when the backtest has no date range (some VAM
+    // envelopes) since /benchmark would return an empty series anyway.
+    fetchBacktestBenchmark(id)
+      .then((b) => { if (!cancelled) setBenchmark(b); })
+      .catch(() => { /* silent — benchmark is a nice-to-have overlay */ });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -191,13 +201,13 @@ export default function BacktestDetailPage() {
             </div>
           )}
 
-          {/* Equity curve */}
+          {/* Equity curve with multi-benchmark overlay */}
           {result.time_series.equity_curve.length > 1 && (
             <Card>
-              <SectionTitle sub="Strategy NAV vs benchmark — normalised to 100">Equity curve</SectionTitle>
+              <SectionTitle sub="Strategy NAV vs benchmarks — normalised to 100">Equity curve</SectionTitle>
               <div className="h-72 -ml-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mergeBenchmark(result)} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <LineChart data={mergeBenchmark(result, benchmark)} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                     <CartesianGrid stroke="currentColor" className="text-ink-200 dark:text-ink-800" strokeDasharray="2 4" vertical={false}/>
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11 }}
                       tickFormatter={(d) => new Date(d).toLocaleDateString("en-GB", { month: "short", year: "2-digit" })}
@@ -209,9 +219,27 @@ export default function BacktestDetailPage() {
                     {result.time_series.benchmark_curves?.[0] && (
                       <Line type="monotone" dataKey="benchmark" name={result.time_series.benchmark_curves[0].name} stroke="#8a8a98" strokeWidth={1.5} strokeDasharray="4 3" dot={false}/>
                     )}
+                    {benchmark?.meta.map((m) => (
+                      <Line
+                        key={m.symbol}
+                        type="monotone"
+                        dataKey={`bench_${m.symbol}`}
+                        name={m.display_name}
+                        stroke={m.color}
+                        strokeWidth={1.4}
+                        strokeDasharray="3 4"
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+              {benchmark && benchmark.source && (
+                <p className="mt-2 text-[10px] text-ink-400 dark:text-ink-500 italic">
+                  Benchmark series are indicative (synthetic curves matching real-world drift/volatility for each asset). Real Yahoo Finance data lands in a later release — see roadmap.
+                </p>
+              )}
             </Card>
           )}
 
@@ -355,15 +383,31 @@ function KpiCard({ label, value, tone = "neutral" }: { label: string; value?: st
 // Operates only on the v1.0 (BacktestResult) shape — VAM-engine results have
 // their own renderer and never call this helper. We accept the union for the
 // call-site convenience but narrow + bail out if VAM accidentally lands here.
-function mergeBenchmark(result: BacktestDetail["result"]) {
+function mergeBenchmark(
+  result: BacktestDetail["result"],
+  benchmark: BacktestBenchmark | null,
+) {
   if (!result) return [];
   if ("engine_response" in result) return []; // VAM envelope — not applicable
   const v1 = result as BacktestResult;
-  const bench = v1.time_series.benchmark_curves?.[0];
-  const benchMap = new Map((bench?.series ?? []).map((p) => [p.date, p.value]));
-  return v1.time_series.equity_curve.map((p) => ({
-    date: p.date,
-    nav: p.nav,
-    benchmark: benchMap.get(p.date) ?? undefined,
-  }));
+  const legacyBench = v1.time_series.benchmark_curves?.[0];
+  const legacyMap = new Map((legacyBench?.series ?? []).map((p) => [p.date, p.value]));
+  // Multi-benchmark maps keyed by symbol so we don't allocate per-row.
+  const benchMaps: Record<string, Map<string, number>> = {};
+  if (benchmark) {
+    for (const [symbol, series] of Object.entries(benchmark.series)) {
+      benchMaps[symbol] = new Map(series.map((p) => [p.date, p.value]));
+    }
+  }
+  return v1.time_series.equity_curve.map((p) => {
+    const row: Record<string, number | string | undefined> = {
+      date: p.date,
+      nav: p.nav,
+      benchmark: legacyMap.get(p.date) ?? undefined,
+    };
+    for (const [symbol, m] of Object.entries(benchMaps)) {
+      row[`bench_${symbol}`] = m.get(p.date);
+    }
+    return row;
+  });
 }

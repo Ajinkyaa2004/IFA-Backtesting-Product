@@ -21,6 +21,7 @@ auth failed — check VAM_ADMIN_PASSWORD".
 from __future__ import annotations
 
 import asyncio
+import random
 import time
 from typing import Any
 
@@ -28,6 +29,86 @@ import httpx
 from loguru import logger
 
 from app.core.config import get_settings
+
+
+# ── Circuit breaker ────────────────────────────────────────────────────────
+#
+# When the VAM engine is fully offline (500 5xx in a row) we don't want every
+# incoming client request to sit for 15s waiting on httpx timeout. The breaker
+# tracks consecutive upstream failures and, past a threshold, short-circuits
+# subsequent calls with an immediate VAMUpstreamError until a cooldown passes.
+# On the first attempt after cooldown we allow ONE probe; success closes it,
+# failure re-opens with a fresh cooldown.
+
+_CB_FAIL_THRESHOLD = 5           # consecutive failures to trip
+_CB_COOLDOWN_S     = 30.0        # how long to stay open before allowing a probe
+_CB_HALF_OPEN_MAX_INFLIGHT = 1   # only one probe at a time
+
+
+class _CircuitBreaker:
+    def __init__(self):
+        self._consec_failures = 0
+        self._opened_at: float | None = None
+        self._probe_lock = asyncio.Lock()
+
+    def state(self) -> str:
+        if self._opened_at is None:
+            return "closed"
+        if time.time() - self._opened_at >= _CB_COOLDOWN_S:
+            return "half_open"
+        return "open"
+
+    def before_call(self) -> None:
+        st = self.state()
+        if st == "open":
+            raise VAMUpstreamError(
+                "VAM engine is temporarily unavailable (circuit breaker open). "
+                "Retry in a few seconds.",
+                status_code=503,
+            )
+        # closed or half_open — allowed to proceed
+
+    def record_success(self) -> None:
+        if self._opened_at is not None:
+            logger.info("VAM circuit breaker: closing after successful probe")
+        self._consec_failures = 0
+        self._opened_at = None
+
+    def record_failure(self) -> None:
+        self._consec_failures += 1
+        if self._opened_at is None and self._consec_failures >= _CB_FAIL_THRESHOLD:
+            logger.warning(
+                "VAM circuit breaker: OPENING after {} consecutive failures",
+                self._consec_failures,
+            )
+            self._opened_at = time.time()
+        elif self.state() == "half_open":
+            # Probe failed — reopen with fresh cooldown.
+            logger.warning("VAM circuit breaker: half-open probe failed, re-opening")
+            self._opened_at = time.time()
+
+
+_cb = _CircuitBreaker()
+
+
+def _should_retry(status_code: int | None, attempt: int, max_attempts: int) -> bool:
+    """Retry on transient errors: 5xx (except 501/505) and connection errors
+    (status_code=None). Don't retry client errors (4xx) or the terminal attempt.
+    """
+    if attempt + 1 >= max_attempts:
+        return False
+    if status_code is None:
+        return True  # transport error / connection reset — always retry
+    if 500 <= status_code < 600 and status_code not in (501, 505):
+        return True
+    return False
+
+
+def _backoff_seconds(attempt: int) -> float:
+    """Exponential backoff with jitter: 0.4, 0.8, 1.6, ... + up to 200ms jitter.
+    """
+    base = 0.4 * (2 ** attempt)
+    return base + random.uniform(0, 0.2)
 
 
 # ── Exceptions ─────────────────────────────────────────────────────────────
@@ -140,6 +221,10 @@ class VAMClient:
 
     # ---- HTTP plumbing ----
 
+    # Retry policy — applied to transient upstream failures (5xx + connection
+    # errors). 4xx client errors and 422 validation errors are NOT retried.
+    _MAX_ATTEMPTS = 3
+
     async def _request(
         self,
         method: str,
@@ -149,57 +234,91 @@ class VAMClient:
         timeout: float | None = None,
         _is_retry: bool = False,
     ) -> Any:
-        """Perform an authenticated HTTP request, retrying once on 401 with a fresh login.
+        """Perform an authenticated HTTP request with retry-with-backoff on
+        transient upstream failures + a circuit breaker for total outages.
+
+        Retries 5xx and connection errors up to _MAX_ATTEMPTS with exponential
+        backoff (0.4s, 0.8s, 1.6s + jitter). 401 triggers a re-login and one
+        immediate retry (unchanged from earlier behaviour). Validation errors
+        (422), auth errors, and client-side 4xx do NOT retry.
 
         Returns the parsed JSON body on 2xx.
         Raises VAMAuthError / VAMValidationError / VAMUpstreamError on failure.
         """
+        _cb.before_call()  # short-circuit if breaker open
         timeout = timeout or self._DEFAULT_TIMEOUT_S
-        async with httpx.AsyncClient() as client:
-            token = await self._ensure_token(client)
-            headers = {"Authorization": f"Bearer {token}"}
-            try:
-                resp = await client.request(
-                    method,
-                    f"{self._base_url}{path}",
-                    json=json,
-                    headers=headers,
-                    timeout=timeout,
-                )
-            except httpx.RequestError as e:
-                raise VAMUpstreamError(f"VAM transport error on {method} {path}: {e}") from e
 
-            if resp.status_code == 401 and not _is_retry:
-                # Token may have been revoked / expired earlier than we thought.
-                logger.info("VAM returned 401 on {} {} — forcing re-login + retry", method, path)
-                self._token = None
-                self._token_expires_at = 0.0
-                return await self._request(method, path, json=json, timeout=timeout, _is_retry=True)
+        last_exc: VAMUpstreamError | None = None
+        for attempt in range(self._MAX_ATTEMPTS):
+            async with httpx.AsyncClient() as client:
+                token = await self._ensure_token(client)
+                headers = {"Authorization": f"Bearer {token}"}
+                try:
+                    resp = await client.request(
+                        method,
+                        f"{self._base_url}{path}",
+                        json=json,
+                        headers=headers,
+                        timeout=timeout,
+                    )
+                except httpx.RequestError as e:
+                    _cb.record_failure()
+                    if _should_retry(None, attempt, self._MAX_ATTEMPTS):
+                        wait = _backoff_seconds(attempt)
+                        logger.warning(
+                            "VAM transport error on {} {} attempt {}/{} — retrying in {:.2f}s: {}",
+                            method, path, attempt + 1, self._MAX_ATTEMPTS, wait, e,
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+                    raise VAMUpstreamError(
+                        f"VAM transport error on {method} {path} after {attempt + 1} attempts: {e}"
+                    ) from e
 
-            if resp.status_code == 401:
-                raise VAMAuthError("VAM rejected our token even after re-login")
+                # 401 → force re-login and retry ONCE (breaker doesn't count this).
+                if resp.status_code == 401 and not _is_retry:
+                    logger.info("VAM returned 401 on {} {} — forcing re-login + retry", method, path)
+                    self._token = None
+                    self._token_expires_at = 0.0
+                    return await self._request(method, path, json=json, timeout=timeout, _is_retry=True)
 
-            if resp.status_code == 422:
-                detail = self._extract_violations(resp)
-                raise VAMValidationError(
-                    f"VAM rejected payload on {method} {path}", violations=detail
-                )
+                if resp.status_code == 401:
+                    _cb.record_success()  # 401 isn't an upstream fault — engine responded
+                    raise VAMAuthError("VAM rejected our token even after re-login")
 
-            if not resp.is_success:
-                body_preview = resp.text[:300]
-                logger.warning(
-                    "VAM upstream {} on {} {}: {}",
-                    resp.status_code,
-                    method,
-                    path,
-                    body_preview,
-                )
-                raise VAMUpstreamError(
-                    f"VAM {resp.status_code} on {method} {path}: {body_preview}",
-                    status_code=resp.status_code,
-                )
+                if resp.status_code == 422:
+                    _cb.record_success()  # 422 = valid engine response, just bad input
+                    detail = self._extract_violations(resp)
+                    raise VAMValidationError(
+                        f"VAM rejected payload on {method} {path}", violations=detail
+                    )
 
-            return resp.json()
+                if not resp.is_success:
+                    body_preview = resp.text[:300]
+                    logger.warning(
+                        "VAM upstream {} on {} {} (attempt {}/{}): {}",
+                        resp.status_code, method, path,
+                        attempt + 1, self._MAX_ATTEMPTS, body_preview,
+                    )
+                    _cb.record_failure()
+                    last_exc = VAMUpstreamError(
+                        f"VAM {resp.status_code} on {method} {path}: {body_preview}",
+                        status_code=resp.status_code,
+                    )
+                    if _should_retry(resp.status_code, attempt, self._MAX_ATTEMPTS):
+                        wait = _backoff_seconds(attempt)
+                        logger.info("Retrying VAM call in {:.2f}s", wait)
+                        await asyncio.sleep(wait)
+                        continue
+                    raise last_exc
+
+                _cb.record_success()
+                return resp.json()
+
+        # Should only reach here if the retry loop exhausted without raising.
+        if last_exc:
+            raise last_exc
+        raise VAMUpstreamError("VAM call failed after all retries", status_code=None)
 
     @staticmethod
     def _extract_violations(resp: httpx.Response) -> list[dict]:

@@ -286,6 +286,28 @@ export async function fetchBacktests(status?: string): Promise<BacktestListItem[
   return res.data;
 }
 
+// ── Benchmark comparison (synthetic dummy series) ──────────────
+export type BenchmarkSeriesPoint = { date: string; value: number };
+export type BenchmarkMeta = {
+  symbol: string;
+  display_name: string;
+  color: string;
+  drift_annual_pct: number;
+  vol_annual_pct: number;
+};
+export type BacktestBenchmark = {
+  source: string;
+  from: string | null;
+  to: string | null;
+  series: Record<string, BenchmarkSeriesPoint[]>;
+  meta: BenchmarkMeta[];
+};
+
+export async function fetchBacktestBenchmark(id: string): Promise<BacktestBenchmark> {
+  const r = await api.get<BacktestBenchmark>(`/backtests/${id}/benchmark`);
+  return r.data;
+}
+
 export async function downloadBacktestReport(id: string): Promise<void> {
   // Fetch as blob so the axios auth interceptor (Firebase ID token) is applied.
   // window.open won't send Authorization headers, so a raw redirect would 401.
@@ -504,6 +526,35 @@ export const BACKTEST_STATUSES = [
   "cancelled",
 ] as const;
 export type BacktestStatus = (typeof BACKTEST_STATUSES)[number];
+
+// ── Notifications (client + admin) ─────────────────────────────
+export type NotificationItem = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  is_broadcast: boolean;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type NotificationList = {
+  unread_count: number;
+  items: NotificationItem[];
+};
+
+export async function fetchNotifications(): Promise<NotificationList> {
+  const r = await api.get<NotificationList>("/notifications");
+  return r.data;
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await api.post(`/notifications/${id}/read`);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await api.post("/notifications/mark-all-read");
+}
 
 // ── Impersonation (admin support) ─────────────────────────────
 export type ImpersonateStartResponse = {

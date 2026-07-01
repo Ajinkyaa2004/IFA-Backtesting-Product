@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import client_scope, current_user
 from app.db.models import Backtest, BacktestFile, Client, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
-from app.services import audit, report, storage
+from app.services import audit, benchmark, report, storage
 
 router = APIRouter()
 
@@ -111,6 +111,38 @@ _ENGINE_LABEL = {
     "manual": "Manual JSON upload (v1.0 schema)",
     "vam":    "VAM engine — Insight Fusion Analytics",
 }
+
+
+@router.get("/backtests/{backtest_id}/benchmark")
+def get_backtest_benchmark(
+    backtest_id: uuid.UUID,
+    client_id: uuid.UUID = Depends(client_scope),
+    db: Session = Depends(get_db),
+):
+    """Synthetic benchmark curves aligned to a backtest's date range.
+
+    Frontend overlays these on the equity chart. Section 10 asked for
+    'Real benchmark data (dummy)' — we ship a deterministic-synthetic
+    generator (see services/benchmark.py) so demos look real without
+    external network calls or a yfinance dependency.
+
+    Response shape:
+      { source, from, to, series: {SPY: [...], NIFTY50: [...], BTC-USD: [...]}, meta: [...] }
+    """
+    row = (
+        db.query(Backtest)
+        .filter(Backtest.id == backtest_id, Backtest.client_id == client_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+
+    assumptions = row.assumptions or {}
+    dr = assumptions.get("date_range") or {}
+    from_d = benchmark.parse_date(dr.get("from"))
+    to_d   = benchmark.parse_date(dr.get("to"))
+
+    return benchmark.build_benchmark_series(from_d, to_d)
 
 
 @router.get("/backtests/{backtest_id}/report.pdf")

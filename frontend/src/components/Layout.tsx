@@ -3,7 +3,6 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
   BarChart3,
-  Bell,
   ChevronDown,
   FileText,
   LayoutDashboard,
@@ -19,6 +18,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { useSidebarOverride } from "../store/sidebarOverride";
 import ImpersonationBanner from "./ImpersonationBanner";
+import NotificationBell from "./NotificationBell";
 
 const NAV_CLIENT = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
@@ -187,9 +187,7 @@ export default function Layout() {
               >
                 {dark ? <Sun size={15} /> : <Moon size={15} />}
               </button>
-              <button className="relative size-9 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center">
-                <Bell size={15} />
-              </button>
+              <NotificationBell />
 
               <div className="relative">
                 <button
