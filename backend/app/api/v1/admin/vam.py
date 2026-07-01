@@ -133,6 +133,34 @@ async def vam_profile(_admin: User = Depends(require_role("main_admin", "sub_adm
         raise _translate_vam_error(e) from e
 
 
+@router.get("/health")
+async def vam_health(_admin: User = Depends(require_role("main_admin", "sub_admin"))):
+    """Non-throwing health check used by the AdminPulsePage health card.
+
+    Never raises — always returns a structured status so the frontend can
+    render a green/red pill + last-error message without try/catch juggling.
+    Measures round-trip latency to /api/auth/profile as the canary call.
+    """
+    import time
+    started = time.time()
+    try:
+        await get_vam_client().get_profile()
+        return {
+            "ok": True,
+            "latency_ms": round((time.time() - started) * 1000, 1),
+            "error": None,
+            "checked_at": time.time(),
+        }
+    except Exception as e:
+        # Reason string, not full traceback — the frontend renders it inline.
+        return {
+            "ok": False,
+            "latency_ms": round((time.time() - started) * 1000, 1),
+            "error": str(e)[:200],
+            "checked_at": time.time(),
+        }
+
+
 # ── The workflow endpoint ──────────────────────────────────────────────────
 
 

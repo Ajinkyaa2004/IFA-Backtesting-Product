@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { BadgeCheck, ChevronDown, ChevronRight, Download, FileText, History, RefreshCw, Upload, UploadCloud } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import { extractTierGate, fetchStrategies, finalizeStrategyUpload, getOwnStrategyDownloadUrl, initStrategyUpload, type Strategy } from "../../lib/api";
+import { toast } from "../../store/toast";
 import { usePolling } from "../../lib/usePolling";
 
 async function sha256(file: File): Promise<string> {
@@ -211,7 +212,7 @@ function StrategyDownloadButton({ strategy }: { strategy: Strategy }) {
       const url = await getOwnStrategyDownloadUrl(strategy.id);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Download failed");
+      toast.error("Download failed", e?.response?.data?.detail ?? "Could not open the strategy document.");
     } finally {
       setBusy(false);
     }

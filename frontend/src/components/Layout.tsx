@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
+import { initialDarkMode, setDarkMode } from "../lib/darkMode";
 import { useAuth } from "../store/auth";
 import { useSidebarOverride } from "../store/sidebarOverride";
 import ImpersonationBanner from "./ImpersonationBanner";
@@ -32,7 +33,7 @@ export default function Layout() {
   const me = useAuth((s) => s.me);
   const setMe = useAuth((s) => s.setMe);
   const navigate = useNavigate();
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<boolean>(() => initialDarkMode());
   const [avatarOpen, setAvatarOpen] = useState(false);
 
   // Sidebar override is set by pages that want to commandeer the left rail
@@ -45,8 +46,9 @@ export default function Layout() {
   const inOverrideMode = sidebarOverride !== null && showOverride;
 
   const toggleDark = () => {
-    setDark(!dark);
-    document.documentElement.classList.toggle("dark", !dark);
+    const next = !dark;
+    setDark(next);
+    setDarkMode(next);
   };
 
   const logout = async () => {

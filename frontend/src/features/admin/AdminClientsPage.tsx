@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, UserRound, X } from "lucide-react";
+import { Activity, BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, UserRound, X } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import {
+  type ActivityEvent,
   type AdminBacktestSummary,
   type AdminClient,
   type AdminStrategy,
@@ -14,6 +15,7 @@ import {
   deleteAdminClient,
   downloadAdminCsv,
   fetchAdminClients,
+  fetchClientActivity,
   fetchClientBacktests,
   fetchClientRequests,
   fetchClientStrategies,
@@ -21,6 +23,7 @@ import {
   startImpersonation,
   updateAdminClient,
 } from "../../lib/api";
+import { toast } from "../../store/toast";
 import { usePolling } from "../../lib/usePolling";
 import { useImpersonate } from "../../store/impersonate";
 
@@ -119,9 +122,11 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
   const [strategies, setStrategies] = useState<AdminStrategy[]>([]);
   const [requests, setRequests] = useState<ClientRequest[]>([]);
   const [backtests, setBacktests] = useState<AdminBacktestSummary[]>([]);
+  const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [stratsLoading, setStratsLoading] = useState(true);
   const [reqsLoading, setReqsLoading] = useState(true);
   const [btsLoading, setBtsLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [statusPending, setStatusPending] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -145,6 +150,11 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
       .then(setRequests)
       .catch(() => setRequests([]))
       .finally(() => setReqsLoading(false));
+    setActivityLoading(true);
+    fetchClientActivity(client.id, 40)
+      .then(setActivity)
+      .catch(() => setActivity([]))
+      .finally(() => setActivityLoading(false));
     loadBacktests();
   }, [client.id, loadBacktests]);
 
@@ -200,7 +210,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
       const url = await getStrategyDownloadUrl(s.id);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Failed to generate download link");
+      toast.error("Download URL failed", e?.response?.data?.detail ?? "Could not generate a signed URL.");
     } finally {
       setDownloading(null);
     }
@@ -404,6 +414,36 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
               <div className="mt-2 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg px-2 py-1">
                 {statusError}
               </div>
+            )}
+          </div>
+
+          {/* Activity timeline — chronological event stream so support can see
+              exactly what this client + admin have done, sourced from audit_log */}
+          <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
+            <div className="text-xs font-medium text-ink-600 dark:text-ink-300 mb-2 flex items-center gap-1.5">
+              <Activity size={12}/> Activity timeline
+            </div>
+            {activityLoading ? (
+              <div className="text-xs text-ink-500">Loading…</div>
+            ) : activity.length === 0 ? (
+              <div className="text-xs text-ink-500 italic">No recorded activity yet.</div>
+            ) : (
+              <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                {activity.map((e) => (
+                  <li key={e.id} className="text-[11px] flex items-start gap-2">
+                    <span className="mt-1 size-1.5 rounded-full bg-accent-500 shrink-0"/>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-ink-700 dark:text-ink-200 truncate">{e.title}</div>
+                      {e.subtitle && (
+                        <div className="text-ink-500 dark:text-ink-400 truncate">{e.subtitle}</div>
+                      )}
+                      <div className="text-ink-400 dark:text-ink-500 tabular">
+                        {new Date(e.occurred_at).toLocaleString()} · {e.actor_email ?? "system"}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 

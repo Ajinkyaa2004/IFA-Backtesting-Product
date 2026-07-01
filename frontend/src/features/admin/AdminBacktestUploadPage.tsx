@@ -18,6 +18,7 @@ import {
 } from "../../lib/api";
 import { VamParamForm } from "../vam/VamParamForm";
 import { VAM_STEP_OPTIONS, defaultsFromSchema } from "../vam/vamParams";
+import { toast } from "../../store/toast";
 
 type SourceMode = "json" | "vam";
 
@@ -304,8 +305,8 @@ export default function AdminBacktestUploadPage() {
       }
 
       onJsonChange(JSON.stringify(tpl, null, 2));
-    } catch (e) {
-      alert("Could not load example template");
+    } catch {
+      toast.error("Template unavailable", "Could not load the v1.0 example template. Try again in a moment.");
     } finally {
       setLoadingTemplate(false);
     }

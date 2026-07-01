@@ -4,7 +4,6 @@ import { signOut } from "firebase/auth";
 import {
   Activity,
   BarChart3,
-  Bell,
   ChevronDown,
   FileText,
   Inbox,
@@ -18,9 +17,11 @@ import {
 } from "lucide-react";
 import { auth } from "../lib/firebase";
 import { api, fetchAdminInbox, type AdminInbox } from "../lib/api";
+import { initialDarkMode, setDarkMode } from "../lib/darkMode";
 import { useAuth } from "../store/auth";
 import { useImpersonate } from "../store/impersonate";
 import ImpersonationBanner from "./ImpersonationBanner";
+import NotificationBell from "./NotificationBell";
 
 const NAV_ADMIN = [
   { to: "/admin", label: "Pulse", icon: Activity, end: true },
@@ -35,7 +36,7 @@ export default function AdminLayout() {
   const me = useAuth((s) => s.me);
   const setMe = useAuth((s) => s.setMe);
   const navigate = useNavigate();
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<boolean>(() => initialDarkMode());
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [inbox, setInbox] = useState<AdminInbox | null>(null);
@@ -52,8 +53,9 @@ export default function AdminLayout() {
   }, []);
 
   const toggleDark = () => {
-    setDark(!dark);
-    document.documentElement.classList.toggle("dark", !dark);
+    const next = !dark;
+    setDark(next);
+    setDarkMode(next);
   };
 
   const logout = async () => {
@@ -144,13 +146,18 @@ export default function AdminLayout() {
               >
                 {dark ? <Sun size={15} /> : <Moon size={15} />}
               </button>
+              {/* System notifications (broadcasts + personal) — mirrors the
+                  bell on the client side. Distinct from the InboxBell below
+                  which shows client-work waiting on the admin. */}
+              <NotificationBell />
               <div className="relative">
                 <button
                   onClick={() => setBellOpen(!bellOpen)}
                   className="relative size-9 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
                   aria-label={`${unread} items need attention`}
+                  title="Client work waiting on you"
                 >
-                  <Bell size={15} />
+                  <Inbox size={15} />
                   {unread > 0 && (
                     <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-accent-600 text-white text-[9px] font-semibold flex items-center justify-center ring-2 ring-white dark:ring-ink-900 tabular">
                       {unread > 99 ? "99+" : unread}

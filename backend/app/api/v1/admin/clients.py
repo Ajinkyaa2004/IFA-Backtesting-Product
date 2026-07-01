@@ -91,6 +91,110 @@ def _client_out(c: Client) -> ClientOut:
     )
 
 
+class ActivityEvent(BaseModel):
+    id: str
+    kind: str            # 'strategy_upload' | 'strategy_finalize' | 'request' | 'backtest_status' | 'terms_accept' | 'other'
+    title: str
+    subtitle: str | None = None
+    actor_email: str | None = None
+    occurred_at: datetime
+
+
+@router.get("/clients/{client_id}/activity", response_model=list[ActivityEvent])
+def client_activity_timeline(
+    client_id: uuid.UUID,
+    limit: int = 50,
+    _admin=Depends(require_role("main_admin", "sub_admin")),
+    db: Session = Depends(get_db),
+):
+    """Chronological event stream for one client — merges audit log rows
+    whose target belongs to this client with recent backtest state
+    changes. Powers the admin drawer's Activity tab so support can see
+    exactly what's happened in the last N days without pivoting through
+    the global audit filter.
+    """
+    # Import inside to avoid circular deps between clients module + audit model
+    from app.db.models import AuditLog, Backtest as BT, StrategyDocument as SD, User as U, Request as Req
+
+    events: list[ActivityEvent] = []
+
+    # Audit rows that mention this client — either as target_id (direct) or
+    # via a strategy / request / backtest whose client_id matches.
+    # For MVP simplicity we pull audit rows and filter by joining target
+    # against the client's owned rows in Python — the row counts are small.
+    strategy_ids = {r.id for r in db.query(SD.id).filter(SD.client_id == client_id).all()}
+    backtest_ids = {r.id for r in db.query(BT.id).filter(BT.client_id == client_id).all()}
+    request_ids = {r.id for r in db.query(Req.id).filter(Req.client_id == client_id).all()}
+
+    audit_rows = (
+        db.query(AuditLog, U.email)
+        .outerjoin(U, U.id == AuditLog.actor_user_id)
+        .filter(
+            (AuditLog.target_id == client_id)
+            | (AuditLog.target_id.in_(strategy_ids) if strategy_ids else False)
+            | (AuditLog.target_id.in_(backtest_ids) if backtest_ids else False)
+            | (AuditLog.target_id.in_(request_ids) if request_ids else False)
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    for a, email in audit_rows:
+        kind = _classify_audit_action(a.action)
+        title, subtitle = _describe_audit_row(a)
+        events.append(
+            ActivityEvent(
+                id=f"a-{a.id}",
+                kind=kind,
+                title=title,
+                subtitle=subtitle,
+                actor_email=email,
+                occurred_at=a.created_at,
+            )
+        )
+
+    events.sort(key=lambda e: e.occurred_at, reverse=True)
+    return events[:limit]
+
+
+def _classify_audit_action(action: str) -> str:
+    if action.startswith("strategy."):
+        return "strategy_upload"
+    if action.startswith("backtest."):
+        return "backtest_status"
+    if action.startswith("tnc.") or action.startswith("terms."):
+        return "terms_accept"
+    if action.startswith("request."):
+        return "request"
+    if action.startswith("admin.impersonate"):
+        return "impersonate"
+    if action.startswith("client."):
+        return "client_update"
+    return "other"
+
+
+def _describe_audit_row(a) -> tuple[str, str | None]:
+    """Human labels for the timeline. Falls back to the raw action string."""
+    action = a.action
+    p = a.payload or {}
+    if action == "strategy.upload.init":
+        return (f"Started upload · {p.get('name', 'strategy')}", f"v{p.get('version', '?')} · {p.get('size', '?')} bytes")
+    if action == "strategy.upload.finalize":
+        return (f"Finalised strategy · {p.get('name', 'strategy')}", f"v{p.get('version', '?')} · checksum {p.get('checksum', '')[:12]}")
+    if action == "backtest.status.change":
+        return (f"Backtest {p.get('code', '')} · {p.get('from', '?')} → {p.get('to', '?')}", p.get('note'))
+    if action == "backtest.result.upload":
+        return (f"Uploaded backtest result · {p.get('code', '?')}", p.get('name'))
+    if action == "backtest.report.export":
+        return (f"Exported PDF report · {p.get('code', '?')}", f"{p.get('size_bytes', '?')} bytes")
+    if action.startswith("admin.impersonate"):
+        return (f"Impersonation · {action.split('.')[-1]}", None)
+    if action == "client.update":
+        return ("Admin edited client", ", ".join(f"{k}={v}" for k, v in p.items()))
+    return (action, None)
+
+
 @router.get("/clients", response_model=list[ClientOut])
 def list_clients(
     include_deleted: bool = False,

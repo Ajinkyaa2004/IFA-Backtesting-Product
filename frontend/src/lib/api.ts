@@ -576,6 +576,20 @@ export async function fetchClientBacktests(clientId: string): Promise<AdminBackt
   return r.data;
 }
 
+export type ActivityEvent = {
+  id: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  actor_email: string | null;
+  occurred_at: string;
+};
+
+export async function fetchClientActivity(clientId: string, limit = 50): Promise<ActivityEvent[]> {
+  const r = await api.get<ActivityEvent[]>(`/admin/clients/${clientId}/activity`, { params: { limit } });
+  return r.data;
+}
+
 export const BACKTEST_STATUSES = [
   "draft",
   "quote_requested",
@@ -800,6 +814,18 @@ export async function fetchVamSchemaAsAdmin(stepId: string): Promise<VamStepSche
 
 export async function fetchVamSymbolsAsAdmin(): Promise<VamSymbol[]> {
   const r = await api.get<VamSymbol[]>(`/admin/vam/symbols`);
+  return r.data;
+}
+
+export type VamHealth = {
+  ok: boolean;
+  latency_ms: number;
+  error: string | null;
+  checked_at: number;
+};
+
+export async function fetchVamHealth(): Promise<VamHealth> {
+  const r = await api.get<VamHealth>("/admin/vam/health");
   return r.data;
 }
 
