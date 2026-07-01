@@ -1,11 +1,12 @@
+import uuid
 from collections.abc import Generator
 from datetime import datetime, timezone
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.security import TokenError, verify_id_token
-from app.db.models import User
+from app.db.models import Client, User
 from app.db.session import get_db
 
 
@@ -73,7 +74,53 @@ def require_role(*roles: str):
     return _check
 
 
-def client_scope(user: User = Depends(current_user)):
+def client_scope(
+    request: Request,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+    x_impersonate_client_id: str | None = Header(default=None, alias="X-Impersonate-Client-Id"),
+) -> uuid.UUID:
+    """Resolve the client_id whose data the caller may access.
+
+    Normal flow: the caller is a client, return their client_id.
+
+    Impersonation flow (for admin support access, Day 4 of Phase 4.5):
+      * When an admin sets the X-Impersonate-Client-Id header, they read
+        that client's data instead of their own (admins have no client_id).
+      * Impersonation is READ-ONLY: any non-GET request is rejected 403.
+        Writes must be made from the admin's own session at /admin/*, not
+        by pretending to be the client.
+      * The target client must exist and not be soft-deleted.
+      * Non-admin callers cannot impersonate — the header is ignored (well,
+        rejected 403) if the caller isn't a main_admin or sub_admin.
+    """
+    if x_impersonate_client_id:
+        if user.role not in ("main_admin", "sub_admin"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can impersonate a client",
+            )
+        if request.method != "GET":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Impersonation is read-only. Exit impersonation to make changes on behalf of a client.",
+            )
+        try:
+            target_id = uuid.UUID(x_impersonate_client_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid impersonation client_id") from e
+        client = (
+            db.query(Client)
+            .filter(Client.id == target_id, Client.deleted_at.is_(None))
+            .first()
+        )
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Impersonation target client not found",
+            )
+        return target_id
+
     if user.role != "client" or user.client_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client-only endpoint")
     return user.client_id

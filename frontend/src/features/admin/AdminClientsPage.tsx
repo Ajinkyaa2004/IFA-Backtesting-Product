@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { BadgeCheck, Download, FileText, LineChart, MessageSquare, Plus, RefreshCw, Trash2, UserRound, X } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
 import {
   type AdminBacktestSummary,
@@ -16,9 +17,11 @@ import {
   fetchClientRequests,
   fetchClientStrategies,
   getStrategyDownloadUrl,
+  startImpersonation,
   updateAdminClient,
 } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
+import { useImpersonate } from "../../store/impersonate";
 
 export default function AdminClientsPage() {
   const [selected, setSelected] = useState<AdminClient | null>(null);
@@ -366,6 +369,8 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
             )}
           </div>
 
+          <ImpersonateCta client={client} onDone={onClose} />
+
           <div className="pt-4 border-t border-ink-100 dark:border-ink-800 flex items-center justify-between">
             <Button variant="danger" icon={<Trash2 size={14}/>} onClick={remove}>Soft delete</Button>
             <div className="flex items-center gap-3">
@@ -374,6 +379,67 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ImpersonateCta({ client, onDone }: { client: AdminClient; onDone: () => void }) {
+  const start = useImpersonate((s) => s.start);
+  const active = useImpersonate((s) => s.active);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const nav = useNavigate();
+
+  const impersonate = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const resp = await startImpersonation(client.id);
+      start({
+        clientId: resp.client_id,
+        clientName: resp.client_name,
+        tier: resp.tier,
+        startedAt: resp.started_at,
+      });
+      onDone();
+      // Land on the client dashboard so the admin sees exactly what the
+      // client sees. Red banner at the top prevents any confusion.
+      nav("/");
+    } catch (e: any) {
+      setErr(e?.response?.data?.detail ?? "Impersonation failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isThisClient = active?.clientId === client.id;
+  return (
+    <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
+      <div className="text-xs font-medium text-ink-600 dark:text-ink-300 mb-2">Support tools</div>
+      <div className="p-2.5 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50/40 dark:bg-red-500/5">
+        <div className="flex items-start gap-2.5">
+          <span className="size-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+            <UserRound size={14}/>
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-ink-900 dark:text-ink-50">
+              View as {client.name}
+            </div>
+            <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
+              Loads their dashboard so you can reproduce what they're seeing.
+              Read-only — every write is blocked. Audit-logged.
+            </div>
+          </div>
+          <button
+            onClick={impersonate}
+            disabled={busy || isThisClient}
+            className="shrink-0 h-7 px-3 rounded-md bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold"
+          >
+            {busy ? "Starting…" : isThisClient ? "Active" : "Impersonate"}
+          </button>
+        </div>
+        {err && <div className="mt-2 text-[11px] text-red-700 dark:text-red-300">{err}</div>}
       </div>
     </div>
   );

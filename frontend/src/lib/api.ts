@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from "axios";
 import { signOut } from "firebase/auth";
 import { auth } from "./firebase";
+import { currentImpersonatedClientId } from "../store/impersonate";
 
 // ── Base URL resolution ────────────────────────────────────────────────────
 // In dev (Vite serves with import.meta.env.DEV === true) we fall back to
@@ -30,6 +31,14 @@ api.interceptors.request.use(async (config) => {
     const token = await user.getIdToken();
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Impersonation header — set only when the admin has an active session.
+  // Backend client_scope reads this and returns the impersonated client's
+  // data (for GET) or 403 (for non-GET). See store/impersonate.ts.
+  const impersonatedClientId = currentImpersonatedClientId();
+  if (impersonatedClientId) {
+    config.headers = config.headers ?? {};
+    (config.headers as Record<string, string>)["X-Impersonate-Client-Id"] = impersonatedClientId;
   }
   return config;
 });
@@ -488,6 +497,23 @@ export const BACKTEST_STATUSES = [
   "cancelled",
 ] as const;
 export type BacktestStatus = (typeof BACKTEST_STATUSES)[number];
+
+// ── Impersonation (admin support) ─────────────────────────────
+export type ImpersonateStartResponse = {
+  client_id: string;
+  client_name: string;
+  tier: string;
+  started_at: string;
+};
+
+export async function startImpersonation(clientId: string): Promise<ImpersonateStartResponse> {
+  const r = await api.post<ImpersonateStartResponse>(`/admin/impersonate/${clientId}`);
+  return r.data;
+}
+
+export async function exitImpersonation(clientId: string): Promise<void> {
+  await api.post(`/admin/impersonate/${clientId}/exit`);
+}
 
 export async function changeBacktestStatus(
   backtestId: string,

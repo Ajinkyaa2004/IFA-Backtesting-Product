@@ -19,6 +19,8 @@ import {
 import { auth } from "../lib/firebase";
 import { api, fetchAdminInbox, type AdminInbox } from "../lib/api";
 import { useAuth } from "../store/auth";
+import { useImpersonate } from "../store/impersonate";
+import ImpersonationBanner from "./ImpersonationBanner";
 
 const NAV_ADMIN = [
   { to: "/admin", label: "Pulse", icon: Activity, end: true },
@@ -55,6 +57,10 @@ export default function AdminLayout() {
   };
 
   const logout = async () => {
+    // Impersonation must not survive across sign-outs. Clear the client-side
+    // state first — if the admin logs in as a different user next, they'd
+    // otherwise inherit the stale impersonation header.
+    useImpersonate.getState().stop();
     // Revoke refresh token server-side first (sweep #18) so any captured ID
     // token can't outlive the click.
     try { await api.post("/auth/logout"); } catch { /* best-effort */ }
@@ -66,7 +72,9 @@ export default function AdminLayout() {
   const unread = inbox?.total ?? 0;
 
   return (
-    <div className="min-h-screen flex bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
+    <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
+      <ImpersonationBanner />
+      <div className="flex-1 flex min-h-0">
       <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
         {/* admin accent bar */}
         <div className="h-1.5 bg-accent-600" />
@@ -242,6 +250,7 @@ export default function AdminLayout() {
         <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
           <Outlet />
         </main>
+      </div>
       </div>
     </div>
   );

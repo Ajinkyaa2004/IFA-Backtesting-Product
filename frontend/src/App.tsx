@@ -21,6 +21,7 @@ import AdminTermsPage from "./features/admin/AdminTermsPage";
 import { auth } from "./lib/firebase";
 import { classifyAuthGateError, fetchMe } from "./lib/api";
 import { useAuth } from "./store/auth";
+import { useImpersonate } from "./store/impersonate";
 
 function Protected({
   children,
@@ -36,17 +37,12 @@ function Protected({
   const me = useAuth((s) => s.me);
   const loading = useAuth((s) => s.loading);
   const authError = useAuth((s) => s.authError);
+  const impersonating = useImpersonate((s) => s.active);
   if (loading) return <div className="p-6 text-sm text-ink-500">Loading…</div>;
 
-  // Distinguish failure modes from "no session" so the user sees the actual
-  // problem instead of being bounced to /login on every kind of error.
-  // See sweep finding #3.
   if (authError && authError !== "unauthenticated") {
     return <AuthErrorScreen reason={authError} />;
   }
-
-  // Send unauthenticated users to the appropriate login page based on which area
-  // they tried to enter. /admin/* → /admin/login. Everything else → /login.
   if (!me) {
     const loginTarget = requireAdmin ? "/admin/login" : "/login";
     return <Navigate to={loginTarget} replace />;
@@ -54,7 +50,13 @@ function Protected({
 
   const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
-  if (requireClient && isAdmin) return <Navigate to="/admin" replace />;
+  // Admins with an active impersonation session are allowed into the client
+  // area — that's the whole point of impersonation. The red banner stays
+  // sticky so it's impossible to forget you're not seeing your own data.
+  if (requireClient && isAdmin && !impersonating) return <Navigate to="/admin" replace />;
+  // T&C check only applies to real clients — impersonating admins skip this
+  // (client's own acceptance state is what matters and admins can't accept
+  // T&C on behalf of a client anyway).
   if (requireTncDone && me.role === "client" && me.needs_tnc_acceptance)
     return <Navigate to="/terms" replace />;
   return <>{children}</>;
