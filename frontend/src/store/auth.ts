@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { installAuthFailureHandler, type AuthGateReason, type Me } from "../lib/api";
+import { setSentryUser } from "../lib/sentry";
 
 type AuthState = {
   me: Me | null;
@@ -24,7 +25,12 @@ export const useAuth = create<AuthState>((set) => ({
   me: null,
   loading: true,
   authError: null,
-  setMe: (me) => set({ me, authError: null }),  // landing me clears any pending error
+  setMe: (me) => {
+    // Tag every Sentry error with the current user id + role. No email, no
+    // client name — see setSentryUser() rationale in lib/sentry.ts.
+    setSentryUser(me ? { id: me.id, role: me.role } : null);
+    set({ me, authError: null });  // landing me clears any pending error
+  },
   setLoading: (loading) => set({ loading }),
   setAuthError: (authError) => set({ authError }),
 }));
@@ -34,5 +40,6 @@ export const useAuth = create<AuthState>((set) => ({
 // because the store imports types from api.ts). The store calls back into
 // api.ts to install itself.
 installAuthFailureHandler(() => {
+  setSentryUser(null);
   useAuth.setState({ me: null, authError: "unauthenticated", loading: false });
 });

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, BarChart3, CheckCircle2, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
 import { fetchBacktests, fetchRequests, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
+import TierCard, { ComingSoonTile } from "./TierCard";
 
 const POLL_INTERVAL_MS = 20_000;
 // Per-browser first-visit flag. Cheap, no backend migration. If a client uses
@@ -134,6 +135,31 @@ export default function OverviewPage() {
         <StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" />
         <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
         <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
+      </div>
+
+      {me?.client?.tier && <TierCard tier={me.client.tier} />}
+
+      {/* Section 10 mocked items — visible placeholders so clients see the
+          roadmap. Turns real once Anmol's decisions from A + C land. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <ComingSoonTile
+          icon={<Bot size={16}/>}
+          title="AI Analyst"
+          subtitle="Ask questions about your backtest in plain English."
+          badge="Growth"
+        />
+        <ComingSoonTile
+          icon={<Calculator size={16}/>}
+          title="Parameter optimiser"
+          subtitle="Automated grid + walk-forward on your strategy."
+          badge="Enterprise"
+        />
+        <ComingSoonTile
+          icon={<CreditCard size={16}/>}
+          title="Auto-billing"
+          subtitle="Manage plan, invoices, and payment methods."
+          badge="Soon"
+        />
       </div>
 
       <Card>

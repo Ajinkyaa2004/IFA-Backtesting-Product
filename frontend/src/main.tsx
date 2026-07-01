@@ -1,8 +1,13 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { initSentry } from "./lib/sentry";
 
 // StrictMode disabled: double-running effects races with Firebase auth restoration on full page reload.
 initSentry();
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+);

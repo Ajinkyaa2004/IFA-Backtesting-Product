@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { BadgeCheck, ChevronDown, ChevronRight, FileText, History, RefreshCw, Upload, UploadCloud } from "lucide-react";
+import { BadgeCheck, ChevronDown, ChevronRight, Download, FileText, History, RefreshCw, Upload, UploadCloud } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
-import { fetchStrategies, finalizeStrategyUpload, initStrategyUpload, type Strategy } from "../../lib/api";
+import { fetchStrategies, finalizeStrategyUpload, getOwnStrategyDownloadUrl, initStrategyUpload, type Strategy } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
 
 async function sha256(file: File): Promise<string> {
@@ -165,6 +165,7 @@ export default function StrategiesPage() {
                                       <BadgeCheck size={11}/> SoT
                                     </span>
                                   )}
+                                  <StrategyDownloadButton strategy={v} />
                                 </div>
                               </div>
                             ))}
@@ -198,6 +199,33 @@ export default function StrategiesPage() {
 
       <UploadModal open={modal} onClose={() => { setModal(false); refresh(); }} />
     </div>
+  );
+}
+
+function StrategyDownloadButton({ strategy }: { strategy: Strategy }) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    if (strategy.status !== "active") return;
+    setBusy(true);
+    try {
+      const url = await getOwnStrategyDownloadUrl(strategy.id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      alert(e?.response?.data?.detail ?? "Download failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy || strategy.status !== "active"}
+      title={strategy.status === "active" ? "Open in a new tab" : `Cannot download (${strategy.status})`}
+      className="text-accent-700 dark:text-accent-300 hover:underline disabled:opacity-40 disabled:no-underline inline-flex items-center gap-0.5 text-[11px] font-medium"
+    >
+      <Download size={11}/>
+      {busy ? "…" : "Open"}
+    </button>
   );
 }
 

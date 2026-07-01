@@ -34,6 +34,17 @@ if _sentry_dsn:
     logger.info("Sentry initialised (env={})", settings.APP_ENV)
 
 
+def _sentry_tag_user(request: Request):
+    """Middleware helper: after current_user has populated request.state.user,
+    tag the active Sentry scope. No PII beyond id + role.
+    """
+    user = getattr(request.state, "user", None)
+    if user is None or not _sentry_dsn:
+        return
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_user({"id": str(user.id), "segment": user.role})
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     logger.info("Starting {} ({})", settings.APP_NAME, settings.APP_ENV)

@@ -159,6 +159,13 @@ export async function fetchStrategies(): Promise<Strategy[]> {
   return res.data;
 }
 
+export async function getOwnStrategyDownloadUrl(strategyId: string): Promise<string> {
+  const r = await api.get<{ signed_url: string; expires_in: number }>(
+    `/strategies/${strategyId}/download-url`
+  );
+  return r.data.signed_url;
+}
+
 export type StrategyUploadInit = {
   upload_id: string;
   storage_key: string;

@@ -198,6 +198,53 @@ def init_upload(
     )
 
 
+class DownloadUrlOut(BaseModel):
+    signed_url: str
+    expires_in: int
+
+
+@router.get("/strategies/{strategy_id}/download-url", response_model=DownloadUrlOut)
+def get_own_strategy_download_url(
+    strategy_id: uuid.UUID,
+    request: Request,
+    user: User = Depends(current_user),
+    client_id: uuid.UUID = Depends(client_scope),
+    db: Session = Depends(get_db),
+):
+    """Signed download URL for a client's own strategy document.
+
+    Cross-tenant safe: the query filters by client_id from client_scope,
+    so a user can only download rows their client owns. Audit-logged so
+    we track who downloaded what and when — matches the discipline of
+    the admin download endpoint added in Phase 4.
+    """
+    row = (
+        db.query(StrategyDocument)
+        .filter(StrategyDocument.id == strategy_id, StrategyDocument.client_id == client_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+    if row.status != "active":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Strategy is {row.status}, not yet finalised. Cannot download.",
+        )
+    expires_in = 300  # 5 minutes
+    signed_url = storage.signed_download_url(row.storage_key, expires_in=expires_in)
+    audit.record(
+        db,
+        actor_user_id=user.id,
+        action="strategy.download_url",
+        target_type="strategy_document",
+        target_id=row.id,
+        payload={"name": row.name, "version": row.version},
+        ip=request.client.host if request.client else None,
+    )
+    db.commit()
+    return DownloadUrlOut(signed_url=signed_url, expires_in=expires_in)
+
+
 @router.post("/strategies/{upload_id}/finalize", response_model=FinalizeOut)
 def finalize_upload(
     upload_id: uuid.UUID,
