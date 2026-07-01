@@ -1,25 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Check, Download, FileText, Upload } from "lucide-react";
+import { AlertCircle, Check, Cpu, Download, FileText, Play, Upload } from "lucide-react";
 import { Button, Card, SectionTitle } from "../../components/ui";
 import {
   type AdminClient,
   type AdminStrategy,
+  type VamStepSchema,
+  type VamStrategy,
+  type VamSymbol,
   fetchAdminClients,
   fetchBacktestExampleTemplate,
   fetchClientStrategies,
+  fetchVamSchemaAsAdmin,
+  fetchVamStrategiesAsAdmin,
+  fetchVamSymbolsAsAdmin,
+  runVamAsAdmin,
   uploadBacktestResult,
 } from "../../lib/api";
+import { VamParamForm } from "../vam/VamParamForm";
+import { VAM_STEP_OPTIONS, defaultsFromSchema } from "../vam/vamParams";
+
+type SourceMode = "json" | "vam";
 
 export default function AdminBacktestUploadPage() {
   const [clients, setClients] = useState<AdminClient[]>([]);
   const [clientId, setClientId] = useState("");
   const [strategies, setStrategies] = useState<AdminStrategy[]>([]);
   const [strategyId, setStrategyId] = useState<string>(""); // empty = not associated
-  const [json, setJson] = useState("");
   const [violations, setViolations] = useState<{ path: string; message: string }[] | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Which source produces the backtest — either hand-crafted JSON (manual
+  // delivery, works for any strategy shape) or Ravi's VAM engine (works only
+  // for VAM-compatible RSI/VIX strategies). Both modes hit the same client's
+  // Backtests list and audit trail, just different persistence pipelines.
+  const [sourceMode, setSourceMode] = useState<SourceMode>("json");
+
+  // JSON-mode state
+  const [json, setJson] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  // VAM-mode state — lazily populated the first time the user switches to it
+  const [vamStrategies, setVamStrategies] = useState<VamStrategy[] | null>(null);
+  const [vamSymbols, setVamSymbols] = useState<VamSymbol[]>([]);
+  const [vamStep, setVamStep] = useState<string>("step1");
+  const [vamSchema, setVamSchema] = useState<VamStepSchema | null>(null);
+  const [vamParams, setVamParams] = useState<Record<string, unknown>>({});
+  const [vamSchemaLoading, setVamSchemaLoading] = useState(false);
+  const [vamBootError, setVamBootError] = useState<string | null>(null);
 
   // Load clients on mount
   useEffect(() => {
@@ -145,6 +173,105 @@ export default function AdminBacktestUploadPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     onJsonChange(await f.text());
+  };
+
+  // ── VAM mode boot: lazy-load the strategy list + SPY date range the
+  //    first time the admin switches to this tab. Idempotent across
+  //    re-entries since we bail if vamStrategies is already loaded.
+  useEffect(() => {
+    if (sourceMode !== "vam" || vamStrategies !== null) return;
+    (async () => {
+      try {
+        const [vs, syms] = await Promise.all([
+          fetchVamStrategiesAsAdmin(),
+          fetchVamSymbolsAsAdmin().catch(() => [] as VamSymbol[]),
+        ]);
+        setVamStrategies(vs);
+        setVamSymbols(syms);
+        const implemented = vs.filter((s) => s.implemented);
+        if (implemented.length && !implemented.some((s) => s.id === "step1")) {
+          setVamStep(implemented[0].id);
+        }
+      } catch (e) {
+        const msg = extractErrMsg(e);
+        setVamBootError(msg || "Could not reach the VAM engine.");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceMode]);
+
+  // Fetch schema on step change (only while in VAM mode)
+  useEffect(() => {
+    if (sourceMode !== "vam" || !vamStep) return;
+    let cancelled = false;
+    setVamSchemaLoading(true);
+    setVamSchema(null);
+    fetchVamSchemaAsAdmin(vamStep)
+      .then((s) => {
+        if (cancelled) return;
+        setVamSchema(s);
+        setVamParams(defaultsFromSchema(s));
+      })
+      .catch(() => { /* schema errors surface at run-time as violations */ })
+      .finally(() => { if (!cancelled) setVamSchemaLoading(false); });
+    return () => { cancelled = true; };
+  }, [sourceMode, vamStep]);
+
+  // Date-range hints (SPY window) shown inside the param form
+  const vamSpyRange = useMemo(() => {
+    const spy = vamSymbols.find((s) => s.symbol === "SPY");
+    return spy ? { start: spy.start, end: spy.end } : null;
+  }, [vamSymbols]);
+
+  // Switching modes wipes stale feedback so the previous mode's success/
+  // violations don't confuse the next attempt.
+  const switchMode = (m: SourceMode) => {
+    setSourceMode(m);
+    setSuccess(null);
+    setViolations(null);
+  };
+
+  const submitVam = async () => {
+    if (!clientId || !vamStep) return;
+    setSubmitting(true);
+    setViolations(null);
+    setSuccess(null);
+    try {
+      const res = await runVamAsAdmin({
+        client_id: clientId,
+        step: vamStep,
+        params: vamParams,
+        strategy_id: strategyId || null,
+      });
+      const linkedHint = strategyId
+        ? ` (linked to strategy ${strategies.find((s) => s.id === strategyId)?.name ?? "?"})`
+        : "";
+      setSuccess(`Ran ${res.code} (${res.name}) via VAM engine${linkedHint}`);
+    } catch (e: unknown) {
+      // Translate the /admin/vam/run error shapes into the existing
+      // violations UI so the admin sees the same failure card regardless
+      // of source mode. Backend surfaces VAM validation errors as
+      // {error: "VAM rejected the parameters", violations: [...]}.
+      const errObj = e as { response?: { status?: number; data?: { detail?: unknown } } };
+      const status = errObj.response?.status;
+      const detail = errObj.response?.data?.detail;
+      if (typeof detail === "object" && detail !== null && "violations" in detail) {
+        setViolations((detail as { violations: { path: string; message: string }[] }).violations);
+      } else if (status === 503) {
+        setViolations([{ path: "(engine)", message: "VAM engine is offline." }]);
+      } else if (status === 502) {
+        setViolations([{ path: "(engine)", message: "VAM engine returned an error." }]);
+      } else if (status === 429) {
+        setViolations([{ path: "(rate-limit)", message: "Too many runs — wait and retry." }]);
+      } else {
+        const msg = typeof detail === "string"
+          ? detail
+          : (detail as { error?: string })?.error ?? extractErrMsg(e) ?? "Run failed";
+        setViolations([{ path: "(server)", message: msg }]);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const loadTemplate = async () => {
@@ -282,46 +409,158 @@ export default function AdminBacktestUploadPage() {
             </div>
           )}
 
-          {/* 3. JSON payload */}
+          {/* 3. Source-mode toggle */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
-                3. Result JSON (v1.0 schema)
-              </label>
-              <div className="flex items-center gap-3 text-xs">
-                <button
-                  type="button"
-                  onClick={loadTemplate}
-                  disabled={loadingTemplate}
-                  className="text-accent-700 dark:text-accent-300 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
-                >
-                  <Download size={12}/> {loadingTemplate ? "Loading…" : "Load example template"}
-                </button>
-                <label className="text-accent-700 dark:text-accent-300 hover:underline cursor-pointer">
-                  <input type="file" accept=".json,application/json" className="hidden" onChange={onFile} />
-                  Load from file
-                </label>
-              </div>
-            </div>
-            <textarea
-              value={json}
-              onChange={(e) => onJsonChange(e.target.value)}
-              spellCheck={false}
-              className="w-full min-h-[300px] px-3 py-2 text-xs font-mono rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
-              placeholder='{ "schema_version": "1.0", "result_type": "backtest", "backtest_id": "BT-...", "strategy": { ... }, "assumptions": { ... }, "metrics": { ... }, "time_series": { ... }, "trades": [...] }'
-            />
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs text-ink-500">{json.length.toLocaleString()} chars</div>
-              {preview && !preview.ok && (
-                <div className="text-xs text-amber-700 dark:text-amber-400">
-                  Not valid JSON yet — {preview.error.slice(0, 80)}
+            <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
+              3. Source
+            </label>
+            <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => switchMode("json")}
+                className={`text-left p-3 rounded-lg border text-sm transition-colors ${
+                  sourceMode === "json"
+                    ? "border-accent-500 bg-accent-50/40 dark:bg-accent-900/10"
+                    : "border-ink-200 dark:border-ink-700 hover:border-ink-300 dark:hover:border-ink-600"
+                }`}
+                data-testid="source-mode-json"
+              >
+                <div className="flex items-center gap-1.5 font-medium">
+                  <FileText size={13}/> Paste JSON
                 </div>
-              )}
+                <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
+                  Manual delivery — paste or upload the v1.0 result JSON for any strategy shape.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("vam")}
+                className={`text-left p-3 rounded-lg border text-sm transition-colors ${
+                  sourceMode === "vam"
+                    ? "border-accent-500 bg-accent-50/40 dark:bg-accent-900/10"
+                    : "border-ink-200 dark:border-ink-700 hover:border-ink-300 dark:hover:border-ink-600"
+                }`}
+                data-testid="source-mode-vam"
+              >
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Cpu size={13}/> Run via VAM engine
+                </div>
+                <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
+                  Trigger Ravi's engine — only for VAM-compatible RSI/VIX strategies.
+                </div>
+              </button>
             </div>
           </div>
 
-          {/* 4. Live preview — surfaces key fields so admin can sanity-check before upload */}
-          {preview && preview.ok && (
+          {/* 4a. Manual-JSON payload */}
+          {sourceMode === "json" && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
+                  Result JSON (v1.0 schema)
+                </label>
+                <div className="flex items-center gap-3 text-xs">
+                  <button
+                    type="button"
+                    onClick={loadTemplate}
+                    disabled={loadingTemplate}
+                    className="text-accent-700 dark:text-accent-300 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <Download size={12}/> {loadingTemplate ? "Loading…" : "Load example template"}
+                  </button>
+                  <label className="text-accent-700 dark:text-accent-300 hover:underline cursor-pointer">
+                    <input type="file" accept=".json,application/json" className="hidden" onChange={onFile} />
+                    Load from file
+                  </label>
+                </div>
+              </div>
+              <textarea
+                value={json}
+                onChange={(e) => onJsonChange(e.target.value)}
+                spellCheck={false}
+                className="w-full min-h-[300px] px-3 py-2 text-xs font-mono rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+                placeholder='{ "schema_version": "1.0", "result_type": "backtest", "backtest_id": "BT-...", "strategy": { ... }, "assumptions": { ... }, "metrics": { ... }, "time_series": { ... }, "trades": [...] }'
+              />
+              <div className="mt-1 flex items-center justify-between">
+                <div className="text-xs text-ink-500">{json.length.toLocaleString()} chars</div>
+                {preview && !preview.ok && (
+                  <div className="text-xs text-amber-700 dark:text-amber-400">
+                    Not valid JSON yet — {preview.error.slice(0, 80)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 4b. VAM engine mode */}
+          {sourceMode === "vam" && (
+            <div className="space-y-4">
+              {vamBootError ? (
+                <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-sm text-amber-900 dark:text-amber-200">
+                  <div className="font-medium mb-1 inline-flex items-center gap-1.5">
+                    <AlertCircle size={14}/> Engine unreachable
+                  </div>
+                  <div className="text-xs">{vamBootError}</div>
+                </div>
+              ) : vamStrategies === null ? (
+                <div className="text-xs text-ink-500 italic">Loading VAM engine…</div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
+                      Strategy variant
+                    </label>
+                    <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {vamStrategies.filter((s) => s.implemented).map((s) => {
+                        const friendly = VAM_STEP_OPTIONS.find((o) => o.id === s.id);
+                        const label = friendly?.label ?? s.name;
+                        const description = friendly?.description ?? "";
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setVamStep(s.id)}
+                            disabled={submitting}
+                            className={`text-left p-2.5 rounded-md border text-xs transition-colors ${
+                              vamStep === s.id
+                                ? "border-accent-500 bg-accent-50/40 dark:bg-accent-900/10"
+                                : "border-ink-200 dark:border-ink-700 hover:border-ink-300 dark:hover:border-ink-600"
+                            }`}
+                            data-testid={`vam-step-${s.id}`}
+                          >
+                            <div className="font-medium">{label}</div>
+                            <div className="text-[10px] text-ink-500 dark:text-ink-400 mt-0.5">{description}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
+                      Parameters
+                    </label>
+                    <div className="mt-1.5 p-3 rounded-lg border border-ink-100 dark:border-ink-800 bg-ink-50/40 dark:bg-ink-950/40">
+                      {vamSchemaLoading || !vamSchema ? (
+                        <div className="text-xs text-ink-500">Loading parameter schema…</div>
+                      ) : (
+                        <VamParamForm
+                          schema={vamSchema}
+                          value={vamParams}
+                          onChange={setVamParams}
+                          dataRange={vamSpyRange}
+                          disabled={submitting}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* 5. Live preview — surfaces key fields so admin can sanity-check before upload */}
+          {sourceMode === "json" && preview && preview.ok && (
             <Card padding="p-4" className="bg-ink-50/60 dark:bg-ink-950/40 !border-dashed">
               <div className="text-[11px] uppercase tracking-wider text-ink-500 mb-2">Preview</div>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
@@ -348,25 +587,49 @@ export default function AdminBacktestUploadPage() {
             </Card>
           )}
 
-          {/* 5. Submit */}
+          {/* 6. Submit */}
           <div className="flex items-center justify-between pt-2 border-t border-ink-100 dark:border-ink-800">
-            <div className="text-xs text-ink-500">
-              {!clientId
-                ? "Select a client to continue."
-                : !json
-                ? "Paste JSON or load the example template."
-                : preview && !preview.ok
-                ? "Fix JSON syntax before uploading."
-                : "Ready."}
-            </div>
-            <Button
-              variant="accent"
-              icon={<Upload size={15}/>}
-              onClick={submit}
-              disabled={!json || !clientId || submitting || (preview ? !preview.ok : false)}
-            >
-              {submitting ? "Validating + uploading…" : "Validate & upload"}
-            </Button>
+            {sourceMode === "json" ? (
+              <>
+                <div className="text-xs text-ink-500">
+                  {!clientId
+                    ? "Select a client to continue."
+                    : !json
+                    ? "Paste JSON or load the example template."
+                    : preview && !preview.ok
+                    ? "Fix JSON syntax before uploading."
+                    : "Ready."}
+                </div>
+                <Button
+                  variant="accent"
+                  icon={<Upload size={15}/>}
+                  onClick={submit}
+                  disabled={!json || !clientId || submitting || (preview ? !preview.ok : false)}
+                >
+                  {submitting ? "Validating + uploading…" : "Validate & upload"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="text-xs text-ink-500">
+                  {!clientId
+                    ? "Select a client to continue."
+                    : vamBootError
+                    ? "Engine is unreachable — try Paste JSON, or retry later."
+                    : !vamSchema
+                    ? "Waiting on VAM schema…"
+                    : "Ready — engine runs typically take 10–30 seconds."}
+                </div>
+                <Button
+                  variant="accent"
+                  icon={<Play size={15}/>}
+                  onClick={submitVam}
+                  disabled={!clientId || !vamSchema || submitting || !!vamBootError}
+                >
+                  {submitting ? "Engine running…" : "Run backtest"}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </Card>
@@ -424,4 +687,18 @@ function KVrow({ k, v, mono = false, warn = false }: { k: string; v: string; mon
 function pct(v?: number): string {
   if (v === undefined || v === null || Number.isNaN(v)) return "—";
   return `${v > 0 ? "+" : ""}${v.toFixed(2)}%`;
+}
+
+function extractErrMsg(e: unknown): string {
+  if (typeof e === "object" && e !== null && "response" in e) {
+    const ax = e as { response?: { data?: { detail?: unknown } }; message?: string };
+    const d = ax.response?.data?.detail;
+    if (typeof d === "string") return d;
+    if (typeof d === "object" && d !== null && "error" in d) {
+      return String((d as { error: unknown }).error);
+    }
+    if (ax.message) return ax.message;
+  }
+  if (e instanceof Error) return e.message;
+  return "";
 }

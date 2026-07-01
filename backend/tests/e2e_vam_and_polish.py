@@ -472,6 +472,109 @@ def test_login_bad_password_signs_out_firebase(driver, run: TestRun) -> None:
         run.record("bad+good password sequence", False, str(e)[:120])
 
 
+def test_admin_run_via_vam_tab(driver, run: TestRun) -> None:
+    """Admin backtest upload page now has a two-tab source picker:
+    Paste JSON (default) or Run via VAM engine. Verify the toggle works,
+    the VAM tab loads the step picker + param form, and the Run button
+    is enabled once a client + a valid schema are present.
+    We stop short of actually clicking Run because that would trigger a
+    real VAM engine call (10-30s + external dependency). The admin-side
+    end-to-end VAM run is covered by the admin_run_via_vam backend test."""
+    print("\n— Admin: 'Run via VAM engine' tab (Phase 2 admin work) —")
+    try:
+        # Fresh login as admin
+        logout_via_avatar(driver)
+        ok = login(driver, ADMIN_EMAIL, ADMIN_PASSWORD, admin=True)
+        run.record("admin login for VAM tab test", ok)
+        if not ok:
+            shoot(driver, "admin_vam_login_fail")
+            return
+
+        driver.get(f"{FRONTEND}/admin/backtests/upload")
+        WebDriverWait(driver, 10).until(
+            lambda d: "upload backtest result" in body_text(d).lower()
+        )
+
+        # 1. Confirm BOTH source-mode cards are present
+        json_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='source-mode-json']")
+        vam_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='source-mode-vam']")
+        run.record("Paste-JSON source card present", json_btn is not None)
+        run.record("Run-via-VAM source card present", vam_btn is not None)
+
+        # 2. Default mode is JSON — the textarea should be visible
+        run.record("JSON mode active by default (textarea visible)",
+                   len(driver.find_elements(By.TAG_NAME, "textarea")) >= 1)
+
+        # 3. Pick a client (Ravi if present, else the first non-blank option)
+        from selenium.webdriver.support.ui import Select
+        WebDriverWait(driver, 10).until(
+            lambda d: len(d.find_element(By.TAG_NAME, "select").find_elements(By.TAG_NAME, "option")) >= 2
+        )
+        client_select = driver.find_element(By.TAG_NAME, "select")
+        # Prefer Ravi (VAM-enabled) so a real run would work end-to-end
+        opts = client_select.find_elements(By.TAG_NAME, "option")
+        ravi_idx = next((i for i, o in enumerate(opts) if "ravi" in o.text.lower()), None)
+        Select(client_select).select_by_index(ravi_idx if ravi_idx is not None else 1)
+        time.sleep(0.4)
+
+        # 4. Switch to VAM mode
+        vam_btn.click()
+        # 5. Wait for the VAM boot — either the step picker OR an "Engine unreachable" card
+        WebDriverWait(driver, 15).until(
+            lambda d: any(
+                s in body_text(d).lower()
+                for s in ["strategy variant", "engine unreachable", "loading vam engine"]
+            )
+        )
+        body = body_text(driver).lower()
+        if "engine unreachable" in body:
+            # Graceful failure — the tab loaded, the admin sees a clear
+            # message. Still a pass for the UI wiring.
+            run.record("VAM tab shows 'Engine unreachable' banner when engine is down", True)
+            return
+
+        # 6. Engine reachable — verify step picker + params rendered
+        WebDriverWait(driver, 15).until(
+            lambda d: "strategy variant" in body_text(d).lower()
+                       and "parameters" in body_text(d).lower()
+        )
+        run.record("VAM tab shows Strategy variant picker", True)
+        run.record("VAM tab shows Parameters section", True)
+
+        # Confirm at least one step button is present + labelled
+        step_btns = driver.find_elements(By.CSS_SELECTOR, "[data-testid^='vam-step-']")
+        run.record(f">=1 VAM step button rendered ({len(step_btns)})", len(step_btns) >= 1)
+
+        # Confirm a parameter input rendered (schema arrived)
+        # The param form uses <input> and <select> elements — count them.
+        WebDriverWait(driver, 15).until(
+            lambda d: len(d.find_elements(By.CSS_SELECTOR, "input[type='number']")) >= 3
+        )
+        input_count = len(driver.find_elements(By.CSS_SELECTOR, "input[type='number']"))
+        run.record(f"VAM param form rendered with numeric inputs ({input_count})", input_count >= 3)
+
+        # 7. Run button is present, labelled, and enabled
+        run_btn = next(
+            (b for b in driver.find_elements(By.TAG_NAME, "button") if "run backtest" in b.text.lower()),
+            None,
+        )
+        if not run_btn:
+            run.record("'Run backtest' button visible in VAM tab", False, "button not found")
+            return
+        run.record("'Run backtest' button visible in VAM tab", True)
+        run.record("'Run backtest' button enabled (client + schema loaded)", run_btn.is_enabled())
+
+        # 8. Switch back to JSON mode — textarea returns
+        json_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='source-mode-json']")
+        json_btn.click()
+        time.sleep(0.4)
+        run.record("Switching back to JSON mode shows textarea again",
+                   len(driver.find_elements(By.TAG_NAME, "textarea")) >= 1)
+    except Exception as e:
+        shoot(driver, "admin_vam_tab_fail")
+        run.record("Admin VAM tab", False, str(e)[:200])
+
+
 # ── runner ────────────────────────────────────────────────────────────────
 
 
@@ -489,6 +592,7 @@ def main() -> int:
         test_dark_mode_toggle(driver, run)
         test_logout_revokes_session(driver, run)
         test_login_bad_password_signs_out_firebase(driver, run)
+        test_admin_run_via_vam_tab(driver, run)
     finally:
         driver.quit()
 

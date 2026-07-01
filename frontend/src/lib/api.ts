@@ -575,7 +575,25 @@ export async function fetchVamSymbols(): Promise<VamSymbol[]> {
   return r.data;
 }
 
-// ── Admin-only (data info + engine-health probe) ────────────────────────────
+// ── Admin-scoped VAM fetchers ───────────────────────────────────────────────
+// Admins need their own set because the client-scoped routes above are gated
+// by `vam_client_scope`, which 403s any non-client (including admins). These
+// hit the `/admin/vam/*` proxy which is gated by `require_role`.
+
+export async function fetchVamStrategiesAsAdmin(): Promise<VamStrategy[]> {
+  const r = await api.get<VamStrategy[]>(`/admin/vam/strategies`);
+  return r.data;
+}
+
+export async function fetchVamSchemaAsAdmin(stepId: string): Promise<VamStepSchema> {
+  const r = await api.get<VamStepSchema>(`/admin/vam/strategies/${stepId}/schema`);
+  return r.data;
+}
+
+export async function fetchVamSymbolsAsAdmin(): Promise<VamSymbol[]> {
+  const r = await api.get<VamSymbol[]>(`/admin/vam/symbols`);
+  return r.data;
+}
 
 export async function fetchVamDataInfo(): Promise<unknown> {
   const r = await api.get(`/admin/vam/data-info`);
