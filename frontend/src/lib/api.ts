@@ -401,6 +401,7 @@ export type AdminClient = {
   primary_contact: string | null;
   tier: "tier1" | "tier2" | "tier3";
   status: "active" | "suspended";
+  vam_enabled: boolean;
   deleted_at: string | null;
   created_at: string;
 };

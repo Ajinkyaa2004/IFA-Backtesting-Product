@@ -271,9 +271,18 @@ export default function BacktestDetailPage() {
 
           {/* Trades */}
           <Card padding="p-0">
-            <div className="px-5 pt-5 pb-3">
-              <h2 className="text-base font-semibold tracking-tight">Trade log</h2>
-              <p className="text-xs text-ink-500 mt-0.5">{result.trades.length} trades</p>
+            <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold tracking-tight">Trade log</h2>
+                <p className="text-xs text-ink-500 mt-0.5">{result.trades.length} trades</p>
+              </div>
+              <button
+                onClick={() => downloadTradesCsv(bt.code, result.trades)}
+                className="shrink-0 h-8 px-3 rounded-md border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-xs font-medium text-ink-700 dark:text-ink-200 inline-flex items-center gap-1.5"
+                title="Download trades as CSV"
+              >
+                <Download size={12}/> Export CSV
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -325,6 +334,51 @@ export default function BacktestDetailPage() {
       )}
     </div>
   );
+}
+
+// Client-side CSV of the trade log. Uses the existing BacktestResult.trades
+// shape from lib/api.ts. Deliberately unopinionated columns — includes every
+// field the current renderer surfaces plus a few extras (entry/exit price,
+// quantity) that some clients want for their own reconciliation.
+function downloadTradesCsv(btCode: string, trades: BacktestResult["trades"]) {
+  const rows: string[][] = [
+    ["id", "symbol", "side", "entry_date", "entry_price", "exit_date", "exit_price", "quantity", "pnl_net", "pnl_pct"],
+  ];
+  for (const t of trades) {
+    rows.push([
+      String(t.id ?? ""),
+      String(t.symbol ?? ""),
+      String(t.side ?? ""),
+      String(t.entry?.timestamp ?? ""),
+      String((t.entry as { price?: number })?.price ?? ""),
+      String(t.exit?.timestamp ?? ""),
+      String((t.exit as { price?: number })?.price ?? ""),
+      String((t as unknown as { quantity?: number })?.quantity ?? ""),
+      String(t.pnl?.net ?? ""),
+      String(t.pnl?.pct ?? ""),
+    ]);
+  }
+  const csv = rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        })
+        .join(","),
+    )
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${btCode}_trades.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 function ExportReportButton({ backtestId, status }: { backtestId: string; status: string }) {

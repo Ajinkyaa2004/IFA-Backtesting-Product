@@ -105,6 +105,7 @@ export default function AdminClientsPage() {
 function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () => void }) {
   const [tier, setTier] = useState<AdminClient["tier"]>(client.tier);
   const [status, setStatus] = useState<AdminClient["status"]>(client.status);
+  const [vamEnabled, setVamEnabled] = useState<boolean>(client.vam_enabled);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [strategies, setStrategies] = useState<AdminStrategy[]>([]);
@@ -169,7 +170,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
   const save = async () => {
     setSaving(true);
     try {
-      await updateAdminClient(client.id, { tier, status });
+      await updateAdminClient(client.id, { tier, status, vam_enabled: vamEnabled });
       setMsg("Saved");
       setTimeout(onClose, 600);
     } catch (e: any) {
@@ -234,6 +235,35 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
               <option value="active">Active</option>
               <option value="suspended">Suspended</option>
             </select>
+          </div>
+
+          {/* VAM engine access — separate from tier so we can hand Enterprise
+              features to a Starter client for a demo, or hold VAM back for a
+              Growth client whose contract doesn't include it yet. */}
+          <div>
+            <label className="text-xs font-medium text-ink-600 dark:text-ink-300">VAM engine access</label>
+            <div className="mt-1 flex items-center gap-3 p-2.5 rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950">
+              <button
+                type="button"
+                onClick={() => setVamEnabled(!vamEnabled)}
+                className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${
+                  vamEnabled ? "bg-emerald-500" : "bg-ink-300 dark:bg-ink-700"
+                }`}
+                aria-pressed={vamEnabled}
+                aria-label="Toggle VAM engine access"
+              >
+                <span
+                  className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${
+                    vamEnabled ? "left-4" : "left-0.5"
+                  }`}
+                />
+              </button>
+              <div className="text-xs text-ink-500 dark:text-ink-400">
+                {vamEnabled
+                  ? "Client can run VAM backtests directly (subject to tier limits)."
+                  : "Client sees VAM UI hidden. Only tier-based enforcement is skipped."}
+              </div>
+            </div>
           </div>
 
           {/* Requests submitted by this client */}

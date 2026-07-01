@@ -6,12 +6,14 @@ import { auth } from "../../lib/firebase";
 import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
 import { useAuth } from "../../store/auth";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const navigate = useNavigate();
   const setMe = useAuth((s) => s.setMe);
   const setAuthError = useAuth((s) => s.setAuthError);
@@ -120,11 +122,22 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-[11px] text-ink-400 text-center">
+          <div className="mt-4 text-right">
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="text-xs text-accent-700 dark:text-accent-300 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+
+          <p className="mt-4 text-[11px] text-ink-400 text-center">
             Access controlled by main admin. Contact ops if locked out.
           </p>
         </div>
       </div>
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} initialEmail={email} />
     </div>
   );
 }

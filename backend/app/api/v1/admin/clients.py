@@ -53,6 +53,7 @@ class ClientOut(BaseModel):
     primary_contact: str | None
     tier: str
     status: str
+    vam_enabled: bool
     deleted_at: datetime | None
     created_at: datetime
 
@@ -74,6 +75,7 @@ class ClientUpdate(BaseModel):
     primary_contact: str | None = None
     tier: Literal["tier1", "tier2", "tier3"] | None = None
     status: Literal["active", "suspended"] | None = None
+    vam_enabled: bool | None = None
 
 
 def _client_out(c: Client) -> ClientOut:
@@ -83,6 +85,7 @@ def _client_out(c: Client) -> ClientOut:
         primary_contact=c.primary_contact,
         tier=c.tier,
         status=c.status,
+        vam_enabled=bool(c.vam_enabled),
         deleted_at=c.deleted_at,
         created_at=c.created_at,
     )
