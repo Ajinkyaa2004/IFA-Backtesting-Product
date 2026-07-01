@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check, Sparkles, X, Zap } from "lucide-react";
 import { Card, SectionTitle } from "../../components/ui";
 import type { TierFeatureKey, TierUsage } from "../../lib/api";
+import { useContent } from "../../store/content";
 
 /**
  * Tier feature-matrix card. Reflects real usage from /me.client.tier_usage
@@ -20,12 +21,6 @@ const CORE_FEATURES: FeatureRow[] = [
   { key: "custom_strategy_engineering", label: "Custom strategy engineering" },
 ];
 
-const TIER_TAGLINE: Record<string, string> = {
-  tier1: "Perfect for validating one strategy at a time.",
-  tier2: "For teams shipping multiple strategies with self-serve access.",
-  tier3: "For firms who need custom research + SLA-backed delivery.",
-};
-
 const NEXT_TIER: Record<string, { key: string; label: string } | null> = {
   tier1: { key: "tier2", label: "Growth" },
   tier2: { key: "tier3", label: "Enterprise" },
@@ -33,8 +28,11 @@ const NEXT_TIER: Record<string, { key: string; label: string } | null> = {
 };
 
 export default function TierCard({ usage }: { usage: TierUsage }) {
+  const tierContent = useContent((s) => s.content.tier_card);
+  const upgradeLabel = useContent((s) => s.content.tier_card.upgrade_cta_label);
   const featureSet = new Set(usage.features);
   const next = NEXT_TIER[usage.tier] ?? null;
+  const tierCopy = tierContent[usage.tier as "tier1" | "tier2" | "tier3"];
 
   const btPct =
     usage.backtests_per_month == null
@@ -48,7 +46,7 @@ export default function TierCard({ usage }: { usage: TierUsage }) {
   return (
     <Card>
       <SectionTitle
-        sub={TIER_TAGLINE[usage.tier] ?? usage.tier_tagline}
+        sub={tierCopy?.tagline ?? usage.tier_tagline}
         action={
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-[0.14em] text-ink-500 dark:text-ink-400">
@@ -108,7 +106,7 @@ export default function TierCard({ usage }: { usage: TierUsage }) {
             to="/requests"
             className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-accent-700 dark:text-accent-300 hover:underline"
           >
-            Talk to us <ArrowRight size={12} />
+            {upgradeLabel} <ArrowRight size={12} />
           </Link>
         </div>
       )}

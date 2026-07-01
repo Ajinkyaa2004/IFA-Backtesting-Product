@@ -4,6 +4,7 @@ import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditC
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
 import { fetchBacktests, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
+import { useContent } from "../../store/content";
 import OnboardingChecklist from "./OnboardingChecklist";
 import TierCard, { ComingSoonTile } from "./TierCard";
 
@@ -53,6 +54,7 @@ export default function OverviewPage() {
     };
   }, []);
 
+  const content = useContent((s) => s.content);
   const active = backtests.filter((b) => ["in_progress", "approved"].includes(b.status)).length;
   const completed = backtests.filter((b) => b.status === "completed").length;
   const pendingQuote = backtests.filter((b) => ["quote_requested", "quote_sent"].includes(b.status)).length;
@@ -60,7 +62,10 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      {showWelcome && demo && (
+      {content.sections.announcement && content.announcement.visible && (
+        <Announcement announcement={content.announcement} />
+      )}
+      {content.sections.welcome_banner && showWelcome && demo && (
         <Card padding="p-0">
           <div className="px-6 py-4 flex items-start gap-4 bg-accent-50 dark:bg-accent-500/10 border-l-4 border-accent-500 rounded-2xl">
             <span className="mt-0.5 size-8 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0">
@@ -68,19 +73,17 @@ export default function OverviewPage() {
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
-                Welcome to the IFA Backtest Engine
+                {content.welcome.headline}
               </div>
               <p className="mt-0.5 text-xs text-ink-600 dark:text-ink-300">
-                We've preloaded a demo backtest — <span className="font-medium">{demo.name}</span> —
-                so you can explore the full report view. When you're ready, upload your first strategy
-                document or open a new request.
+                {content.welcome.body}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Link to={`/backtests/${demo.id}`}>
-                  <Button variant="accent" icon={<ArrowRight size={14}/>}>Open demo report</Button>
+                  <Button variant="accent" icon={<ArrowRight size={14}/>}>{content.welcome.primary_cta_label}</Button>
                 </Link>
                 <Link to="/strategies">
-                  <Button variant="secondary" icon={<FileText size={14}/>}>Upload strategy</Button>
+                  <Button variant="secondary" icon={<FileText size={14}/>}>{content.welcome.secondary_cta_label}</Button>
                 </Link>
               </div>
             </div>
@@ -137,14 +140,16 @@ export default function OverviewPage() {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" />
-        <StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" />
-        <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
-        <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
-      </div>
+      {content.sections.stat_tiles && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" />
+          <StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" />
+          <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
+          <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
+        </div>
+      )}
 
-      {me && (
+      {content.sections.onboarding_checklist && me && (
         <OnboardingChecklist
           me={me}
           backtests={backtests}
@@ -153,31 +158,35 @@ export default function OverviewPage() {
         />
       )}
 
-      {me?.client?.tier_usage && <TierCard usage={me.client.tier_usage} />}
+      {content.sections.tier_card && me?.client?.tier_usage && <TierCard usage={me.client.tier_usage} />}
 
-      {/* Section 10 mocked items — visible placeholders so clients see the
-          roadmap. Turns real once Anmol's decisions from A + C land. */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <ComingSoonTile
-          icon={<Bot size={16}/>}
-          title="AI Analyst"
-          subtitle="Ask questions about your backtest in plain English."
-          badge="Growth"
-        />
-        <ComingSoonTile
-          icon={<Calculator size={16}/>}
-          title="Parameter optimiser"
-          subtitle="Automated grid + walk-forward on your strategy."
-          badge="Enterprise"
-        />
-        <ComingSoonTile
-          icon={<CreditCard size={16}/>}
-          title="Auto-billing"
-          subtitle="Manage plan, invoices, and payment methods."
-          badge="Soon"
-        />
-      </div>
+      {/* Section 10 mocked items — copy comes from the admin content editor
+          so Anmol can flip 'Growth' → 'Pro' or retitle 'AI Analyst' without
+          a code change. */}
+      {content.sections.placeholder_tiles && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <ComingSoonTile
+            icon={<Bot size={16}/>}
+            title={content.placeholder_tiles.ai.title}
+            subtitle={content.placeholder_tiles.ai.subtitle}
+            badge={content.placeholder_tiles.ai.badge}
+          />
+          <ComingSoonTile
+            icon={<Calculator size={16}/>}
+            title={content.placeholder_tiles.optimiser.title}
+            subtitle={content.placeholder_tiles.optimiser.subtitle}
+            badge={content.placeholder_tiles.optimiser.badge}
+          />
+          <ComingSoonTile
+            icon={<CreditCard size={16}/>}
+            title={content.placeholder_tiles.billing.title}
+            subtitle={content.placeholder_tiles.billing.subtitle}
+            badge={content.placeholder_tiles.billing.badge}
+          />
+        </div>
+      )}
 
+      {content.sections.latest_backtests && (<>
       <Card>
         <SectionTitle
           sub={lastUpdated ? `Most recent first · auto-refreshes every ${POLL_INTERVAL_MS / 1000}s · last updated ${lastUpdated.toLocaleTimeString()}` : "Most recent first"}
@@ -209,10 +218,37 @@ export default function OverviewPage() {
           )}
         </ul>
       </Card>
+      </>)}
     </div>
   );
 }
 
 function MessageIcon() {
   return <BarChart3 size={15} />;
+}
+
+// Site-wide announcement banner — visibility + copy managed from
+// /admin/content. Kinds: info (accent), warning (amber), success (emerald).
+function Announcement({ announcement: a }: { announcement: import("../../lib/contentDefaults").Announcement }) {
+  const styles = {
+    info:    "bg-accent-50 dark:bg-accent-500/10 border-accent-400 text-accent-800 dark:text-accent-200",
+    warning: "bg-amber-50 dark:bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-200",
+    success: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500 text-emerald-800 dark:text-emerald-200",
+  } as const;
+  return (
+    <div className={`rounded-lg border-l-4 px-4 py-3 ${styles[a.kind] ?? styles.info}`}>
+      {a.headline && <div className="text-sm font-semibold">{a.headline}</div>}
+      {a.body && <div className="text-xs mt-1">{a.body}</div>}
+      {a.cta_url && a.cta_label && (
+        <a
+          href={a.cta_url}
+          target={a.cta_url.startsWith("http") ? "_blank" : undefined}
+          rel="noopener noreferrer"
+          className="inline-block mt-2 text-xs font-medium underline"
+        >
+          {a.cta_label} →
+        </a>
+      )}
+    </div>
+  );
 }

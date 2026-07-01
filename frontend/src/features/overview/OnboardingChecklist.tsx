@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check, ChevronDown, ChevronRight, CircleDot, FileText, MessageSquare, PlayCircle, Sparkles, X } from "lucide-react";
 import { Card } from "../../components/ui";
 import type { BacktestListItem, Me } from "../../lib/api";
+import { useContent } from "../../store/content";
 
 /**
  * Getting-started checklist. Rendered on Overview for new clients so they
@@ -32,6 +33,7 @@ export default function OnboardingChecklist({
   strategyCount: number;
   requestCount: number;
 }) {
+  const contentSteps = useContent((s) => s.content.onboarding.steps);
   const [dismissed, setDismissed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(DISMISS_KEY) === "1";
@@ -45,44 +47,34 @@ export default function OnboardingChecklist({
     const backtestDelivered = backtests.some((b) => b.status === "completed");
     const demoOpened = window.localStorage.getItem("ifa.demo_opened") === "1";
 
-    return [
-      {
-        id: "tnc",
-        title: "Accept the Terms & Conditions",
-        hint: tncDone ? "Signed and stored." : "Read + accept the engagement terms so we can start work.",
-        done: tncDone,
-        cta: { label: "Open T&C", to: "/terms", icon: <FileText size={13}/> },
-      },
-      {
-        id: "demo",
-        title: "Explore the demo backtest",
-        hint: "See the exact report format your strategies will land in.",
-        done: demoOpened || backtestDelivered,
-        cta: { label: "Open demo", to: "/backtests", icon: <PlayCircle size={13}/> },
-      },
-      {
-        id: "strategy",
-        title: "Upload your first strategy document",
-        hint: strategyUploaded ? "Nice — locked in as source of truth." : "PDF / DOCX / TXT. Up to 25 MB. Versioned for you.",
-        done: strategyUploaded,
-        cta: { label: "Upload strategy", to: "/strategies", icon: <FileText size={13}/> },
-      },
-      {
-        id: "request",
-        title: "Open your first request",
-        hint: requestSubmitted ? "In our queue — Susmita will reach out." : "New strategy / change request / RFQ / clarification — any of the four.",
-        done: requestSubmitted,
-        cta: { label: "New request", to: "/requests", icon: <MessageSquare size={13}/> },
-      },
-      {
-        id: "backtest",
-        title: "Review your first delivered backtest",
-        hint: backtestDelivered ? "Read the metrics, export the PDF." : "We'll email you when it's ready. Turnaround is per your plan's SLA.",
-        done: backtestDelivered,
-        cta: { label: "See backtests", to: "/backtests", icon: <PlayCircle size={13}/> },
-      },
-    ];
-  }, [me.needs_tnc_acceptance, strategyCount, requestCount, backtests]);
+    // Copy comes from the admin content editor (titles + hints); step IDs
+    // still drive the completion logic + CTA routing.
+    const doneMap: Record<string, boolean> = {
+      tnc: tncDone,
+      demo: demoOpened || backtestDelivered,
+      strategy: strategyUploaded,
+      request: requestSubmitted,
+      backtest: backtestDelivered,
+    };
+    const ctaMap: Record<string, Step["cta"]> = {
+      tnc:      { label: "Open T&C",       to: "/terms",      icon: <FileText size={13}/> },
+      demo:     { label: "Open demo",      to: "/backtests",  icon: <PlayCircle size={13}/> },
+      strategy: { label: "Upload strategy",to: "/strategies", icon: <FileText size={13}/> },
+      request:  { label: "New request",    to: "/requests",   icon: <MessageSquare size={13}/> },
+      backtest: { label: "See backtests",  to: "/backtests",  icon: <PlayCircle size={13}/> },
+    };
+
+    return contentSteps.map((cs) => {
+      const isDone = doneMap[cs.key] ?? false;
+      return {
+        id: cs.key,
+        title: cs.title,
+        hint: isDone ? cs.hint_done : cs.hint_todo,
+        done: isDone,
+        cta: ctaMap[cs.key] ?? { label: "Open", to: "/", icon: <PlayCircle size={13}/> },
+      };
+    });
+  }, [me.needs_tnc_acceptance, strategyCount, requestCount, backtests, contentSteps]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const pct = Math.round((doneCount / steps.length) * 100);

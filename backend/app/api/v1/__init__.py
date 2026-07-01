@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, backtests, local_storage, me, notifications, requests, strategies, terms, vam
+from app.api.v1 import auth, backtests, content, local_storage, me, notifications, requests, strategies, terms, vam
 from app.api.v1.admin import admin_router
 from app.core.config import get_settings
 
@@ -12,6 +12,7 @@ api_router.include_router(strategies.router, tags=["strategies"])
 api_router.include_router(requests.router, tags=["requests"])
 api_router.include_router(backtests.router, tags=["backtests"])
 api_router.include_router(notifications.router, tags=["notifications"])
+api_router.include_router(content.router, tags=["content"])
 api_router.include_router(vam.router)
 api_router.include_router(admin_router)
 

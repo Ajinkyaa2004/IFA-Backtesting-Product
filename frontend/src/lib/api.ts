@@ -428,6 +428,25 @@ export async function deleteAdminClient(id: string) {
   await api.delete(`/admin/clients/${id}`);
 }
 
+// ── Admin content editor ──────────────────────────────────
+export type AdminContentResponse = {
+  content: Record<string, Record<string, unknown>>;
+  overridden_keys: string[];
+};
+
+export async function fetchAdminContent(): Promise<AdminContentResponse> {
+  const r = await api.get<AdminContentResponse>("/admin/content");
+  return r.data;
+}
+
+export async function patchAdminContent(key: string, value: Record<string, unknown>): Promise<void> {
+  await api.patch(`/admin/content/${key}`, { value });
+}
+
+export async function resetAdminContent(key: string): Promise<void> {
+  await api.post(`/admin/content/${key}/reset`);
+}
+
 // Admin CSV exports — trigger a blob download in a new tab.
 export async function downloadAdminCsv(kind: "clients" | "audit" | "backtests"): Promise<void> {
   const r = await api.get<Blob>(`/admin/exports/${kind}.csv`, { responseType: "blob" });

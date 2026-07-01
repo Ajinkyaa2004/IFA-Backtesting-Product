@@ -17,10 +17,12 @@ import AdminClientsPage from "./features/admin/AdminClientsPage";
 import AdminBacktestUploadPage from "./features/admin/AdminBacktestUploadPage";
 import AdminNotificationsPage from "./features/admin/AdminNotificationsPage";
 import AdminAuditPage from "./features/admin/AdminAuditPage";
+import AdminContentPage from "./features/admin/AdminContentPage";
 import AdminTermsPage from "./features/admin/AdminTermsPage";
 import { auth } from "./lib/firebase";
 import { classifyAuthGateError, fetchMe } from "./lib/api";
 import { useAuth } from "./store/auth";
+import { useContent } from "./store/content";
 import { useImpersonate } from "./store/impersonate";
 
 function Protected({
@@ -38,6 +40,11 @@ function Protected({
   const loading = useAuth((s) => s.loading);
   const authError = useAuth((s) => s.authError);
   const impersonating = useImpersonate((s) => s.active);
+  // Admin content editor loads client dashboard in an iframe with
+  // ?admin-preview=1 to render live previews. Admins are allowed into
+  // the client area in that mode even without impersonation.
+  const previewMode = typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("admin-preview") === "1";
   if (loading) return <div className="p-6 text-sm text-ink-500">Loading…</div>;
 
   if (authError && authError !== "unauthenticated") {
@@ -53,7 +60,9 @@ function Protected({
   // Admins with an active impersonation session are allowed into the client
   // area — that's the whole point of impersonation. The red banner stays
   // sticky so it's impossible to forget you're not seeing your own data.
-  if (requireClient && isAdmin && !impersonating) return <Navigate to="/admin" replace />;
+  // Admins in preview mode (?admin-preview=1) also enter the client area,
+  // used by the content editor iframe.
+  if (requireClient && isAdmin && !impersonating && !previewMode) return <Navigate to="/admin" replace />;
   // T&C check only applies to real clients — impersonating admins skip this
   // (client's own acceptance state is what matters and admins can't accept
   // T&C on behalf of a client anyway).
@@ -112,6 +121,13 @@ export default function App() {
   const setMe = useAuth((s) => s.setMe);
   const setLoading = useAuth((s) => s.setLoading);
   const setAuthError = useAuth((s) => s.setAuthError);
+  const hydrateContent = useContent((s) => s.hydrate);
+
+  // Load admin-editable content once on boot — no auth required, so this
+  // races the auth flow without dependency.
+  useEffect(() => {
+    hydrateContent();
+  }, [hydrateContent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,6 +208,7 @@ export default function App() {
           <Route path="terms" element={<AdminTermsPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="content" element={<AdminContentPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
