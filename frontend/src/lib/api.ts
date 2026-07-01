@@ -428,6 +428,19 @@ export async function deleteAdminClient(id: string) {
   await api.delete(`/admin/clients/${id}`);
 }
 
+// Admin CSV exports — trigger a blob download in a new tab.
+export async function downloadAdminCsv(kind: "clients" | "audit" | "backtests"): Promise<void> {
+  const r = await api.get<Blob>(`/admin/exports/${kind}.csv`, { responseType: "blob" });
+  const url = URL.createObjectURL(r.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ifa_${kind}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
 export async function uploadBacktestResult(
   client_id: string,
   result: object,

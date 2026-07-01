@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import { Card, SectionTitle } from "../../components/ui";
-import { fetchAuditLog, type AuditEntry } from "../../lib/api";
+import { downloadAdminCsv, fetchAuditLog, type AuditEntry } from "../../lib/api";
 
 export default function AdminAuditPage() {
   const [rows, setRows] = useState<AuditEntry[]>([]);
@@ -13,16 +14,25 @@ export default function AdminAuditPage() {
   return (
     <div className="space-y-6">
       <Card padding="p-0">
-        <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3 flex-wrap">
           <SectionTitle sub="Append-only — every sensitive action is recorded with actor, target, IP, and timestamp.">
             Audit log
           </SectionTitle>
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter by action prefix (e.g. tnc., client.)"
-            className="h-9 w-72 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter by action prefix (e.g. tnc., client.)"
+              className="h-9 w-72 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+            />
+            <button
+              onClick={() => downloadAdminCsv("audit")}
+              className="h-9 px-3 rounded-lg border border-ink-200 dark:border-ink-700 hover:bg-ink-50 dark:hover:bg-ink-800 text-xs font-medium text-ink-700 dark:text-ink-200 inline-flex items-center gap-1.5"
+              title="Download filtered audit log as CSV"
+            >
+              <Download size={12}/> CSV
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

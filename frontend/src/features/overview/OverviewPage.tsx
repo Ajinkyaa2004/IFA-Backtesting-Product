@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
-import { fetchBacktests, fetchRequests, type BacktestListItem } from "../../lib/api";
+import { fetchBacktests, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
+import OnboardingChecklist from "./OnboardingChecklist";
 import TierCard, { ComingSoonTile } from "./TierCard";
 
 const POLL_INTERVAL_MS = 20_000;
@@ -15,6 +16,7 @@ export default function OverviewPage() {
   const me = useAuth((s) => s.me);
   const [backtests, setBacktests] = useState<BacktestListItem[]>([]);
   const [requestCount, setRequestCount] = useState(0);
+  const [strategyCount, setStrategyCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -29,9 +31,14 @@ export default function OverviewPage() {
 
   const refresh = async () => {
     try {
-      const [bts, reqs] = await Promise.all([fetchBacktests(), fetchRequests()]);
+      const [bts, reqs, strats] = await Promise.all([
+        fetchBacktests(),
+        fetchRequests(),
+        fetchStrategies().catch(() => []),
+      ]);
       setBacktests(bts);
       setRequestCount(reqs.length);
+      setStrategyCount(strats.length);
       setLastUpdated(new Date());
     } catch {
       /* leave previous data */
@@ -136,6 +143,15 @@ export default function OverviewPage() {
         <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
         <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
       </div>
+
+      {me && (
+        <OnboardingChecklist
+          me={me}
+          backtests={backtests}
+          strategyCount={strategyCount}
+          requestCount={requestCount}
+        />
+      )}
 
       {me?.client?.tier_usage && <TierCard usage={me.client.tier_usage} />}
 

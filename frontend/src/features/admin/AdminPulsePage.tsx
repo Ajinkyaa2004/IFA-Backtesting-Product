@@ -10,6 +10,7 @@ import {
   type AdminInbox,
   type PlatformStats,
 } from "../../lib/api";
+import ArchitectureDiagram from "./ArchitectureDiagram";
 
 const POLL_INTERVAL_MS = 20_000;
 
@@ -135,6 +136,8 @@ export default function AdminPulsePage() {
           )}
         </ul>
       </Card>
+
+      <ArchitectureDiagram />
     </div>
   );
 }
