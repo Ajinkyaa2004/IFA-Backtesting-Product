@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Backtest Report — {{ bt_code }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 22mm 16mm;
+    @bottom-left {
+      content: "Confidential — {{ client_name }}";
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #64748b;
+    }
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #64748b;
+    }
+  }
+  body {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    color: #0f172a;
+    font-size: 10.5pt;
+    line-height: 1.35;
+    margin: 0;
+  }
+  .header {
+    border-bottom: 1.5pt solid #0f172a;
+    padding-bottom: 8pt;
+    margin-bottom: 14pt;
+  }
+  .header .brand {
+    font-size: 8pt;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 2pt;
+  }
+  .header h1 {
+    font-size: 18pt;
+    font-weight: 600;
+    margin: 0 0 4pt 0;
+    letter-spacing: -0.01em;
+  }
+  .header .meta {
+    font-size: 9pt;
+    color: #475569;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8pt 24pt;
+    margin: 12pt 0 18pt 0;
+  }
+  .meta-grid .label {
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #64748b;
+    margin-bottom: 2pt;
+  }
+  .meta-grid .value {
+    font-size: 10pt;
+    color: #0f172a;
+  }
+  h2 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 16pt 0 8pt 0;
+    padding-bottom: 3pt;
+    border-bottom: 0.5pt solid #cbd5e1;
+    letter-spacing: -0.005em;
+  }
+  .summary { font-size: 9.5pt; color: #334155; margin-bottom: 8pt; }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6pt;
+  }
+  .metric {
+    padding: 8pt;
+    border: 0.5pt solid #cbd5e1;
+    border-radius: 3pt;
+    background: #f8fafc;
+  }
+  .metric .label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #64748b;
+    margin-bottom: 2pt;
+  }
+  .metric .value {
+    font-size: 12pt;
+    font-weight: 600;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+  }
+  .metric.pos .value { color: #059669; }
+  .metric.neg .value { color: #dc2626; }
+  .assumption-table, .trades-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+  .assumption-table td, .trades-table td, .trades-table th {
+    padding: 4pt 8pt;
+    border-bottom: 0.5pt solid #e2e8f0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .assumption-table td:first-child {
+    color: #64748b;
+    width: 32%;
+    font-size: 8.5pt;
+  }
+  .trades-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #475569;
+  }
+  .trades-table td.num, .trades-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart {
+    border: 0.5pt solid #cbd5e1;
+    border-radius: 3pt;
+    padding: 6pt;
+    background: #ffffff;
+    margin-top: 4pt;
+  }
+  .disclaimer {
+    margin-top: 18pt;
+    padding: 10pt 12pt;
+    background: #fef3c7;
+    border-left: 2pt solid #d97706;
+    font-size: 8pt;
+    color: #78350f;
+    border-radius: 2pt;
+  }
+  .disclaimer strong { color: #451a03; }
+  .disclaimer ul { margin: 4pt 0 0 12pt; padding: 0; }
+  .disclaimer li { margin-bottom: 2pt; }
+  .footer-note {
+    margin-top: 10pt;
+    padding-top: 6pt;
+    border-top: 0.5pt solid #cbd5e1;
+    font-size: 7.5pt;
+    color: #64748b;
+    line-height: 1.5;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">Insight Fusion Analytics · Backtest Report</div>
+  <h1>{{ strategy_name }}</h1>
+  <div class="meta">
+    Backtest <strong>{{ bt_code }}</strong> · prepared for <strong>{{ client_name }}</strong> · generated {{ generated_at }}
+  </div>
+</div>
+
+<div class="meta-grid">
+  <div>
+    <div class="label">Strategy version</div>
+    <div class="value">{{ strategy_version or "—" }}</div>
+  </div>
+  <div>
+    <div class="label">Backtest engine</div>
+    <div class="value">{{ engine_label }}</div>
+  </div>
+  <div>
+    <div class="label">Date range</div>
+    <div class="value">{{ assumptions.date_range.from if assumptions and assumptions.date_range else "—" }} → {{ assumptions.date_range.to if assumptions and assumptions.date_range else "—" }}</div>
+  </div>
+  <div>
+    <div class="label">Initial capital</div>
+    <div class="value">{{ initial_capital_display }}</div>
+  </div>
+</div>
+
+<h2>Strategy summary</h2>
+<div class="summary">{{ strategy_description or "No description recorded." }}</div>
+
+<h2>Key metrics</h2>
+<div class="metrics-grid">
+  {% for m in metric_cards %}
+    <div class="metric {% if m.tone %}{{ m.tone }}{% endif %}">
+      <div class="label">{{ m.label }}</div>
+      <div class="value">{{ m.value }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+{% if equity_svg %}
+  <h2>Equity curve</h2>
+  <div class="chart">{{ equity_svg | safe }}</div>
+{% endif %}
+
+{% if drawdown_svg %}
+  <h2>Drawdown</h2>
+  <div class="chart">{{ drawdown_svg | safe }}</div>
+{% endif %}
+
+<h2>Assumptions</h2>
+<table class="assumption-table">
+  {% for row in assumption_rows %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td>{{ row.value }}</td>
+    </tr>
+  {% endfor %}
+</table>
+
+{% if trade_sample %}
+  <h2>Trade sample (first {{ trade_sample|length }} of {{ trades_total }})</h2>
+  <table class="trades-table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th>
+        <th class="num">Qty</th><th class="num">PnL</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in trade_sample %}
+        <tr>
+          <td>{{ t.trade_id or t.id or "—" }}</td>
+          <td>{{ t.symbol or "—" }}</td>
+          <td>{{ t.side or "—" }}</td>
+          <td>{{ t.entry_date or t.entry_time or "—" }}</td>
+          <td>{{ t.exit_date or t.exit_time or "—" }}</td>
+          <td class="num">{{ t.quantity or t.qty or "—" }}</td>
+          <td class="num">{{ t.pnl_display or "—" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+<div class="disclaimer">
+  <strong>Legal disclaimers</strong>
+  <ul>
+    <li>Past performance is not indicative of future results.</li>
+    <li>Backtests are based on assumptions; historical simulation may not reflect live execution.</li>
+    <li>Execution may differ in live markets — slippage, liquidity, and venue rules can materially change outcomes.</li>
+    <li>This report is not investment advice. It is prepared for the recipient's internal research purposes only.</li>
+  </ul>
+</div>
+
+<div class="footer-note">
+  This report references engagement terms <strong>{{ tnc_version }}</strong> accepted by {{ client_name }}
+  on {{ tnc_accepted_at or "record" }}.
+  Report SHA-256 of source result JSON:
+  <span style="font-family: monospace">{{ result_checksum[:16] }}…{{ result_checksum[-8:] }}</span>.
+  Backtest source engine: {{ engine_label }}.
+</div>
+
+</body>
+</html>

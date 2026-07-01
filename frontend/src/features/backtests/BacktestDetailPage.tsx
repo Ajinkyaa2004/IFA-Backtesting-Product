@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { Badge, Button, Card, KV, SectionTitle } from "../../components/ui";
 import {
+  downloadBacktestReport,
   fetchBacktest,
   type BacktestDetail,
   type BacktestResult,
@@ -138,7 +139,7 @@ export default function BacktestDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="accent" icon={<Download size={15}/>} onClick={() => alert("Export coming Phase F (V1.1)")}>Export report</Button>
+          <ExportReportButton backtestId={bt.id} status={bt.status} />
         </div>
       </div>
 
@@ -294,6 +295,44 @@ export default function BacktestDetailPage() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function ExportReportButton({ backtestId, status }: { backtestId: string; status: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const enabled = status === "completed";
+  const onClick = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await downloadBacktestReport(backtestId);
+    } catch (e: any) {
+      // Backend returns JSON errors for schema/validation. Since we requested
+      // responseType blob, axios wraps the JSON body in a Blob — unwrap it.
+      let detail = e?.response?.data;
+      if (detail instanceof Blob) {
+        try { detail = JSON.parse(await detail.text())?.detail ?? "Report generation failed"; }
+        catch { detail = "Report generation failed"; }
+      }
+      setError(typeof detail === "string" ? detail : "Report generation failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const hint = enabled ? "Download PDF report" : "Report available once backtest is completed";
+  return (
+    <div className="flex flex-col items-end gap-1" title={hint}>
+      <Button
+        variant="accent"
+        icon={<Download size={15}/>}
+        onClick={onClick}
+        disabled={!enabled || busy}
+      >
+        {busy ? "Rendering…" : "Export report"}
+      </Button>
+      {error && <span className="text-[11px] text-red-600 dark:text-red-400">{error}</span>}
     </div>
   );
 }

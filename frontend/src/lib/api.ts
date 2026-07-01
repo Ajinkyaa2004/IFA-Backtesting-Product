@@ -270,6 +270,27 @@ export async function fetchBacktests(status?: string): Promise<BacktestListItem[
   return res.data;
 }
 
+export async function downloadBacktestReport(id: string): Promise<void> {
+  // Fetch as blob so the axios auth interceptor (Firebase ID token) is applied.
+  // window.open won't send Authorization headers, so a raw redirect would 401.
+  const r = await api.get<Blob>(`/backtests/${id}/report.pdf`, { responseType: "blob" });
+  const url = URL.createObjectURL(r.data);
+  // Open in a new tab. The Content-Disposition inline the backend sends means
+  // the browser will preview the PDF rather than dropping to Downloads.
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (!win) {
+    // Pop-up blocked — fall back to anchor click download.
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `backtest_${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  // Release the blob URL after the browser has consumed it.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export async function fetchBacktest(id: string): Promise<BacktestDetail> {
   const res = await api.get<BacktestDetail>(`/backtests/${id}`);
   return res.data;

@@ -30,7 +30,8 @@ RUN pip install --upgrade pip && pip install \
     "psycopg2-binary>=2.9" "pydantic>=2.7" "pydantic-settings>=2.4" "python-dotenv>=1.0" \
     "firebase-admin>=6.5" "supabase>=2.7" "loguru>=0.7" "python-multipart>=0.0.9" \
     "httpx>=0.27" "jsonschema>=4.23" "pydantic[email]" \
-    "slowapi>=0.1.9" "sentry-sdk[fastapi]>=2.14"
+    "slowapi>=0.1.9" "sentry-sdk[fastapi]>=2.14" \
+    "jinja2>=3.1" "weasyprint>=62.3"
 
 # ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.12-slim
@@ -43,6 +44,10 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 curl \
+        # WeasyPrint runtime libs — needed for HTML→PDF rendering of the
+        # backtest report. libpangoft2 pulls in fonts + cairo + gdk-pixbuf.
+        libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 \
+        libffi8 shared-mime-info fonts-liberation \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash app
 
