@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from firebase_admin import auth as fb_auth
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.deps import _TOKEN_PUBLIC_MESSAGES, current_user
+from app.core.rate_limit import limiter
 from app.core.security import TokenError, verify_id_token
 from app.db.models import User
 from app.db.session import get_db
@@ -24,8 +25,13 @@ class LoginOut(BaseModel):
     role: str
 
 
+# 20/min per IP — a legitimate user won't fat-finger 20 times a minute, and a
+# wrong password rejects in ~200ms so at cap a credential stuffer only gets
+# ~1200 tries/hour before nginx also declines. Request is required by
+# slowapi to extract client IP.
 @router.post("/login", response_model=LoginOut)
-def login(payload: LoginIn, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def login(request: Request, payload: LoginIn, db: Session = Depends(get_db)):
     """Frontend signs in via Firebase, then POSTs the ID token here.
     Backend verifies it and confirms the user is provisioned in our DB.
 

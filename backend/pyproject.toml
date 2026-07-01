@@ -18,6 +18,8 @@ dependencies = [
   "python-multipart>=0.0.9",
   "httpx>=0.27",
   "jsonschema>=4.23",
+  "slowapi>=0.1.9",
+  "sentry-sdk[fastapi]>=2.14",
 ]
 
 [project.optional-dependencies]

@@ -3,15 +3,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_role
-from app.db.models import StrategyDocument
+from app.db.models import StrategyDocument, User
 from app.db.session import get_db
-from app.services import storage
+from app.services import audit, storage
 
 router = APIRouter()
 
@@ -70,15 +70,33 @@ def list_client_strategies(
 @router.get("/strategies/{strategy_id}/download-url", response_model=DownloadUrlOut)
 def get_strategy_download_url(
     strategy_id: uuid.UUID,
-    _admin=Depends(require_role("main_admin", "sub_admin")),
+    request: Request,
+    admin: User = Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
 ):
     """Returns a short-lived signed URL the admin can hit to download/view the PDF.
-    URL expires in 5 minutes."""
+    URL expires in 5 minutes.
+
+    Audit-logged. Both admin roles legitimately have cross-tenant access
+    to strategy documents (that's the ops role), but every download is
+    recorded so we can answer "who saw what and when" after the fact —
+    the classic BREACH-DETECTION-OVER-BREACH-PREVENTION control for
+    small-team ops access.
+    """
     row = db.query(StrategyDocument).filter(StrategyDocument.id == strategy_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Strategy not found")
     expires_in = 300  # 5 minutes
+    audit.record(
+        db,
+        actor_user_id=admin.id,
+        action="admin.strategy.download_url",
+        target_type="strategy_document",
+        target_id=row.id,
+        payload={"client_id": str(row.client_id), "name": row.name, "version": row.version},
+        ip=request.client.host if request.client else None,
+    )
+    db.commit()
     return DownloadUrlOut(
         signed_url=storage.signed_download_url(row.storage_key, expires_in=expires_in),
         expires_in=expires_in,

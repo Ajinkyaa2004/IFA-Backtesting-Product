@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import re
 import uuid
 from datetime import datetime
 
@@ -22,6 +24,39 @@ ALLOWED_MIME = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
 }
+ALLOWED_EXTS = {".pdf", ".doc", ".docx", ".txt"}
+MAX_FILENAME_LEN = 200
+_SAFE_CHAR_RE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitize_filename(raw: str) -> str:
+    """Extension-allowlist + character-allowlist filename sanitizer.
+
+    Rejects with 400 if the input is untrustworthy. The previous
+    "replace('/','_').replace('..','_')" was too loose — it let through
+    null bytes, backslashes on Windows uploads, unicode homoglyphs, and
+    dotfiles like ".htaccess". Trust nothing from the client.
+    """
+    if "\x00" in raw:
+        raise HTTPException(status_code=400, detail="Invalid filename (null byte)")
+    # Strip any path component — accept only the basename.
+    base = os.path.basename(raw.replace("\\", "/")).strip()
+    if not base or base in {".", ".."} or base.startswith("."):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    root, ext = os.path.splitext(base)
+    ext_lower = ext.lower()
+    if ext_lower not in ALLOWED_EXTS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file extension: {ext or '(none)'}. Allowed: pdf, doc, docx, txt.",
+        )
+    # Collapse any run of non-safe chars into single "_" — preserves
+    # readability without letting shell/URL metacharacters through.
+    safe_root = _SAFE_CHAR_RE.sub("_", root).strip("._-")
+    if not safe_root:
+        safe_root = "file"
+    cleaned = (safe_root + ext_lower)[:MAX_FILENAME_LEN]
+    return cleaned
 
 
 class StrategyOut(BaseModel):
@@ -117,7 +152,7 @@ def init_upload(
     next_version = (existing.version + 1) if existing else 1
 
     strategy_id = uuid.uuid4()
-    safe_filename = payload.filename.replace("/", "_").replace("..", "_")
+    safe_filename = _sanitize_filename(payload.filename)
     storage_key = f"clients/{client_id}/strategies/{strategy_id}/{safe_filename}"
 
     signed = storage.signed_upload_url(storage_key)
