@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { BadgeCheck, ChevronDown, ChevronRight, Download, FileText, History, RefreshCw, Upload, UploadCloud } from "lucide-react";
 import { Badge, Button, Card, Modal, SectionTitle } from "../../components/ui";
-import { fetchStrategies, finalizeStrategyUpload, getOwnStrategyDownloadUrl, initStrategyUpload, type Strategy } from "../../lib/api";
+import { extractTierGate, fetchStrategies, finalizeStrategyUpload, getOwnStrategyDownloadUrl, initStrategyUpload, type Strategy } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
 
 async function sha256(file: File): Promise<string> {
@@ -269,7 +269,19 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       setProgress("Done");
       setTimeout(close, 400);
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? e?.message ?? "Upload failed");
+      const gate = extractTierGate(e);
+      if (gate) {
+        setError(
+          `${gate.message} Contact us via the Requests tab to upgrade.`,
+        );
+      } else {
+        const detail = e?.response?.data?.detail;
+        setError(
+          typeof detail === "string"
+            ? detail
+            : detail?.message ?? e?.message ?? "Upload failed",
+        );
+      }
     } finally {
       setUploading(false);
     }

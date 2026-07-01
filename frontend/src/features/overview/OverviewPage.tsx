@@ -137,7 +137,7 @@ export default function OverviewPage() {
         <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
       </div>
 
-      {me?.client?.tier && <TierCard tier={me.client.tier} />}
+      {me?.client?.tier_usage && <TierCard usage={me.client.tier_usage} />}
 
       {/* Section 10 mocked items — visible placeholders so clients see the
           roadmap. Turns real once Anmol's decisions from A + C land. */}

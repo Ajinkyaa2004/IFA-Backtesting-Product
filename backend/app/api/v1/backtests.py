@@ -12,6 +12,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.core.deps import client_scope, current_user
+from app.core.tier_deps import require_feature
 from app.db.models import Backtest, BacktestFile, Client, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 from app.services import audit, benchmark, report, storage
@@ -113,7 +114,10 @@ _ENGINE_LABEL = {
 }
 
 
-@router.get("/backtests/{backtest_id}/benchmark")
+@router.get(
+    "/backtests/{backtest_id}/benchmark",
+    dependencies=[Depends(require_feature("benchmark_comparison"))],
+)
 def get_backtest_benchmark(
     backtest_id: uuid.UUID,
     client_id: uuid.UUID = Depends(client_scope),

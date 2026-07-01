@@ -1,12 +1,30 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core import tier as tier_config
 from app.core.deps import current_user
-from app.db.models import Client, TermsAcceptance, TermsVersion, User
+from app.db.models import Backtest, Client, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 
 router = APIRouter()
+
+
+class TierUsage(BaseModel):
+    """Current usage + limits so the frontend can render bars + upgrade prompts."""
+    tier: str
+    tier_label: str
+    tier_tagline: str
+    backtests_used_this_month: int
+    backtests_per_month: int | None       # null = unlimited
+    active_strategies: int
+    max_active_strategies: int | None     # null = unlimited
+    features: list[str]                    # feature keys included in this tier
+    support_response_hours: int
+    month_started_at: datetime
+    month_ends_at: datetime
 
 
 class ClientOut(BaseModel):
@@ -15,6 +33,7 @@ class ClientOut(BaseModel):
     tier: str
     status: str
     vam_enabled: bool = False  # drives client-side gating of the engine UI
+    tier_usage: TierUsage | None = None
 
 
 class MeOut(BaseModel):
@@ -38,12 +57,48 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
         client = db.query(Client).filter(Client.id == user.client_id).first()
         if client:
             vam_enabled = bool(client.vam_enabled)
+            # Assemble tier usage — cheap 2 counts, keeps the /me response
+            # a one-stop shop for the frontend header + tier card.
+            cfg = tier_config.get_tier_config(client.tier)
+            m_start, m_end = tier_config.month_bounds()
+            bt_used = (
+                db.query(Backtest)
+                .filter(
+                    Backtest.client_id == client.id,
+                    Backtest.created_at >= m_start,
+                    Backtest.created_at < m_end,
+                )
+                .count()
+            )
+            active_strat = (
+                db.query(StrategyDocument)
+                .filter(
+                    StrategyDocument.client_id == client.id,
+                    StrategyDocument.is_source_of_truth.is_(True),
+                    StrategyDocument.status == "active",
+                )
+                .count()
+            )
+            usage = TierUsage(
+                tier=cfg.key,
+                tier_label=cfg.label,
+                tier_tagline=cfg.tagline,
+                backtests_used_this_month=bt_used,
+                backtests_per_month=cfg.backtests_per_month,
+                active_strategies=active_strat,
+                max_active_strategies=cfg.max_active_strategies,
+                features=sorted(cfg.features),
+                support_response_hours=cfg.support_response_hours,
+                month_started_at=m_start,
+                month_ends_at=m_end,
+            )
             client_out = ClientOut(
                 id=str(client.id),
                 name=client.name,
                 tier=client.tier,
                 status=client.status,
                 vam_enabled=vam_enabled,
+                tier_usage=usage,
             )
 
     latest = (

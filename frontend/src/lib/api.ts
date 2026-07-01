@@ -94,6 +94,30 @@ export function classifyAuthGateError(e: unknown): AuthGateReason {
   return "unknown";
 }
 
+export type TierFeatureKey =
+  | "pdf_export"
+  | "vam_engine"
+  | "benchmark_comparison"
+  | "ai_chatbot"
+  | "optimisation_engine"
+  | "priority_support"
+  | "custom_strategy_engineering"
+  | "unlimited_backtests";
+
+export type TierUsage = {
+  tier: "tier1" | "tier2" | "tier3";
+  tier_label: string;
+  tier_tagline: string;
+  backtests_used_this_month: number;
+  backtests_per_month: number | null;   // null = unlimited
+  active_strategies: number;
+  max_active_strategies: number | null; // null = unlimited
+  features: TierFeatureKey[];
+  support_response_hours: number;
+  month_started_at: string;
+  month_ends_at: string;
+};
+
 export type Me = {
   id: string;
   email: string;
@@ -105,12 +129,35 @@ export type Me = {
     tier: string;
     status: string;
     vam_enabled?: boolean;
+    tier_usage?: TierUsage | null;
   } | null;
   needs_tnc_acceptance: boolean;
   latest_tnc_version_id: string | null;
   /** True when this user's client is allowed to run VAM-engine backtests. */
   vam_enabled: boolean;
 };
+
+// Tier-gate error shape returned by the backend as HTTPException detail.
+// The axios error interceptor doesn't know about it; UI components can
+// check e.response?.data?.detail?.error === "tier_gate" to render prompts.
+export type TierGateDetail = {
+  error: "tier_gate";
+  kind: "limit" | "feature";
+  message: string;
+  current_tier: string;
+  required_tier: "tier1" | "tier2" | "tier3" | null;
+  feature_key: TierFeatureKey | null;
+  limit: number | null;
+  used: number | null;
+};
+
+export function extractTierGate(err: unknown): TierGateDetail | null {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  if (!detail || typeof detail !== "object") return null;
+  const d = detail as Record<string, unknown>;
+  if (d.error !== "tier_gate") return null;
+  return d as unknown as TierGateDetail;
+}
 
 export async function fetchMe(): Promise<Me> {
   const res = await api.get<Me>("/me");

@@ -156,8 +156,22 @@ async def client_run_via_vam(
       * actor_type = "client" in the audit log + envelope
       * subject to the per-client sliding-window rate limit
       * requires Client.vam_enabled = True (enforced by vam_client_scope)
+      * subject to the tier's monthly backtest cap + vam_engine feature gate
     """
     _check_rate_limit(client_id)
+
+    # Tier gates — feature check + monthly count. Both raise HTTPException with
+    # the standard tier-gate detail body so the frontend can render an upgrade
+    # prompt. Runs BEFORE we hit VAM, so limit-blocked clients don't burn a
+    # backtest slot on the upstream engine.
+    from app.core.tier_deps import check_backtest_limit_for_client
+    from app.core import tier as _tier_config
+    _client_tier = db.query(Client.tier).filter(Client.id == client_id).scalar()
+    try:
+        _tier_config.check_feature(_client_tier or "tier1", "vam_engine")
+    except _tier_config.TierGateError as e:
+        raise HTTPException(status_code=403, detail=e.as_detail()) from e
+    check_backtest_limit_for_client(client_id, db)
 
     client = (
         db.query(Client).filter(Client.id == client_id, Client.deleted_at.is_(None)).first()

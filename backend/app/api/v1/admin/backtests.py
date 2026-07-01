@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_role
+from app.core.tier_deps import check_backtest_limit_for_client
 from app.db.models import Backtest, BacktestFile, Client
 from app.db.session import get_db
 from app.services import audit, storage
@@ -132,11 +133,14 @@ def upload_backtest_result(
             },
         )
 
-    # 2. Resolve target client
+    # 2. Resolve target client + honor its tier's monthly backtest cap. Admin
+    #    uploads on-behalf still count against the client's plan — otherwise
+    #    admins would silently side-step the limit that the client is billed on.
     client_uuid = uuid.UUID(payload.client_id)
     client = db.query(Client).filter(Client.id == client_uuid, Client.deleted_at.is_(None)).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    check_backtest_limit_for_client(client_uuid, db)
 
     # 2b. Resolve optional strategy_id — must belong to this client (cross-tenant guard)
     from app.db.models import StrategyDocument

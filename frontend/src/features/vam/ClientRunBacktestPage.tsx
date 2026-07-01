@@ -337,6 +337,15 @@ function classifyError(e: unknown): RunErr {
   const ax = (e as { response?: { status?: number; data?: { detail?: unknown }; headers?: Record<string, string> } }).response;
   const status = ax?.status;
   const detail = ax?.data?.detail;
+  // Tier-gate first — both 403 (feature unavailable) and 429 (limit hit)
+  // ride this shape. Render as a friendly upgrade prompt.
+  if (typeof detail === "object" && detail !== null && (detail as { error?: string }).error === "tier_gate") {
+    const g = detail as { message: string; kind: string };
+    return {
+      kind: g.kind === "limit" ? "ratelimit" : "config",
+      message: `${g.message} Contact us via the Requests tab to upgrade your plan.`,
+    };
+  }
   if (status === 503) {
     return { kind: "config", message: "The engine is currently offline. Please try again shortly." };
   }

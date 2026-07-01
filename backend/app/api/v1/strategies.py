@@ -11,6 +11,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.core.deps import client_scope, current_user
+from app.core.tier_deps import enforce_active_strategy_limit
 from app.db.models import StrategyDocument, User
 from app.db.session import get_db
 from app.services import audit, storage
@@ -130,7 +131,11 @@ def list_strategies(
     ]
 
 
-@router.post("/strategies/upload", response_model=UploadOut)
+@router.post(
+    "/strategies/upload",
+    response_model=UploadOut,
+    dependencies=[Depends(enforce_active_strategy_limit)],
+)
 def init_upload(
     payload: UploadIn,
     request: Request,
