@@ -16,8 +16,10 @@ server {
     # ---- Security headers (applied to every response, including errors) ----
     # HSTS — force HTTPS for 6 months, include subdomains, mark for browser preload list.
     add_header Strict-Transport-Security "max-age=15552000; includeSubDomains; preload" always;
-    # Anti-clickjacking — the portal is never framed by design.
-    add_header X-Frame-Options "DENY" always;
+    # Anti-clickjacking — allow same-origin framing so the admin content
+    # editor can preview the client dashboard in an iframe. Third-party
+    # framing is still blocked.
+    add_header X-Frame-Options "SAMEORIGIN" always;
     # Freeze MIME type sniffing (helps CSP + defence against upload tricks).
     add_header X-Content-Type-Options "nosniff" always;
     # Referrer discipline — never leak URLs to third parties.
@@ -28,7 +30,7 @@ server {
     # Supabase (storage) + Sentry (observability) + VAM engine (backtests) allowed.
     # 'unsafe-inline' on styles because Tailwind runtime + inline SVG styles rely on it;
     # scripts are strict — no inline eval.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://backtestravi.insightfusionanalytics.com; frame-src 'self' https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://backtestravi.insightfusionanalytics.com; frame-src 'self' https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" always;
 
     # Frontend container (Docker bridge network)
     location / {
