@@ -37,6 +37,10 @@ export default function AdminContentPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<CategoryKey>("welcome");
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  // On small screens the split-view collapses to stacked; showing the 720px
+  // iframe by default balloons the page. Users opt-in via a toggle. Desktop
+  // (xl+) keeps the sticky sidebar preview always visible.
+  const [showPreviewOnMobile, setShowPreviewOnMobile] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const iframeReady = useRef(false);
 
@@ -191,17 +195,31 @@ export default function AdminContentPage() {
         </Card>
       </div>
 
-      {/* Right column — live preview iframe */}
+      {/* Right column — live preview iframe. Hidden on mobile/tablet unless
+          toggled on; always visible on xl+ where it fits alongside the form. */}
       <div className="xl:sticky xl:top-4 space-y-2">
-        <div className="text-xs text-ink-500 dark:text-ink-400 flex items-center gap-1.5">
-          <Eye size={12}/> Live preview · updates on every edit · not saved yet
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs text-ink-500 dark:text-ink-400 flex items-center gap-1.5">
+            <Eye size={12}/> Live preview · updates on every edit
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPreviewOnMobile((v) => !v)}
+            className="xl:hidden text-[11px] font-medium text-accent-700 dark:text-accent-300 hover:underline"
+          >
+            {showPreviewOnMobile ? "Hide preview" : "Show preview"}
+          </button>
         </div>
-        <div className="rounded-2xl border border-ink-200 dark:border-ink-800 overflow-hidden shadow-pop bg-white dark:bg-ink-900">
+        <div
+          className={`rounded-2xl border border-ink-200 dark:border-ink-800 overflow-hidden shadow-pop bg-white dark:bg-ink-900 ${
+            showPreviewOnMobile ? "block" : "hidden xl:block"
+          }`}
+        >
           <iframe
             ref={iframeRef}
             title="Client dashboard preview"
             src="/?admin-preview=1"
-            className="w-full h-[720px] block"
+            className="w-full h-[520px] xl:h-[720px] block"
           />
         </div>
       </div>

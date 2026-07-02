@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { PageTransition } from "./motion";
 import { signOut } from "firebase/auth";
 import {
@@ -25,7 +25,7 @@ import NotificationBell from "./NotificationBell";
 import SupportFooter from "./SupportFooter";
 
 const NAV_CLIENT = [
-  { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
+  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/strategies", label: "Strategies", icon: FileText },
   { to: "/requests", label: "Requests", icon: MessageSquare },
   { to: "/backtests", label: "Backtests", icon: BarChart3 },
@@ -38,6 +38,12 @@ export default function Layout() {
   const location = useLocation();
   const [dark, setDark] = useState<boolean>(() => initialDarkMode());
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Auto-close the mobile drawer when the route changes so a NavLink click
+  // on mobile actually feels like navigation. Otherwise the drawer sticks
+  // open on top of the destination page.
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
 
   // Sidebar override is set by pages that want to commandeer the left rail
   // (e.g. a backtest result page swaps the nav for a param-tweak panel).
@@ -71,13 +77,16 @@ export default function Layout() {
     .join("")
     .toUpperCase() ?? "IFA";
 
-  return (
-    <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
-      <ImpersonationBanner />
-      <div className="flex-1 flex min-h-0">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
-        <div className="h-14 px-5 flex items-center gap-2.5 border-b border-ink-200 dark:border-ink-800">
+  /*
+   * Sidebar body — same JSX used in the desktop fixed rail (>= lg) AND
+   * inside the mobile off-canvas drawer. Extracted so a NavLink click on
+   * mobile navigates via one source of truth; duplicating it would risk
+   * the two lists drifting.
+   */
+  const sidebarBody = (
+    <>
+      <div className="h-14 px-5 flex items-center justify-between gap-2.5 border-b border-ink-200 dark:border-ink-800 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900">
             IFA
           </span>
@@ -90,6 +99,16 @@ export default function Layout() {
             </div>
           </div>
         </div>
+        {/* Close button — only shown inside the mobile drawer via context styling */}
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(false)}
+          className="lg:hidden size-8 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
+          aria-label="Close menu"
+        >
+          <X size={16} />
+        </button>
+      </div>
 
         {/*
           The flex-1 div below holds EITHER the standard workspace nav OR a
@@ -153,7 +172,7 @@ export default function Layout() {
           </div>
         </div>
 
-        <div className="p-3 border-t border-ink-200 dark:border-ink-800">
+        <div className="p-3 border-t border-ink-200 dark:border-ink-800 shrink-0">
           <div className="px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-950/60 border border-ink-100 dark:border-ink-800">
             <div className="flex items-center gap-2">
               <span className="size-7 rounded-full bg-accent-600/15 text-accent-700 dark:text-accent-300 flex items-center justify-center text-[11px] font-semibold">
@@ -170,18 +189,70 @@ export default function Layout() {
             </div>
           </div>
         </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
+      <ImpersonationBanner />
+      <div className="flex-1 flex min-h-0">
+      {/* Desktop sidebar — fixed rail on >= lg */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
+        {sidebarBody}
       </aside>
+
+      {/*
+        Mobile off-canvas drawer. Backdrop fades in; the drawer slides in
+        from the left. AnimatePresence handles exit animations. The whole
+        thing is `lg:hidden` so it never intrudes on desktop.
+      */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setMobileNavOpen(false)}
+              className="lg:hidden fixed inset-0 z-40 bg-black/50"
+              aria-hidden
+            />
+            <motion.aside
+              key="drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[80vw] flex flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800 shadow-2xl"
+              role="dialog"
+              aria-label="Navigation"
+            >
+              {sidebarBody}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
         <header className="h-14 sticky top-0 z-30 bg-white/85 dark:bg-ink-900/85 backdrop-blur border-b border-ink-200 dark:border-ink-800">
-          <div className="h-full max-w-[1440px] mx-auto px-4 lg:px-8 flex items-center gap-3">
-            <div className="lg:hidden flex items-center gap-2.5">
-              <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900">
+          <div className="h-full max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-8 flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden size-9 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={17} />
+            </button>
+            <div className="lg:hidden flex items-center gap-2.5 min-w-0">
+              <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 shrink-0">
                 IFA
               </span>
-              <span className="text-sm font-semibold">Backtest Engine</span>
+              <span className="text-sm font-semibold truncate hidden sm:inline">Backtest Engine</span>
             </div>
 
             <div className="flex-1" />
@@ -231,7 +302,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
               <Outlet />

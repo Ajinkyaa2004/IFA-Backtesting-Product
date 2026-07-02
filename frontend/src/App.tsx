@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoginPage from "./features/auth/LoginPage";
 import AdminLoginPage from "./features/auth/AdminLoginPage";
+import LandingPage from "./features/marketing/LandingPage";
 import OverviewPage from "./features/overview/OverviewPage";
 import StrategiesPage from "./features/strategies/StrategiesPage";
 import RequestsPage from "./features/requests/RequestsPage";
@@ -57,7 +58,7 @@ function Protected({
   }
 
   const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
-  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
+  if (requireAdmin && !isAdmin) return <Navigate to="/dashboard" replace />;
   // Admins with an active impersonation session are allowed into the client
   // area — that's the whole point of impersonation. The red banner stays
   // sticky so it's impossible to forget you're not seeing your own data.
@@ -185,15 +186,24 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/*
+          `/` is the public marketing landing page — indexable by search
+          engines, mission-critical for SEO. Authenticated visitors are
+          bounced to their real home (dashboard or admin console) by
+          HomeGate so they never see the marketing surface once signed in.
+        */}
+        <Route path="/" element={<HomeGate />} />
+
         {/* Public login pages — role-gated so a client can't sneak in via /admin/login */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
 
         <Route path="/terms" element={<Protected><TermsAcceptPage /></Protected>} />
 
-        {/* Client portal */}
+        {/* Client portal — dashboard root moved from `/` to `/dashboard` when the
+            landing page took over `/`. Every other client URL stays the same. */}
         <Route element={<Protected requireClient requireTncDone><Layout /></Protected>}>
-          <Route index element={<OverviewPage />} />
+          <Route path="dashboard" element={<OverviewPage />} />
           <Route path="strategies" element={<StrategiesPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="backtests" element={<BacktestsListPage />} />
@@ -217,4 +227,22 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+/**
+ * Deciding what `/` shows. Unauth visitors see the public marketing
+ * landing (SEO-indexable). Authed visitors get bounced to whichever
+ * real home matches their role.
+ */
+function HomeGate() {
+  const me = useAuth((s) => s.me);
+  const loading = useAuth((s) => s.loading);
+  const authError = useAuth((s) => s.authError);
+  if (loading) return <div className="p-6 text-sm text-ink-500">Loading…</div>;
+  if (authError && authError !== "unauthenticated") return <AuthErrorScreen reason={authError} />;
+  if (!me) return <LandingPage />;
+  const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
+  if (isAdmin) return <Navigate to="/admin" replace />;
+  if (me.needs_tnc_acceptance) return <Navigate to="/terms" replace />;
+  return <Navigate to="/dashboard" replace />;
 }

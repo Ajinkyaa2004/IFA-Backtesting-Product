@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /$
+Allow: /favicon.svg
+Allow: /favicon-16.png
+Allow: /favicon-32.png
+Allow: /favicon-180.png
+Allow: /favicon-512.png
+Allow: /og-image.png
+Allow: /sitemap.xml
+Allow: /robots.txt
+
+# Everything else is client portal — auth-gated, do not index.
+Disallow: /login
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /strategies
+Disallow: /requests
+Disallow: /backtests
+Disallow: /terms
+
+Sitemap: https://backtestingengine.insightfusionanalytics.com/sitemap.xml

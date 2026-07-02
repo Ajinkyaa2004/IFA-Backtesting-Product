@@ -24,8 +24,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=2" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png?v=2" />
     <link rel="mask-icon" href="/favicon.svg?v=2" color="#7c6cff" />
-    <!-- Used as the og:image preview for Slack/WhatsApp/LinkedIn link unfurls. -->
     <link rel="shortcut icon" href="/favicon-512.png?v=2" />
+    <link rel="manifest" href="/site.webmanifest" />
 
     <!-- ── Open Graph (shows up in Slack / WhatsApp / LinkedIn previews) ── -->
     <meta property="og:type" content="website" />
@@ -36,27 +36,42 @@
       content="Client portal for Insight Fusion Analytics' systematic trading research, backtests and engine runs."
     />
     <meta property="og:url" content="https://backtestingengine.insightfusionanalytics.com" />
-    <meta property="og:image" content="https://backtestingengine.insightfusionanalytics.com/favicon-512.png" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
+    <meta property="og:image" content="https://backtestingengine.insightfusionanalytics.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="IFA Backtest Engine — Systematic strategy backtests for Indian markets" />
 
     <!-- ── Twitter card (for X/Twitter previews) ─────────────────── -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="IFA Backtest Engine" />
     <meta
       name="twitter:description"
       content="Client portal for Insight Fusion Analytics' systematic trading research and backtests."
     />
-    <meta name="twitter:image" content="https://backtestingengine.insightfusionanalytics.com/favicon-512.png" />
+    <meta name="twitter:image" content="https://backtestingengine.insightfusionanalytics.com/og-image.png" />
 
     <!-- ── Search-engine hints ───────────────────────────────────── -->
-    <!-- This is a private client portal — keep it OUT of search indexes.
-         Flip to "index, follow" if you ever publish a marketing landing page. -->
-    <meta name="robots" content="noindex, nofollow" />
+    <!-- `/` is the public marketing landing (index, follow). Every gated
+         route overrides this with SEOHead using robots="noindex, nofollow"
+         so auth-protected content stays out of search indexes. -->
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://backtestingengine.insightfusionanalytics.com" />
   </head>
   <body>
+    <noscript>
+      <div style="max-width:640px;margin:64px auto;padding:24px;font-family:system-ui,sans-serif;text-align:center;color:#111827;">
+        <h1 style="font-size:24px;margin:0 0 12px 0;">IFA Backtest Engine</h1>
+        <p style="font-size:15px;line-height:1.55;color:#4b5563;">
+          Insight Fusion Analytics' client portal for systematic trading strategy backtests.
+          This portal requires JavaScript to run — please enable it in your browser to sign in
+          and view your dashboard.
+        </p>
+        <p style="font-size:13px;color:#6b7280;margin-top:24px;">
+          For enquiries: <a href="mailto:hello@insightfusionanalytics.com">hello@insightfusionanalytics.com</a>
+        </p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -196,7 +196,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-ink-900/40 dark:bg-ink-950/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-ink-900/40 dark:bg-ink-950/70 backdrop-blur-sm overflow-y-auto"
           variants={backdropFade}
           initial="hidden"
           animate="visible"
@@ -204,11 +204,11 @@ export function Modal({
           onClick={onClose}
         >
           <motion.div
-            className={`w-full ${w} bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 overflow-hidden`}
+            className={`w-full ${w} max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 overflow-hidden`}
             variants={modalScale}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-ink-100 dark:border-ink-800">
+            <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-ink-100 dark:border-ink-800 shrink-0">
               <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
               <button
                 onClick={onClose}
@@ -218,9 +218,9 @@ export function Modal({
                 ✕
               </button>
             </div>
-            <div className="px-6 py-5">{children}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1 min-h-0">{children}</div>
             {footer && (
-              <div className="px-6 py-4 bg-ink-50 dark:bg-ink-950/40 border-t border-ink-100 dark:border-ink-800">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 bg-ink-50 dark:bg-ink-950/40 border-t border-ink-100 dark:border-ink-800 shrink-0">
                 {footer}
               </div>
             )}

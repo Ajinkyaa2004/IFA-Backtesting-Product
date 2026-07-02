@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { PageTransition } from "./motion";
 import { signOut } from "firebase/auth";
 import {
@@ -12,12 +12,14 @@ import {
   Inbox,
   LogOut,
   Megaphone,
+  Menu,
   Moon,
   Palette,
   ScrollText,
   Shield,
   Sun,
   Users,
+  X,
 } from "lucide-react";
 import { auth } from "../lib/firebase";
 import { api, fetchAdminInbox, type AdminInbox } from "../lib/api";
@@ -46,8 +48,12 @@ export default function AdminLayout() {
   const [dark, setDark] = useState<boolean>(() => initialDarkMode());
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [inbox, setInbox] = useState<AdminInbox | null>(null);
   const pollRef = useRef<number | null>(null);
+
+  // Close the mobile drawer when the route changes (a NavLink click closes it).
+  useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
 
   // Poll the admin inbox every 30s so the badge stays fresh without a manual refresh.
   useEffect(() => {
@@ -80,16 +86,14 @@ export default function AdminLayout() {
 
   const unread = inbox?.total ?? 0;
 
-  return (
-    <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
-      <ImpersonationBanner />
-      <div className="flex-1 flex min-h-0">
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
-        {/* admin accent bar */}
-        <div className="h-1.5 bg-accent-600" />
-
-        <div className="h-14 px-5 flex items-center gap-2.5 border-b border-ink-200 dark:border-ink-800">
-          <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-accent-600 text-white">
+  // Same-source-of-truth sidebar body — desktop rail (>= lg) and mobile
+  // off-canvas drawer render this. Mirrors the client Layout.tsx pattern.
+  const sidebarBody = (
+    <>
+      <div className="h-1.5 bg-accent-600 shrink-0" />
+      <div className="h-14 px-5 flex items-center justify-between gap-2.5 border-b border-ink-200 dark:border-ink-800 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-accent-600 text-white shrink-0">
             IFA
           </span>
           <div className="min-w-0">
@@ -101,50 +105,111 @@ export default function AdminLayout() {
             </div>
           </div>
         </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-ink-400 dark:text-ink-500">
-            Operations
-          </div>
-          {NAV_ADMIN.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                `w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-ink-900 text-white dark:bg-ink-50 dark:text-ink-900"
-                    : "text-ink-600 hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
-                }`
-              }
-            >
-              <n.icon size={15} />
-              <span className="flex-1 text-left truncate">{n.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="p-3 border-t border-ink-200 dark:border-ink-800">
-          <div className="px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-950/60 border border-ink-100 dark:border-ink-800">
-            <div className="flex items-center gap-2">
-              <span className="size-7 rounded-full bg-accent-600 text-white flex items-center justify-center text-[11px] font-semibold">
-                <Shield size={12}/>
-              </span>
-              <div className="min-w-0">
-                <div className="text-xs font-medium truncate">{me?.email}</div>
-                <div className="text-[10px] text-ink-500 dark:text-ink-400 truncate capitalize">
-                  {me?.role?.replace("_", " ")}
-                </div>
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(false)}
+          className="lg:hidden size-8 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
+          aria-label="Close menu"
+        >
+          <X size={16}/>
+        </button>
+      </div>
+      <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-0.5">
+        <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-ink-400 dark:text-ink-500">
+          Operations
+        </div>
+        {NAV_ADMIN.map((n) => (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            end={n.end}
+            className={({ isActive }) =>
+              `w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-ink-900 text-white dark:bg-ink-50 dark:text-ink-900"
+                  : "text-ink-600 hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
+              }`
+            }
+          >
+            <n.icon size={15} />
+            <span className="flex-1 text-left truncate">{n.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+      <div className="p-3 border-t border-ink-200 dark:border-ink-800 shrink-0">
+        <div className="px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-950/60 border border-ink-100 dark:border-ink-800">
+          <div className="flex items-center gap-2">
+            <span className="size-7 rounded-full bg-accent-600 text-white flex items-center justify-center text-[11px] font-semibold">
+              <Shield size={12}/>
+            </span>
+            <div className="min-w-0">
+              <div className="text-xs font-medium truncate">{me?.email}</div>
+              <div className="text-[10px] text-ink-500 dark:text-ink-400 truncate capitalize">
+                {me?.role?.replace("_", " ")}
               </div>
             </div>
           </div>
         </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
+      <ImpersonationBanner />
+      <div className="flex-1 flex min-h-0">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
+        {sidebarBody}
       </aside>
+
+      {/* Mobile off-canvas drawer — slides in from the left with a backdrop */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              key="admin-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setMobileNavOpen(false)}
+              className="lg:hidden fixed inset-0 z-40 bg-black/50"
+              aria-hidden
+            />
+            <motion.aside
+              key="admin-drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[80vw] flex flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800 shadow-2xl"
+              role="dialog"
+              aria-label="Admin navigation"
+            >
+              {sidebarBody}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="h-14 sticky top-0 z-30 bg-white/85 dark:bg-ink-900/85 backdrop-blur border-b border-ink-200 dark:border-ink-800">
-          <div className="h-full max-w-[1440px] mx-auto px-4 lg:px-8 flex items-center gap-3">
+          <div className="h-full max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-8 flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden size-9 rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={17} />
+            </button>
+            <div className="lg:hidden flex items-center gap-2.5 min-w-0">
+              <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-accent-600 text-white shrink-0">
+                IFA
+              </span>
+              <span className="text-sm font-semibold truncate hidden sm:inline">Admin</span>
+            </div>
             <div className="flex-1" />
             <div className="flex items-center gap-1">
               <button
@@ -261,7 +326,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
               <Outlet />

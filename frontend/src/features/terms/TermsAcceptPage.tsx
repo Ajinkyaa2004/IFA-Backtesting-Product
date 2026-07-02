@@ -43,7 +43,7 @@ export default function TermsAcceptPage() {
       await acceptTerms(terms.id, Array.from(accepted));
       const me = await fetchMe();
       setMe(me);
-      navigate("/");
+      navigate("/dashboard");
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Failed to accept");
     } finally {

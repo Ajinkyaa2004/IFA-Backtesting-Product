@@ -43,7 +43,7 @@ export default function LoginPage() {
       }
       setMe(me);
       if (me.needs_tnc_acceptance) navigate("/terms");
-      else navigate("/");
+      else navigate("/dashboard");
     } catch (err: unknown) {
       // Only tear down the Firebase session if we actually established one
       // (i.e. signIn succeeded but a downstream call — fetchMe, role check —

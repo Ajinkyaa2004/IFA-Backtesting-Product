@@ -336,8 +336,8 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-ink-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-white dark:bg-ink-900 border-l border-ink-200 dark:border-ink-800 shadow-pop h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between">
+      <div className="w-full sm:max-w-md bg-white dark:bg-ink-900 sm:border-l border-ink-200 dark:border-ink-800 shadow-pop h-full overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="px-4 sm:px-6 py-4 border-b border-ink-100 dark:border-ink-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-ink-900/95 backdrop-blur z-10">
           <div>
             <div className="text-sm font-semibold">{client.name}</div>
             <div className="text-xs text-ink-500 font-mono">{client.id.slice(0, 8)}…</div>
@@ -347,7 +347,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-5">
           {/* Engagement editor — Chirag's central primitive. Sits at the
               top of the drawer because everything else is derived from it. */}
           <EngagementEditor clientId={client.id} />

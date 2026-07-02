@@ -1,0 +1,15 @@
+{
+  "name": "IFA Backtest Engine",
+  "short_name": "IFA Backtest",
+  "description": "Insight Fusion Analytics — systematic strategy backtests for Indian markets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#7c6cff",
+  "background_color": "#0b0b0f",
+  "icons": [
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/favicon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
