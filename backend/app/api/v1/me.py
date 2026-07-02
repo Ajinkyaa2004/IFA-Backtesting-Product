@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core import tier as tier_config
 from app.core.deps import current_user
-from app.db.models import Backtest, Client, StrategyDocument, TermsAcceptance, TermsVersion, User
+from app.db.models import Backtest, Client, Engagement, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 
 router = APIRouter()
@@ -27,6 +27,23 @@ class TierUsage(BaseModel):
     month_ends_at: datetime
 
 
+class EngagementSummary(BaseModel):
+    """Compact summary embedded in /me so the client scope panel renders
+    without a second round-trip."""
+    id: str
+    code: str
+    status: str
+    scope_in: list[str]
+    scope_out: list[str]
+    scope_version: int
+    engine_assignment: str
+    engine_id: str | None
+    deliverable: str
+    # True when the CURRENT user has NOT acked the current scope_version.
+    # Drives the re-ack banner + gate on the client-facing UI.
+    needs_scope_reack: bool
+
+
 class ClientOut(BaseModel):
     id: str
     name: str
@@ -34,6 +51,7 @@ class ClientOut(BaseModel):
     status: str
     vam_enabled: bool = False  # drives client-side gating of the engine UI
     tier_usage: TierUsage | None = None
+    engagement: EngagementSummary | None = None
 
 
 class MeOut(BaseModel):
@@ -92,6 +110,29 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                 month_started_at=m_start,
                 month_ends_at=m_end,
             )
+
+            # Engagement summary — one row per client (Chirag Item #1).
+            engagement_summary: EngagementSummary | None = None
+            eng = db.query(Engagement).filter(Engagement.client_id == client.id).first()
+            if eng:
+                # Re-ack gate: user's acked_scope_version lags behind current.
+                needs_reack = (
+                    user.role == "client"
+                    and (user.acked_scope_version or 0) < eng.scope_version
+                )
+                engagement_summary = EngagementSummary(
+                    id=str(eng.id),
+                    code=eng.code,
+                    status=eng.status,
+                    scope_in=list(eng.scope_in or []),
+                    scope_out=list(eng.scope_out or []),
+                    scope_version=eng.scope_version,
+                    engine_assignment=eng.engine_assignment,
+                    engine_id=str(eng.engine_id) if eng.engine_id else None,
+                    deliverable=eng.deliverable,
+                    needs_scope_reack=needs_reack,
+                )
+
             client_out = ClientOut(
                 id=str(client.id),
                 name=client.name,
@@ -99,6 +140,7 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                 status=client.status,
                 vam_enabled=vam_enabled,
                 tier_usage=usage,
+                engagement=engagement_summary,
             )
 
     latest = (

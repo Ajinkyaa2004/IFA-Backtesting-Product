@@ -22,6 +22,13 @@ class User(UUIDPKMixin, TimestampMixin, Base):
 
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Per-user gate for scope re-acknowledgement — bumped when this user has
+    # accepted the current engagement scope_version. Compared against
+    # Engagement.scope_version on every /me call to decide whether to show
+    # the re-ack banner. Nullable so existing users default to "hasn't seen"
+    # and are prompted to re-ack once.
+    acked_scope_version: Mapped[int | None] = mapped_column(nullable=True)
+
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
