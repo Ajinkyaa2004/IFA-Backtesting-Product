@@ -277,8 +277,10 @@ def test_good_password_with_db_outage(driver, run: TestRun) -> None:
             "can't reach the server" in body
             or "backend is temporarily unavailable" in body
         )
-        # CASE B: Login succeeded all the way
-        landed_in_app = any(s in url for s in ["/backtests", "/terms"]) or url.endswith("/") and url.startswith(LIVE_URL)
+        # CASE B: Login succeeded all the way — client landing pages are
+        # /dashboard (moved from `/` when the marketing landing took over
+        # root), /backtests, or /terms.
+        landed_in_app = any(s in url for s in ["/dashboard", "/backtests", "/terms"])
         # CASE C: stuck on /login (not great but not catastrophic)
         stuck_on_login = url.endswith("/login")
 
