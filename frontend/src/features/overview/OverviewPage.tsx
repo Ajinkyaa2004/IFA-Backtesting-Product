@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
-import { fetchBacktests, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
+import { fetchBacktests, fetchMe, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
 import { useContent } from "../../store/content";
 import { Reveal, StaggerItem, StaggerReveal } from "../../components/motion";
 import OnboardingChecklist from "./OnboardingChecklist";
+import ScopePanel from "./ScopePanel";
 import TierCard, { ComingSoonTile } from "./TierCard";
 
 const POLL_INTERVAL_MS = 20_000;
@@ -61,10 +62,22 @@ export default function OverviewPage() {
   const pendingQuote = backtests.filter((b) => ["quote_requested", "quote_sent"].includes(b.status)).length;
   const demo = backtests.find((b) => b.code === "BT-2026-0001");
 
+  const setMe = useAuth((s) => s.setMe);
+  const refreshMe = async () => {
+    try {
+      const fresh = await fetchMe();
+      setMe(fresh);
+    } catch { /* stale me is fine */ }
+  };
+
   return (
     <div className="space-y-6">
       {content.sections.announcement && content.announcement.visible && (
         <Announcement announcement={content.announcement} />
+      )}
+
+      {me?.client?.engagement && (
+        <ScopePanel engagement={me.client.engagement} onScopeReacked={refreshMe} />
       )}
       {content.sections.welcome_banner && showWelcome && demo && (
         <Card padding="p-0">
@@ -142,12 +155,12 @@ export default function OverviewPage() {
       </Card>
 
       {content.sections.stat_tiles && (
-        <StaggerReveal className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" stagger={0.06}>
-          <StaggerItem><StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" /></StaggerItem>
-          <StaggerItem><StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" /></StaggerItem>
-          <StaggerItem><StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" /></StaggerItem>
-          <StaggerItem><StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" /></StaggerItem>
-        </StaggerReveal>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" />
+          <StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" />
+          <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
+          <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
+        </div>
       )}
 
       {content.sections.onboarding_checklist && me && (

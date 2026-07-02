@@ -118,6 +118,19 @@ export type TierUsage = {
   month_ends_at: string;
 };
 
+export type EngagementSummary = {
+  id: string;
+  code: string;
+  status: "pending" | "active" | "suspended" | "closed";
+  scope_in: string[];
+  scope_out: string[];
+  scope_version: number;
+  engine_assignment: "existing" | "bespoke" | "manual";
+  engine_id: string | null;
+  deliverable: string;
+  needs_scope_reack: boolean;
+};
+
 export type Me = {
   id: string;
   email: string;
@@ -130,12 +143,46 @@ export type Me = {
     status: string;
     vam_enabled?: boolean;
     tier_usage?: TierUsage | null;
+    engagement?: EngagementSummary | null;
   } | null;
   needs_tnc_acceptance: boolean;
   latest_tnc_version_id: string | null;
   /** True when this user's client is allowed to run VAM-engine backtests. */
   vam_enabled: boolean;
 };
+
+// Engagement admin + re-ack fetchers
+export type Engagement = {
+  id: string;
+  code: string;
+  client_id: string;
+  status: "pending" | "active" | "suspended" | "closed";
+  tier: "tier1" | "tier2" | "tier3";
+  scope_in: string[];
+  scope_out: string[];
+  scope_version: number;
+  engine_assignment: "existing" | "bespoke" | "manual";
+  engine_id: string | null;
+  canonical_strategy_id: string | null;
+  accepted_tnc_version_id: string | null;
+  deliverable: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchClientEngagement(clientId: string): Promise<Engagement> {
+  const r = await api.get<Engagement>(`/admin/clients/${clientId}/engagement`);
+  return r.data;
+}
+
+export async function patchClientEngagement(clientId: string, patch: Partial<Engagement>): Promise<Engagement> {
+  const r = await api.patch<Engagement>(`/admin/clients/${clientId}/engagement`, patch);
+  return r.data;
+}
+
+export async function reAckScope(): Promise<void> {
+  await api.post("/engagement/re-ack");
+}
 
 // Tier-gate error shape returned by the backend as HTTPException detail.
 // The axios error interceptor doesn't know about it; UI components can

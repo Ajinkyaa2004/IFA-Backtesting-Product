@@ -24,6 +24,7 @@ import {
   updateAdminClient,
 } from "../../lib/api";
 import { toast } from "../../store/toast";
+import EngagementEditor from "./EngagementEditor";
 import { useImpersonate } from "../../store/impersonate";
 
 const PAGE_SIZE = 50;
@@ -347,6 +348,10 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Engagement editor — Chirag's central primitive. Sits at the
+              top of the drawer because everything else is derived from it. */}
+          <EngagementEditor clientId={client.id} />
+
           <div>
             <label className="text-xs font-medium text-ink-600 dark:text-ink-300">Tier</label>
             <select

@@ -270,8 +270,37 @@ def create_client(
         role="client",
         status="active",
         client_id=client.id,
+        # Set to 1 so they don't see a stale re-ack prompt on first login.
+        acked_scope_version=1,
     )
     db.add(user)
+    db.flush()
+
+    # Auto-create the Engagement — Chirag Item #1. Every client has exactly
+    # one. Generated code is ENG-YYYY-NNNN based on current year + row count
+    # for that year. Not thread-safe under high concurrency (client creation
+    # is admin-triggered so contention is negligible), but a proper sequence
+    # can replace this later.
+    from datetime import datetime
+    from app.db.models import Engagement
+    year = datetime.utcnow().year
+    year_count = (
+        db.query(Engagement)
+        .filter(Engagement.code.like(f"ENG-{year}-%"))
+        .count()
+    )
+    engagement = Engagement(
+        code=f"ENG-{year}-{year_count + 1:04d}",
+        client_id=client.id,
+        status="pending",   # T&C not yet accepted — matches Chirag Section 4
+        tier=payload.tier,
+        scope_in=["Backtest delivery via the IFA portal"],
+        scope_out=[],
+        scope_version=1,
+        engine_assignment="manual",
+        deliverable="One backtest + tunable rerun once engine reaches live",
+    )
+    db.add(engagement)
     db.flush()
 
     audit.record(
@@ -280,7 +309,13 @@ def create_client(
         action="client.create",
         target_type="client",
         target_id=client.id,
-        payload={"name": payload.name, "user_email": payload.user_email, "tier": payload.tier},
+        payload={
+            "name": payload.name,
+            "user_email": payload.user_email,
+            "tier": payload.tier,
+            "engagement_code": engagement.code,
+            "engagement_id": str(engagement.id),
+        },
         ip=request.client.host if request.client else None,
     )
     db.commit()
