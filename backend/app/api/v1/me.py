@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core import tier as tier_config
 from app.core.deps import current_user
-from app.db.models import Backtest, Client, Engagement, StrategyDocument, TermsAcceptance, TermsVersion, User
+from app.db.models import Backtest, Client, Engagement, Engine, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 
 router = APIRouter()
@@ -137,16 +137,18 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     .first()
                     is not None
                 )
-                # Engine status approximation until Item #3 ships the
-                # engines table. Ravi's Enterprise VAM setup should show
-                # engine ready; manual clients skip the step entirely.
+                # Engine status — real value from the engines table (Item #3).
+                # Manual engagements skip the step entirely; otherwise we
+                # query the engine row directly. If engine_id is set but the
+                # row is missing (shouldn't happen), fall back to 'dev'.
                 engine_status_str: str | None
                 if eng.engine_assignment == "manual":
                     engine_status_str = None
-                elif eng.engine_assignment == "existing":
-                    engine_status_str = "live"
-                else:  # bespoke
+                elif eng.engine_id is None:
                     engine_status_str = "dev"
+                else:
+                    engine_row = db.query(Engine.status).filter(Engine.id == eng.engine_id).first()
+                    engine_status_str = engine_row[0] if engine_row else "dev"
                 engagement_summary = EngagementSummary(
                     id=str(eng.id),
                     code=eng.code,

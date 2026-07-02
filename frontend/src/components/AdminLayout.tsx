@@ -7,6 +7,7 @@ import {
   Activity,
   BarChart3,
   ChevronDown,
+  Cpu,
   FileText,
   Inbox,
   LogOut,
@@ -29,6 +30,7 @@ import NotificationBell from "./NotificationBell";
 const NAV_ADMIN = [
   { to: "/admin", label: "Pulse", icon: Activity, end: true },
   { to: "/admin/clients", label: "Clients", icon: Users },
+  { to: "/admin/engines", label: "Engine registry", icon: Cpu },
   { to: "/admin/backtests/upload", label: "Upload backtest", icon: BarChart3 },
   { to: "/admin/content", label: "Content editor", icon: Palette },
   { to: "/admin/terms", label: "T&C editor", icon: FileText },

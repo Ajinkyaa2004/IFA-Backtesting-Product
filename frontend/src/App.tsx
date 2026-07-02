@@ -18,6 +18,7 @@ import AdminBacktestUploadPage from "./features/admin/AdminBacktestUploadPage";
 import AdminNotificationsPage from "./features/admin/AdminNotificationsPage";
 import AdminAuditPage from "./features/admin/AdminAuditPage";
 import AdminContentPage from "./features/admin/AdminContentPage";
+import AdminEnginesPage from "./features/admin/AdminEnginesPage";
 import AdminTermsPage from "./features/admin/AdminTermsPage";
 import { auth } from "./lib/firebase";
 import { classifyAuthGateError, fetchMe } from "./lib/api";
@@ -209,6 +210,7 @@ export default function App() {
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="audit" element={<AdminAuditPage />} />
           <Route path="content" element={<AdminContentPage />} />
+          <Route path="engines" element={<AdminEnginesPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

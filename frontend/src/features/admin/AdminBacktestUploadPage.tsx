@@ -458,7 +458,7 @@ export default function AdminBacktestUploadPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
-                  Result JSON (v1.0 schema)
+                  4. Result JSON (v1.0 schema)
                 </label>
                 <div className="flex items-center gap-3 text-xs">
                   <button
@@ -509,7 +509,7 @@ export default function AdminBacktestUploadPage() {
                 <>
                   <div>
                     <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
-                      Strategy variant
+                      4. Strategy variant
                     </label>
                     <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {vamStrategies.filter((s) => s.implemented).map((s) => {
@@ -560,7 +560,8 @@ export default function AdminBacktestUploadPage() {
             </div>
           )}
 
-          {/* 5. Live preview — surfaces key fields so admin can sanity-check before upload */}
+          {/* 5. Live preview — surfaces key fields so admin can sanity-check before upload.
+              Chirag Item #7: fixed step numbering from 1 → 3 → 5 → 6 to 1-2-3-4-5-6. */}
           {sourceMode === "json" && preview && preview.ok && (
             <Card padding="p-4" className="bg-ink-50/60 dark:bg-ink-950/40 !border-dashed">
               <div className="text-[11px] uppercase tracking-wider text-ink-500 mb-2">Preview</div>

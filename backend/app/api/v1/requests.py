@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -66,6 +66,37 @@ def submit_request(
     client_id: uuid.UUID = Depends(client_scope),
     db: Session = Depends(get_db),
 ):
+    # Chirag Item #7: summary is required OR we auto-fill from strategy name
+    # + type. Prevents the admin inbox from showing "(no summary)" rows.
+    summary = (payload.payload.get("summary") or "").strip()
+    if not summary:
+        # Auto-fill fallback: use a short title from strategy name + request type.
+        from app.db.models import StrategyDocument
+        strategy_name = ""
+        if payload.strategy_id:
+            try:
+                sid = uuid.UUID(payload.strategy_id)
+                sdoc = db.query(StrategyDocument).filter(StrategyDocument.id == sid).first()
+                if sdoc:
+                    strategy_name = sdoc.name
+            except ValueError:
+                pass
+        type_labels = {
+            "new_strategy":  "New strategy",
+            "change":        "Change request",
+            "quote":         "Request for quote",
+            "clarification": "Clarification",
+        }
+        auto = f"{type_labels.get(payload.type, payload.type)}"
+        if strategy_name:
+            auto = f"{auto} · {strategy_name}"
+        if not auto:
+            raise HTTPException(
+                status_code=422,
+                detail="Request needs a summary. Add one to payload.summary.",
+            )
+        payload.payload = {**payload.payload, "summary": auto}
+
     row = RequestRow(
         client_id=client_id,
         type=payload.type,

@@ -188,6 +188,56 @@ export async function reAckScope(): Promise<void> {
   await api.post("/engagement/re-ack");
 }
 
+// ── Engine registry (Chirag #3 + #6) ──────────────────────────
+export type EngineStatus = "dev" | "isolation_pending" | "live" | "retired";
+
+export type Engine = {
+  id: string;
+  code: string;
+  name: string;
+  owner_email: string;
+  strategy_family: string;
+  status: EngineStatus;
+  covers: string;
+  param_schema: Record<string, unknown>;
+  isolation_passed_at: string | null;
+  isolation_notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchEngines(): Promise<Engine[]> {
+  const r = await api.get<Engine[]>("/admin/engines");
+  return r.data;
+}
+
+export async function createEngine(payload: {
+  code: string;
+  name: string;
+  owner_email: string;
+  strategy_family: string;
+  covers?: string;
+  param_schema?: Record<string, unknown>;
+}): Promise<Engine> {
+  const r = await api.post<Engine>("/admin/engines", payload);
+  return r.data;
+}
+
+export async function patchEngine(id: string, patch: Partial<Engine>): Promise<Engine> {
+  const r = await api.patch<Engine>(`/admin/engines/${id}`, patch);
+  return r.data;
+}
+
+export async function markEngineIsolationPassed(id: string, notes: string): Promise<Engine> {
+  const r = await api.post<Engine>(`/admin/engines/${id}/isolation-pass`, { notes });
+  return r.data;
+}
+
+export async function transitionEngineStatus(id: string, new_status: EngineStatus): Promise<Engine> {
+  const r = await api.post<Engine>(`/admin/engines/${id}/status`, { new_status });
+  return r.data;
+}
+
 // Tier-gate error shape returned by the backend as HTTPException detail.
 // The axios error interceptor doesn't know about it; UI components can
 // check e.response?.data?.detail?.error === "tier_gate" to render prompts.

@@ -3,7 +3,9 @@ import { AlertCircle, Cpu, Plus, Save, X } from "lucide-react";
 import { Button } from "../../components/ui";
 import {
   type Engagement,
+  type Engine,
   fetchClientEngagement,
+  fetchEngines,
   patchClientEngagement,
 } from "../../lib/api";
 import { toast } from "../../store/toast";
@@ -33,11 +35,13 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
   const [eng, setEng] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [engines, setEngines] = useState<Engine[]>([]);
 
   // Draft state — edits stay client-side until Save.
   const [scopeIn, setScopeIn] = useState<string[]>([]);
   const [scopeOut, setScopeOut] = useState<string[]>([]);
   const [engineAssignment, setEngineAssignment] = useState<Engagement["engine_assignment"]>("manual");
+  const [engineId, setEngineId] = useState<string | null>(null);
   const [deliverable, setDeliverable] = useState("");
   const [status, setStatus] = useState<Engagement["status"]>("pending");
   const [newInItem, setNewInItem] = useState("");
@@ -45,12 +49,17 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
 
   useEffect(() => {
     setLoading(true);
-    fetchClientEngagement(clientId)
-      .then((e) => {
+    Promise.all([
+      fetchClientEngagement(clientId),
+      fetchEngines().catch(() => [] as Engine[]),
+    ])
+      .then(([e, es]) => {
         setEng(e);
+        setEngines(es);
         setScopeIn(e.scope_in);
         setScopeOut(e.scope_out);
         setEngineAssignment(e.engine_assignment);
+        setEngineId(e.engine_id);
         setDeliverable(e.deliverable);
         setStatus(e.status);
       })
@@ -63,6 +72,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
     JSON.stringify(scopeOut) !== JSON.stringify(eng?.scope_out ?? []);
   const otherChanged =
     engineAssignment !== eng?.engine_assignment ||
+    engineId !== (eng?.engine_id ?? null) ||
     deliverable !== (eng?.deliverable ?? "") ||
     status !== eng?.status;
   const dirty = scopeChanged || otherChanged;
@@ -81,6 +91,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         scope_in: scopeIn,
         scope_out: scopeOut,
         engine_assignment: engineAssignment,
+        engine_id: engineAssignment === "manual" ? null : engineId,
         deliverable,
         status,
       });
@@ -141,12 +152,29 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
             <option key={k} value={k}>{ENGINE_LABEL[k]}</option>
           ))}
         </select>
-        {engineAssignment === "existing" && !eng.engine_id && (
-          <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
-            <AlertCircle size={10}/> Engine picker lands with Chirag Item #3.
-          </div>
-        )}
       </FormRow>
+
+      {engineAssignment !== "manual" && (
+        <FormRow label="Assigned engine">
+          <select
+            value={engineId ?? ""}
+            onChange={(e) => setEngineId(e.target.value || null)}
+            className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+          >
+            <option value="">— pick an engine —</option>
+            {engines.map((en) => (
+              <option key={en.id} value={en.id}>
+                {en.code} · {en.name} · {en.status}
+              </option>
+            ))}
+          </select>
+          {engineAssignment === "existing" && !engineId && (
+            <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+              <AlertCircle size={10}/> Existing assignment needs an engine.
+            </div>
+          )}
+        </FormRow>
+      )}
 
       <ScopeChipsEditor
         title="In scope"

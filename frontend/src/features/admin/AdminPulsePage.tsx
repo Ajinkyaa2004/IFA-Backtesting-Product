@@ -13,6 +13,39 @@ import {
 import ArchitectureDiagram from "./ArchitectureDiagram";
 import VamHealthCard from "./VamHealthCard";
 
+/**
+ * Chirag Item #7: age indicator against the 1-BD promise. Green when within
+ * 1 business day, amber when overdue by <1 BD, red when overdue by more.
+ * Business days = weekdays here; good-enough MVP.
+ */
+function RequestAgePill({ occurredAt }: { occurredAt: string }) {
+  const then = new Date(occurredAt);
+  const now = new Date();
+  // Count elapsed weekdays between then and now
+  let bd = 0;
+  const cursor = new Date(then);
+  while (cursor < now) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) bd += 0.5; // half-count because we tick by day, average across
+  }
+  const rounded = Math.max(0, Math.floor(bd));
+  const state = rounded < 1 ? "ok" : rounded < 2 ? "warn" : "red";
+  const cls =
+    state === "ok"   ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" :
+    state === "warn" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" :
+                       "bg-red-500/10 text-red-700 dark:text-red-400";
+  const label =
+    rounded === 0 ? "today" :
+    rounded === 1 ? "1 BD" :
+    `${rounded} BDs`;
+  return (
+    <span className={`px-1.5 h-4 rounded-full text-[9px] font-semibold inline-flex items-center ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
 const POLL_INTERVAL_MS = 20_000;
 
 export default function AdminPulsePage() {
@@ -94,8 +127,9 @@ export default function AdminPulsePage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{it.title}</div>
                   <div className="text-xs text-ink-500 truncate">{it.subtitle}</div>
-                  <div className="text-[11px] text-ink-400 tabular mt-0.5">
+                  <div className="text-[11px] text-ink-400 tabular mt-0.5 inline-flex items-center gap-1.5">
                     {new Date(it.occurred_at).toLocaleString()}
+                    <RequestAgePill occurredAt={it.occurred_at}/>
                   </div>
                 </div>
                 <Link
