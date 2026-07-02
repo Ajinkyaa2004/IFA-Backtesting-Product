@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { slideInRight } from "../lib/motion";
 import { type Toast, useToastStore } from "../store/toast";
 
 /**
@@ -18,9 +20,11 @@ export default function Toaster() {
       aria-atomic="true"
       className="fixed bottom-4 right-4 z-[100] flex flex-col-reverse gap-2 max-w-sm w-[calc(100vw-2rem)]"
     >
-      {toasts.map((t) => (
-        <ToastCard key={t.id} toast={t} />
-      ))}
+      <AnimatePresence>
+        {toasts.map((t) => (
+          <ToastCard key={t.id} toast={t} />
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
@@ -37,9 +41,14 @@ function ToastCard({ toast }: { toast: Toast }) {
   const meta = STYLES[toast.kind];
 
   return (
-    <div
+    <motion.div
       role="status"
-      className={`shadow-pop rounded-xl border ${meta.border} ${meta.bg} px-3.5 py-3 flex items-start gap-2.5 animate-in`}
+      layout
+      variants={slideInRight}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className={`shadow-pop rounded-xl border ${meta.border} ${meta.bg} px-3.5 py-3 flex items-start gap-2.5`}
     >
       <span className={`mt-0.5 shrink-0 ${meta.icon}`}>{meta.iconNode}</span>
       <div className="flex-1 min-w-0">
@@ -55,7 +64,7 @@ function ToastCard({ toast }: { toast: Toast }) {
       >
         <X size={13} />
       </button>
-    </div>
+    </motion.div>
   );
 }
 

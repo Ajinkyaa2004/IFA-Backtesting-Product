@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { PageTransition } from "./motion";
 import { signOut } from "firebase/auth";
 import {
   Activity,
@@ -38,6 +40,7 @@ export default function AdminLayout() {
   const me = useAuth((s) => s.me);
   const setMe = useAuth((s) => s.setMe);
   const navigate = useNavigate();
+  const location = useLocation();
   const [dark, setDark] = useState<boolean>(() => initialDarkMode());
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
@@ -257,7 +260,11 @@ export default function AdminLayout() {
         </header>
 
         <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-[1440px] w-full mx-auto">
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <PageTransition key={location.pathname}>
+              <Outlet />
+            </PageTransition>
+          </AnimatePresence>
         </main>
       </div>
       </div>

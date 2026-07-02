@@ -5,6 +5,7 @@ import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui
 import { fetchBacktests, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
 import { useContent } from "../../store/content";
+import { Reveal, StaggerItem, StaggerReveal } from "../../components/motion";
 import OnboardingChecklist from "./OnboardingChecklist";
 import TierCard, { ComingSoonTile } from "./TierCard";
 
@@ -141,52 +142,65 @@ export default function OverviewPage() {
       </Card>
 
       {content.sections.stat_tiles && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" />
-          <StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" />
-          <StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" />
-          <StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" />
-        </div>
+        <StaggerReveal className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" stagger={0.06}>
+          <StaggerItem><StatTile label="Active Backtests" value={String(active)} icon={<Activity size={14}/>} delta="in progress / approved" tone="neutral" /></StaggerItem>
+          <StaggerItem><StatTile label="Completed" value={String(completed)} icon={<CheckCircle2 size={14}/>} delta="lifetime" tone="pos" /></StaggerItem>
+          <StaggerItem><StatTile label="Pending Quotes" value={String(pendingQuote)} icon={<FileText size={14}/>} delta="awaiting decision" tone="neutral" /></StaggerItem>
+          <StaggerItem><StatTile label="Open Requests" value={String(requestCount)} icon={<Inbox size={14}/>} delta="from your side" tone="neutral" /></StaggerItem>
+        </StaggerReveal>
       )}
 
       {content.sections.onboarding_checklist && me && (
-        <OnboardingChecklist
-          me={me}
-          backtests={backtests}
-          strategyCount={strategyCount}
-          requestCount={requestCount}
-        />
+        <Reveal delay={0.05}>
+          <OnboardingChecklist
+            me={me}
+            backtests={backtests}
+            strategyCount={strategyCount}
+            requestCount={requestCount}
+          />
+        </Reveal>
       )}
 
-      {content.sections.tier_card && me?.client?.tier_usage && <TierCard usage={me.client.tier_usage} />}
+      {content.sections.tier_card && me?.client?.tier_usage && (
+        <Reveal delay={0.1}>
+          <TierCard usage={me.client.tier_usage} />
+        </Reveal>
+      )}
 
       {/* Section 10 mocked items — copy comes from the admin content editor
           so Anmol can flip 'Growth' → 'Pro' or retitle 'AI Analyst' without
           a code change. */}
       {content.sections.placeholder_tiles && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <ComingSoonTile
-            icon={<Bot size={16}/>}
-            title={content.placeholder_tiles.ai.title}
-            subtitle={content.placeholder_tiles.ai.subtitle}
-            badge={content.placeholder_tiles.ai.badge}
-          />
-          <ComingSoonTile
-            icon={<Calculator size={16}/>}
-            title={content.placeholder_tiles.optimiser.title}
-            subtitle={content.placeholder_tiles.optimiser.subtitle}
-            badge={content.placeholder_tiles.optimiser.badge}
-          />
-          <ComingSoonTile
-            icon={<CreditCard size={16}/>}
-            title={content.placeholder_tiles.billing.title}
-            subtitle={content.placeholder_tiles.billing.subtitle}
-            badge={content.placeholder_tiles.billing.badge}
-          />
-        </div>
+        <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-4" stagger={0.06}>
+          <StaggerItem>
+            <ComingSoonTile
+              icon={<Bot size={16}/>}
+              title={content.placeholder_tiles.ai.title}
+              subtitle={content.placeholder_tiles.ai.subtitle}
+              badge={content.placeholder_tiles.ai.badge}
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <ComingSoonTile
+              icon={<Calculator size={16}/>}
+              title={content.placeholder_tiles.optimiser.title}
+              subtitle={content.placeholder_tiles.optimiser.subtitle}
+              badge={content.placeholder_tiles.optimiser.badge}
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <ComingSoonTile
+              icon={<CreditCard size={16}/>}
+              title={content.placeholder_tiles.billing.title}
+              subtitle={content.placeholder_tiles.billing.subtitle}
+              badge={content.placeholder_tiles.billing.badge}
+            />
+          </StaggerItem>
+        </StaggerReveal>
       )}
 
       {content.sections.latest_backtests && (<>
+      <Reveal delay={0.15}>
       <Card>
         <SectionTitle
           sub={lastUpdated ? `Most recent first · auto-refreshes every ${POLL_INTERVAL_MS / 1000}s · last updated ${lastUpdated.toLocaleTimeString()}` : "Most recent first"}
@@ -218,6 +232,7 @@ export default function OverviewPage() {
           )}
         </ul>
       </Card>
+      </Reveal>
       </>)}
     </div>
   );

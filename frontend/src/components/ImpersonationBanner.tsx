@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserRound, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { slideDown } from "../lib/motion";
 import { exitImpersonation } from "../lib/api";
 import { useImpersonate } from "../store/impersonate";
 
@@ -16,9 +18,8 @@ export default function ImpersonationBanner() {
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
 
-  if (!active) return null;
-
   const exit = async () => {
+    if (!active) return;
     setBusy(true);
     try {
       await exitImpersonation(active.clientId);
@@ -31,7 +32,15 @@ export default function ImpersonationBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-40 bg-red-600 text-white shadow-md">
+    <AnimatePresence>
+      {active && (
+    <motion.div
+      variants={slideDown}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="sticky top-0 z-40 bg-red-600 text-white shadow-md"
+    >
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3 text-sm">
         <div className="flex items-center gap-2 min-w-0">
           <UserRound size={16} className="shrink-0" />
@@ -50,6 +59,8 @@ export default function ImpersonationBanner() {
           {busy ? "Exiting…" : "Exit impersonation"}
         </button>
       </div>
-    </div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

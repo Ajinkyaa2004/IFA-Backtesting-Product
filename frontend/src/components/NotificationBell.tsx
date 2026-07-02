@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, BellOff, Check } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { dropdownScale } from "../lib/motion";
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -95,8 +97,15 @@ export default function NotificationBell() {
         )}
       </button>
 
+      <AnimatePresence>
       {open && (
-        <div className="absolute right-0 mt-1.5 w-[360px] max-w-[calc(100vw-2rem)] bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 rounded-xl shadow-pop overflow-hidden z-30">
+        <motion.div
+          variants={dropdownScale}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          style={{ transformOrigin: "top right" }}
+          className="absolute right-0 mt-1.5 w-[360px] max-w-[calc(100vw-2rem)] bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 rounded-xl shadow-pop overflow-hidden z-30">
           <div className="px-4 py-2.5 flex items-center justify-between border-b border-ink-100 dark:border-ink-800">
             <div className="text-sm font-semibold">Notifications</div>
             {items.length > 0 && unread > 0 && (
@@ -157,8 +166,9 @@ export default function NotificationBell() {
               ))}
             </ul>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

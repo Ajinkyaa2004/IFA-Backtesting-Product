@@ -1,4 +1,6 @@
 import { type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { backdropFade, modalScale } from "../lib/motion";
 
 export function Card({
   className = "",
@@ -189,29 +191,43 @@ export function Modal({
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
-  if (!open) return null;
   const w = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-3xl" }[size];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-ink-900/40 dark:bg-ink-950/70 backdrop-blur-sm">
-      <div className={`w-full ${w} bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 overflow-hidden`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-ink-100 dark:border-ink-800">
-          <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-          <button
-            onClick={onClose}
-            className="size-7 -mr-1 rounded-md text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
-            aria-label="Close"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-ink-900/40 dark:bg-ink-950/70 backdrop-blur-sm"
+          variants={backdropFade}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          onClick={onClose}
+        >
+          <motion.div
+            className={`w-full ${w} bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 overflow-hidden`}
+            variants={modalScale}
+            onClick={(e) => e.stopPropagation()}
           >
-            ✕
-          </button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
-        {footer && (
-          <div className="px-6 py-4 bg-ink-50 dark:bg-ink-950/40 border-t border-ink-100 dark:border-ink-800">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-ink-100 dark:border-ink-800">
+              <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+              <button
+                onClick={onClose}
+                className="size-7 -mr-1 rounded-md text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-5">{children}</div>
+            {footer && (
+              <div className="px-6 py-4 bg-ink-50 dark:bg-ink-950/40 border-t border-ink-100 dark:border-ink-800">
+                {footer}
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
