@@ -28,8 +28,8 @@ class TierUsage(BaseModel):
 
 
 class EngagementSummary(BaseModel):
-    """Compact summary embedded in /me so the client scope panel renders
-    without a second round-trip."""
+    """Compact summary embedded in /me so the client scope panel + lifecycle
+    stepper render without a second round-trip."""
     id: str
     code: str
     status: str
@@ -39,9 +39,19 @@ class EngagementSummary(BaseModel):
     engine_assignment: str
     engine_id: str | None
     deliverable: str
+    canonical_strategy_id: str | None
+    accepted_tnc_version_id: str | None
     # True when the CURRENT user has NOT acked the current scope_version.
     # Drives the re-ack banner + gate on the client-facing UI.
     needs_scope_reack: bool
+    # Lifecycle stepper signals (Chirag Section 6). Derived on read so we
+    # never persist a snapshot that goes stale.
+    has_completed_backtest: bool
+    # Engine.status once Item #3 lands. For MVP we approximate from
+    # engine_assignment: 'existing' → 'live', 'bespoke' → 'dev', 'manual'
+    # → None (step is skipped for manual). Frontend consumes this to render
+    # the Engine ready step.
+    engine_status: str | None
 
 
 class ClientOut(BaseModel):
@@ -120,6 +130,23 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     user.role == "client"
                     and (user.acked_scope_version or 0) < eng.scope_version
                 )
+                # Lifecycle stepper signals (Chirag Section 6).
+                has_completed_bt = (
+                    db.query(Backtest)
+                    .filter(Backtest.client_id == client.id, Backtest.status == "completed")
+                    .first()
+                    is not None
+                )
+                # Engine status approximation until Item #3 ships the
+                # engines table. Ravi's Enterprise VAM setup should show
+                # engine ready; manual clients skip the step entirely.
+                engine_status_str: str | None
+                if eng.engine_assignment == "manual":
+                    engine_status_str = None
+                elif eng.engine_assignment == "existing":
+                    engine_status_str = "live"
+                else:  # bespoke
+                    engine_status_str = "dev"
                 engagement_summary = EngagementSummary(
                     id=str(eng.id),
                     code=eng.code,
@@ -130,7 +157,11 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     engine_assignment=eng.engine_assignment,
                     engine_id=str(eng.engine_id) if eng.engine_id else None,
                     deliverable=eng.deliverable,
+                    canonical_strategy_id=str(eng.canonical_strategy_id) if eng.canonical_strategy_id else None,
+                    accepted_tnc_version_id=str(eng.accepted_tnc_version_id) if eng.accepted_tnc_version_id else None,
                     needs_scope_reack=needs_reack,
+                    has_completed_backtest=has_completed_bt,
+                    engine_status=engine_status_str,
                 )
 
             client_out = ClientOut(

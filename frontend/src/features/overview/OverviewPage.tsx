@@ -6,6 +6,7 @@ import { fetchBacktests, fetchMe, fetchRequests, fetchStrategies, type BacktestL
 import { useAuth } from "../../store/auth";
 import { useContent } from "../../store/content";
 import { Reveal, StaggerItem, StaggerReveal } from "../../components/motion";
+import LifecycleStepper from "./LifecycleStepper";
 import OnboardingChecklist from "./OnboardingChecklist";
 import ScopePanel from "./ScopePanel";
 import TierCard, { ComingSoonTile } from "./TierCard";
@@ -77,7 +78,13 @@ export default function OverviewPage() {
       )}
 
       {me?.client?.engagement && (
-        <ScopePanel engagement={me.client.engagement} onScopeReacked={refreshMe} />
+        <>
+          <LifecycleStepper
+            engagement={me.client.engagement}
+            features={me.client.tier_usage?.features ?? []}
+          />
+          <ScopePanel engagement={me.client.engagement} onScopeReacked={refreshMe} />
+        </>
       )}
       {content.sections.welcome_banner && showWelcome && demo && (
         <Card padding="p-0">

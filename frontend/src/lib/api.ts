@@ -128,7 +128,11 @@ export type EngagementSummary = {
   engine_assignment: "existing" | "bespoke" | "manual";
   engine_id: string | null;
   deliverable: string;
+  canonical_strategy_id: string | null;
+  accepted_tnc_version_id: string | null;
   needs_scope_reack: boolean;
+  has_completed_backtest: boolean;
+  engine_status: "dev" | "isolation_pending" | "live" | "retired" | null;
 };
 
 export type Me = {
