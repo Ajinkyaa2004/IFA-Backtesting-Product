@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_role
-from app.db.models import Client, Engagement, User
+from app.db.models import Client, Engagement, Service, User
 from app.db.session import get_db
 from app.services import audit
 
@@ -46,6 +46,10 @@ class EngagementOut(BaseModel):
     canonical_strategy_id: str | None
     accepted_tnc_version_id: str | None
     deliverable: str
+    whatsapp_group_link: str | None
+    service_id: str | None
+    service_code: str | None
+    service_name: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -59,9 +63,11 @@ class EngagementPatchIn(BaseModel):
     engine_id: str | None = None
     canonical_strategy_id: str | None = None
     deliverable: str | None = Field(default=None, max_length=2000)
+    whatsapp_group_link: str | None = Field(default=None, max_length=500)
+    service_id: str | None = None
 
 
-def _to_out(e: Engagement) -> EngagementOut:
+def _to_out(e: Engagement, service: Service | None = None) -> EngagementOut:
     return EngagementOut(
         id=str(e.id),
         code=e.code,
@@ -76,9 +82,19 @@ def _to_out(e: Engagement) -> EngagementOut:
         canonical_strategy_id=str(e.canonical_strategy_id) if e.canonical_strategy_id else None,
         accepted_tnc_version_id=str(e.accepted_tnc_version_id) if e.accepted_tnc_version_id else None,
         deliverable=e.deliverable,
+        whatsapp_group_link=e.whatsapp_group_link,
+        service_id=str(e.service_id) if e.service_id else None,
+        service_code=service.code if service else None,
+        service_name=service.name if service else None,
         created_at=e.created_at,
         updated_at=e.updated_at,
     )
+
+
+def _load_service(db: Session, service_id) -> Service | None:
+    if not service_id:
+        return None
+    return db.query(Service).filter(Service.id == service_id).first()
 
 
 @router.get("/clients/{client_id}/engagement", response_model=EngagementOut)
@@ -90,7 +106,7 @@ def get_engagement(
     eng = db.query(Engagement).filter(Engagement.client_id == client_id).first()
     if not eng:
         raise HTTPException(status_code=404, detail="Engagement not found")
-    return _to_out(eng)
+    return _to_out(eng, _load_service(db, eng.service_id))
 
 
 @router.patch("/clients/{client_id}/engagement", response_model=EngagementOut)
@@ -120,6 +136,7 @@ def patch_engagement(
         "engine_id": str(eng.engine_id) if eng.engine_id else None,
         "canonical_strategy_id": str(eng.canonical_strategy_id) if eng.canonical_strategy_id else None,
         "deliverable": eng.deliverable,
+        "whatsapp_group_link": eng.whatsapp_group_link,
     }
 
     # Detect scope changes: mutating scope_in OR scope_out bumps scope_version
@@ -136,6 +153,8 @@ def patch_engagement(
         if k == "engine_id":
             setattr(eng, k, uuid.UUID(v) if v else None)
         elif k == "canonical_strategy_id":
+            setattr(eng, k, uuid.UUID(v) if v else None)
+        elif k == "service_id":
             setattr(eng, k, uuid.UUID(v) if v else None)
         else:
             setattr(eng, k, v)
@@ -172,4 +191,4 @@ def patch_engagement(
     )
     db.commit()
     db.refresh(eng)
-    return _to_out(eng)
+    return _to_out(eng, _load_service(db, eng.service_id))

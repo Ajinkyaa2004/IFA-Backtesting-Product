@@ -5,7 +5,9 @@ from app.db.models.content import ContentSetting
 from app.db.models.engagement import Engagement
 from app.db.models.engine import Engine
 from app.db.models.notification import Notification, NotificationRead
+from app.db.models.quote import Quote
 from app.db.models.request import Request
+from app.db.models.service import Service
 from app.db.models.strategy import StrategyDocument
 from app.db.models.terms import TermsAcceptance, TermsVersion
 from app.db.models.user import User
@@ -25,4 +27,6 @@ __all__ = [
     "ContentSetting",
     "Engagement",
     "Engine",
+    "Service",
+    "Quote",
 ]

@@ -25,6 +25,7 @@ import {
 } from "../../lib/api";
 import { toast } from "../../store/toast";
 import EngagementEditor from "./EngagementEditor";
+import QuoteComposer from "./QuoteComposer";
 import { useImpersonate } from "../../store/impersonate";
 
 const PAGE_SIZE = 50;
@@ -351,6 +352,10 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
           {/* Engagement editor — Chirag's central primitive. Sits at the
               top of the drawer because everything else is derived from it. */}
           <EngagementEditor clientId={client.id} />
+
+          {/* Quote composer (meeting 2026-07-09) — per-request pricing.
+              Admin issues; client accepts / rejects on their dashboard. */}
+          <QuoteComposer clientId={client.id} />
 
           <div>
             <label className="text-xs font-medium text-ink-600 dark:text-ink-300">Tier</label>

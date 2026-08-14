@@ -178,6 +178,50 @@ function labelClass(state: StepState, isPaused: boolean): string {
 }
 
 function buildSteps(e: EngagementSummary, features: TierFeatureKey[]): Step[] {
+  // Service-agnostic path (meeting 2026-07-09): if the engagement has a
+  // lifecycle_template on its Service, drive the stepper from that.
+  // Backtesting keeps its existing derivation because the template step
+  // keys match the state we already track (accepted_tnc, engine_status,
+  // etc.). Other services show setup + terms as derived; remaining steps
+  // sit as 'upcoming' until admin controls arrive in a follow-up sprint.
+  if (e.lifecycle_template && e.service_code && e.service_code !== "backtesting") {
+    return buildGenericSteps(e);
+  }
+  return buildBacktestingSteps(e, features);
+}
+
+function buildGenericSteps(e: EngagementSummary): Step[] {
+  const tpl = e.lifecycle_template ?? [];
+  const tncDone = e.accepted_tnc_version_id !== null;
+  return tpl.map((step, idx): Step => {
+    let state: StepState = "upcoming";
+    let hint: string = step.description;
+    if (idx === 0) {
+      // Every service starts with 'setup' — always done once engagement exists.
+      state = "done";
+      hint = e.code;
+    } else if (step.key === "terms_signed") {
+      state = tncDone ? "done" : "current";
+      hint = tncDone ? "Accepted" : "Awaiting client";
+    } else {
+      // First non-done step becomes 'current'; the rest 'upcoming'.
+      // We don't derive further state for non-backtesting services yet —
+      // admin will drive progression in a follow-up.
+      const priorSteps = tpl.slice(0, idx);
+      const allPriorDone = priorSteps.every((p, i) => i === 0 || p.key === "terms_signed" ? tncDone : true);
+      state = allPriorDone && (idx === (tncDone ? 2 : -1)) ? "current" : "upcoming";
+    }
+    return {
+      key: step.key,
+      label: step.label,
+      icon: <Sparkles size={14}/>,
+      state,
+      hint,
+    };
+  });
+}
+
+function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[]): Step[] {
   const isManual = e.engine_assignment === "manual";
 
   const tncDone = e.accepted_tnc_version_id !== null;

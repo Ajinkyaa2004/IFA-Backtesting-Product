@@ -3,6 +3,7 @@ import { RefreshCw, Send } from "lucide-react";
 import { Badge, Button, Card, SectionTitle } from "../../components/ui";
 import { fetchRequests, submitRequest, type ClientRequest, type RequestType } from "../../lib/api";
 import { usePolling } from "../../lib/usePolling";
+import PaymentDisclaimer from "../../components/PaymentDisclaimer";
 
 const TABS: { id: RequestType; label: string }[] = [
   { id: "new_strategy", label: "New Strategy" },
@@ -21,6 +22,7 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-6">
+      <PaymentDisclaimer />
       <Card padding="p-0">
         <div className="px-5 pt-5">
           <SectionTitle sub="Open a new conversation with the IFA team. We respond within one business day.">

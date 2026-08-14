@@ -144,6 +144,24 @@ export default function ScopePanel({
                 <ScopeList title="In scope" items={engagement.scope_in} tone="in" />
                 <ScopeList title="Out of scope" items={engagement.scope_out} tone="out" />
               </div>
+              {engagement.whatsapp_group_link && (
+                <div className="px-5 pb-4">
+                  <a
+                    href={engagement.whatsapp_group_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg bg-[#25D366]/10 text-[#128C7E] dark:text-[#25D366] border border-[#25D366]/30 hover:bg-[#25D366]/20 text-sm font-medium transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.5-1.7-1.6-2-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2 0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5C8.4 21.5 10.1 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.3c-1.7 0-3.4-.5-4.9-1.4l-.3-.2-3.4 1.1 1.1-3.3-.2-.3C3.4 15 2.9 13.5 2.9 12 2.9 6.9 6.9 2.9 12 2.9s9.1 4 9.1 9.1c0 5-4 9.1-9.1 9.1z"/>
+                    </svg>
+                    Join our project WhatsApp
+                  </a>
+                  <div className="mt-1 text-[10px] text-ink-500 dark:text-ink-400">
+                    Delivery + updates happen on WhatsApp — this is our primary channel.
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 import { acceptTerms, fetchMe, fetchTerms, type Terms } from "../../lib/api";
 import { useAuth } from "../../store/auth";
+import PaymentDisclaimer from "../../components/PaymentDisclaimer";
 
 export default function TermsAcceptPage() {
   const [terms, setTerms] = useState<Terms | null>(null);
@@ -133,6 +134,9 @@ export default function TermsAcceptPage() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-5">
+                <PaymentDisclaimer />
+              </div>
               {!allTicked && (
                 <div className="mt-4 text-xs text-red-600 dark:text-red-400">
                   Some required clauses are not ticked. Go back and accept them.

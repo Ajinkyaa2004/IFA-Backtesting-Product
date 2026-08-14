@@ -95,6 +95,22 @@ class Engagement(UUIDPKMixin, TimestampMixin, Base):
     # scope panel, the admin drawer, the PDF report footer.
     deliverable: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
+    # Meeting 2026-07-09: delivery + comms happen on WhatsApp, not through
+    # the portal. Admin pastes the group link here after creating it out-of-
+    # band; client sees a "Join our project WhatsApp" CTA on the dashboard.
+    # Nullable because the group is created during onboarding, not at engage
+    # creation time. Plain text — could be https://chat.whatsapp.com/xxx or
+    # wa.me/<number>, the frontend just wraps whatever's stored in an <a>.
+    whatsapp_group_link: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Which Service this engagement is delivering. Drives the LifecycleStepper
+    # steps + client dashboard framing. Nullable during backfill; the migration
+    # points every existing engagement at the 'backtesting' service. New
+    # engagements MUST have a service (enforced in the create endpoint).
+    service_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("services.id", ondelete="SET NULL")
+    )
+
     __table_args__ = (
         CheckConstraint(
             "status IN ('pending','active','suspended','closed')",

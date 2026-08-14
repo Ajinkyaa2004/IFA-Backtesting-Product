@@ -133,6 +133,17 @@ export type EngagementSummary = {
   needs_scope_reack: boolean;
   has_completed_backtest: boolean;
   engine_status: "dev" | "isolation_pending" | "live" | "retired" | null;
+  whatsapp_group_link?: string | null;
+  service_code?: string | null;
+  service_name?: string | null;
+  service_icon?: string | null;
+  lifecycle_template?: LifecycleStep[] | null;
+};
+
+export type LifecycleStep = {
+  key: string;
+  label: string;
+  description: string;
 };
 
 export type Me = {
@@ -170,9 +181,100 @@ export type Engagement = {
   canonical_strategy_id: string | null;
   accepted_tnc_version_id: string | null;
   deliverable: string;
+  whatsapp_group_link?: string | null;
+  service_id?: string | null;
+  service_code?: string | null;
+  service_name?: string | null;
   created_at: string;
   updated_at: string;
 };
+
+// ── Services catalog (meeting 2026-07-09) ──────────────────────
+export type Service = {
+  id: string;
+  code: string;
+  name: string;
+  tagline: string | null;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  lifecycle_template: LifecycleStep[] | null;
+};
+
+export async function fetchServices(): Promise<Service[]> {
+  const r = await api.get<Service[]>("/services");
+  return r.data;
+}
+
+// ── Quotes (meeting 2026-07-09) ────────────────────────────────
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+
+export type Quote = {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  amount_inr: number;      // in PAISE, divide by 100 for display
+  currency: string;
+  status: QuoteStatus;
+  service_code: string | null;
+  service_name: string | null;
+  sent_at: string | null;
+  valid_until: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  created_at: string;
+};
+
+export type QuoteAdmin = Quote & {
+  client_id: string;
+  client_name: string | null;
+  service_id: string | null;
+  notes: string | null;
+  updated_at: string;
+};
+
+export async function fetchMyQuotes(): Promise<Quote[]> {
+  const r = await api.get<Quote[]>("/quotes");
+  return r.data;
+}
+
+export async function acceptQuote(id: string): Promise<Quote> {
+  const r = await api.post<Quote>(`/quotes/${id}/accept`);
+  return r.data;
+}
+
+export async function rejectQuote(id: string, reason?: string): Promise<Quote> {
+  const r = await api.post<Quote>(`/quotes/${id}/reject`, { reason });
+  return r.data;
+}
+
+export async function fetchQuotesForClient(clientId: string): Promise<QuoteAdmin[]> {
+  const r = await api.get<QuoteAdmin[]>(`/admin/clients/${clientId}/quotes`);
+  return r.data;
+}
+
+export async function createQuoteForClient(clientId: string, payload: {
+  service_id?: string | null;
+  title: string;
+  description?: string | null;
+  amount_inr: number;
+  valid_until?: string | null;
+  notes?: string | null;
+}): Promise<QuoteAdmin> {
+  const r = await api.post<QuoteAdmin>(`/admin/clients/${clientId}/quotes`, payload);
+  return r.data;
+}
+
+export async function sendQuote(quoteId: string): Promise<QuoteAdmin> {
+  const r = await api.post<QuoteAdmin>(`/admin/quotes/${quoteId}/send`);
+  return r.data;
+}
+
+export async function patchQuote(quoteId: string, patch: Partial<QuoteAdmin>): Promise<QuoteAdmin> {
+  const r = await api.patch<QuoteAdmin>(`/admin/quotes/${quoteId}`, patch);
+  return r.data;
+}
 
 export async function fetchClientEngagement(clientId: string): Promise<Engagement> {
   const r = await api.get<Engagement>(`/admin/clients/${clientId}/engagement`);

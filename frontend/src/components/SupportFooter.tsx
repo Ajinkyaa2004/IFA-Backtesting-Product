@@ -1,6 +1,7 @@
 import { Clock, Mail, ShieldCheck } from "lucide-react";
 import { useAuth } from "../store/auth";
 import { useContent } from "../store/content";
+import PaymentDisclaimer from "./PaymentDisclaimer";
 
 /**
  * Persistent footer on the client-facing layout. Communicates support
@@ -42,6 +43,9 @@ export default function SupportFooter() {
         <span className="ml-auto text-[10px] text-ink-400 dark:text-ink-500">
           {footer.copyright}
         </span>
+      </div>
+      <div className="max-w-[1440px] mx-auto px-4 lg:px-8 mt-3">
+        <PaymentDisclaimer variant="subtle" />
       </div>
     </footer>
   );

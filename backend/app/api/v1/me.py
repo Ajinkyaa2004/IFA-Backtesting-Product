@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core import tier as tier_config
 from app.core.deps import current_user
-from app.db.models import Backtest, Client, Engagement, Engine, StrategyDocument, TermsAcceptance, TermsVersion, User
+from app.db.models import Backtest, Client, Engagement, Engine, Service, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 
 router = APIRouter()
@@ -52,6 +52,17 @@ class EngagementSummary(BaseModel):
     # → None (step is skipped for manual). Frontend consumes this to render
     # the Engine ready step.
     engine_status: str | None
+    # WhatsApp group for delivery + comms (meeting 2026-07-09). Optional —
+    # admin pastes after creating the group out-of-band. Null means no
+    # group yet, in which case the client dashboard hides the CTA.
+    whatsapp_group_link: str | None = None
+    # Service catalog fields (meeting 2026-07-09). Portal serves multiple
+    # service types now — the dashboard framing + lifecycle stepper adapts
+    # to whichever service this engagement is for.
+    service_code: str | None = None
+    service_name: str | None = None
+    service_icon: str | None = None
+    lifecycle_template: list[dict] | None = None
 
 
 class ClientOut(BaseModel):
@@ -149,6 +160,10 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                 else:
                     engine_row = db.query(Engine.status).filter(Engine.id == eng.engine_id).first()
                     engine_status_str = engine_row[0] if engine_row else "dev"
+                # Resolve service info if the engagement has one. Backfill made
+                # every existing engagement point at 'backtesting'; new ones set
+                # it explicitly in the engagement editor.
+                svc = db.query(Service).filter(Service.id == eng.service_id).first() if eng.service_id else None
                 engagement_summary = EngagementSummary(
                     id=str(eng.id),
                     code=eng.code,
@@ -164,6 +179,11 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     needs_scope_reack=needs_reack,
                     has_completed_backtest=has_completed_bt,
                     engine_status=engine_status_str,
+                    whatsapp_group_link=eng.whatsapp_group_link,
+                    service_code=svc.code if svc else None,
+                    service_name=svc.name if svc else None,
+                    service_icon=svc.icon if svc else None,
+                    lifecycle_template=svc.lifecycle_template if svc else None,
                 )
 
             client_out = ClientOut(

@@ -4,8 +4,10 @@ import { Button } from "../../components/ui";
 import {
   type Engagement,
   type Engine,
+  type Service,
   fetchClientEngagement,
   fetchEngines,
+  fetchServices,
   patchClientEngagement,
 } from "../../lib/api";
 import { toast } from "../../store/toast";
@@ -36,6 +38,8 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [engines, setEngines] = useState<Engine[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [serviceId, setServiceId] = useState<string | null>(null);
 
   // Draft state — edits stay client-side until Save.
   const [scopeIn, setScopeIn] = useState<string[]>([]);
@@ -44,6 +48,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
   const [engineId, setEngineId] = useState<string | null>(null);
   const [deliverable, setDeliverable] = useState("");
   const [status, setStatus] = useState<Engagement["status"]>("pending");
+  const [whatsappLink, setWhatsappLink] = useState("");
   const [newInItem, setNewInItem] = useState("");
   const [newOutItem, setNewOutItem] = useState("");
 
@@ -52,16 +57,20 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
     Promise.all([
       fetchClientEngagement(clientId),
       fetchEngines().catch(() => [] as Engine[]),
+      fetchServices().catch(() => [] as Service[]),
     ])
-      .then(([e, es]) => {
+      .then(([e, es, svcs]) => {
         setEng(e);
         setEngines(es);
+        setServices(svcs);
         setScopeIn(e.scope_in);
         setScopeOut(e.scope_out);
         setEngineAssignment(e.engine_assignment);
         setEngineId(e.engine_id);
         setDeliverable(e.deliverable);
         setStatus(e.status);
+        setWhatsappLink(e.whatsapp_group_link ?? "");
+        setServiceId(e.service_id ?? null);
       })
       .catch(() => setEng(null))
       .finally(() => setLoading(false));
@@ -74,7 +83,9 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
     engineAssignment !== eng?.engine_assignment ||
     engineId !== (eng?.engine_id ?? null) ||
     deliverable !== (eng?.deliverable ?? "") ||
-    status !== eng?.status;
+    status !== eng?.status ||
+    whatsappLink !== (eng?.whatsapp_group_link ?? "") ||
+    serviceId !== (eng?.service_id ?? null);
   const dirty = scopeChanged || otherChanged;
 
   const save = async () => {
@@ -94,6 +105,8 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         engine_id: engineAssignment === "manual" ? null : engineId,
         deliverable,
         status,
+        whatsapp_group_link: whatsappLink.trim() || null,
+        service_id: serviceId,
       });
       setEng(updated);
       toast.success(
@@ -132,6 +145,22 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         </select>
       </FormRow>
 
+      <FormRow label={<span className="inline-flex items-center gap-1">🎯 Service</span>}>
+        <select
+          value={serviceId ?? ""}
+          onChange={(e) => setServiceId(e.target.value || null)}
+          className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+        >
+          <option value="">— pick a service —</option>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+          ))}
+        </select>
+        <div className="mt-1 text-[10px] text-ink-500 dark:text-ink-400">
+          Drives the client's lifecycle stepper + dashboard framing.
+        </div>
+      </FormRow>
+
       <FormRow label="Deliverable">
         <textarea
           value={deliverable}
@@ -140,6 +169,19 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
           placeholder="One-line summary of what this client is buying."
           className="w-full px-2 py-1.5 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 resize-y"
         />
+      </FormRow>
+
+      <FormRow label={<span className="inline-flex items-center gap-1">💬 WhatsApp group link</span>}>
+        <input
+          type="url"
+          value={whatsappLink}
+          onChange={(e) => setWhatsappLink(e.target.value)}
+          placeholder="https://chat.whatsapp.com/…"
+          className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+        />
+        <div className="mt-1 text-[10px] text-ink-500 dark:text-ink-400">
+          Create the group on WhatsApp, then paste the invite link. Client sees a "Join our WhatsApp" button on their dashboard.
+        </div>
       </FormRow>
 
       <FormRow label={<span className="inline-flex items-center gap-1"><Cpu size={11}/> Engine assignment</span>}>

@@ -9,6 +9,7 @@ import { Reveal, StaggerItem, StaggerReveal } from "../../components/motion";
 import LifecycleStepper from "./LifecycleStepper";
 import OnboardingChecklist from "./OnboardingChecklist";
 import ScopePanel from "./ScopePanel";
+import ClientQuotesCard from "./ClientQuotesCard";
 import TierCard, { ComingSoonTile } from "./TierCard";
 
 const POLL_INTERVAL_MS = 20_000;
@@ -84,6 +85,7 @@ export default function OverviewPage() {
             features={me.client.tier_usage?.features ?? []}
           />
           <ScopePanel engagement={me.client.engagement} onScopeReacked={refreshMe} />
+          <ClientQuotesCard />
         </>
       )}
       {content.sections.welcome_banner && showWelcome && demo && (
