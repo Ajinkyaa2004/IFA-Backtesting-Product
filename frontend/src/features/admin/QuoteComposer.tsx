@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, DollarSign, FileText, Plus, Send, XCircle } from "lucide-react";
+import { DollarSign, Plus, Send } from "lucide-react";
 import { Button } from "../../components/ui";
 import {
   type QuoteAdmin,
