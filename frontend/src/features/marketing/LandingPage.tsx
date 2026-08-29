@@ -32,7 +32,10 @@ import {
 } from "lucide-react";
 import SEOHead from "../../components/SEOHead";
 
-const SITE = "https://backtestingengine.insightfusionanalytics.com";
+// Runtime-configured site URL — swaps to any domain with an env change.
+// Fallback preserves old prod host so any transitional build keeps working.
+const SITE = (import.meta.env.VITE_SITE_URL as string | undefined)
+  ?? "https://backtestingengine.insightfusionanalytics.com";
 
 const TIERS = [
   {
@@ -487,10 +490,18 @@ function Footer() {
             <li><Link to="/login" className="hover:text-ink-900 dark:hover:text-ink-50">Sign in</Link></li>
           </ul>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-ink-500 mb-3">Contact</div>
           <ul className="space-y-1.5 text-ink-600 dark:text-ink-300">
-            <li><a href="mailto:hello@insightfusionanalytics.com" className="hover:text-ink-900 dark:hover:text-ink-50 inline-flex items-center gap-1"><Mail size={12}/> hello@insightfusionanalytics.com</a></li>
+            <li className="min-w-0">
+              <a
+                href="mailto:hello@insightfusionanalytics.com"
+                className="hover:text-ink-900 dark:hover:text-ink-50 flex items-start gap-1 break-all"
+              >
+                <Mail size={12} className="mt-0.5 shrink-0" />
+                <span className="break-all">hello@insightfusionanalytics.com</span>
+              </a>
+            </li>
             <li><span className="inline-flex items-center gap-1"><Users size={12} aria-hidden/> Serving India</span></li>
             <li><span className="inline-flex items-center gap-1"><BarChart3 size={12} aria-hidden/> NSE cash + F&amp;O</span></li>
           </ul>
