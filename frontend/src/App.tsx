@@ -3,6 +3,9 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoginPage from "./features/auth/LoginPage";
+import SignupPage from "./features/auth/SignupPage";
+import PendingApprovalPage from "./features/auth/PendingApprovalPage";
+import RejectedPage from "./features/auth/RejectedPage";
 import AdminLoginPage from "./features/auth/AdminLoginPage";
 import LandingPage from "./features/marketing/LandingPage";
 import OverviewPage from "./features/overview/OverviewPage";
@@ -20,6 +23,7 @@ import AdminNotificationsPage from "./features/admin/AdminNotificationsPage";
 import AdminAuditPage from "./features/admin/AdminAuditPage";
 import AdminContentPage from "./features/admin/AdminContentPage";
 import AdminEnginesPage from "./features/admin/AdminEnginesPage";
+import AdminSignupsPage from "./features/admin/AdminSignupsPage";
 import AdminTermsPage from "./features/admin/AdminTermsPage";
 import { auth } from "./lib/firebase";
 import { classifyAuthGateError, fetchMe } from "./lib/api";
@@ -32,11 +36,16 @@ function Protected({
   requireTncDone,
   requireAdmin,
   requireClient,
+  // /pending and /rejected pages themselves need to render for a pending/
+  // rejected user — the signup-status redirect must be skipped there or
+  // we bounce forever. Set to false on those two routes only.
+  enforceSignupGate = true,
 }: {
   children: React.ReactNode;
   requireTncDone?: boolean;
   requireAdmin?: boolean;
   requireClient?: boolean;
+  enforceSignupGate?: boolean;
 }) {
   const me = useAuth((s) => s.me);
   const loading = useAuth((s) => s.loading);
@@ -65,6 +74,15 @@ function Protected({
   // Admins in preview mode (?admin-preview=1) also enter the client area,
   // used by the content editor iframe.
   if (requireClient && isAdmin && !impersonating && !previewMode) return <Navigate to="/admin" replace />;
+  // Self-serve signup gate — a pending or rejected client must land on the
+  // dedicated screen, not on the T&C page or dashboard. Admins bypass this
+  // (their signup_status is always 'approved' by construction). The
+  // pending/rejected screens themselves opt out via enforceSignupGate=false
+  // to avoid a redirect loop.
+  if (enforceSignupGate && me.role === "client" && me.signup_status === "pending_approval")
+    return <Navigate to="/pending" replace />;
+  if (enforceSignupGate && me.role === "client" && me.signup_status === "rejected")
+    return <Navigate to="/rejected" replace />;
   // T&C check only applies to real clients — impersonating admins skip this
   // (client's own acceptance state is what matters and admins can't accept
   // T&C on behalf of a client anyway).
@@ -196,7 +214,28 @@ export default function App() {
 
         {/* Public login pages — role-gated so a client can't sneak in via /admin/login */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* Post-signup gating screens. Protected without a role requirement —
+            a pending/rejected user has an active Firebase session but no
+            client_id, so client-only routes bounce them here. */}
+        <Route
+          path="/pending"
+          element={
+            <Protected enforceSignupGate={false}>
+              <PendingApprovalPage />
+            </Protected>
+          }
+        />
+        <Route
+          path="/rejected"
+          element={
+            <Protected enforceSignupGate={false}>
+              <RejectedPage />
+            </Protected>
+          }
+        />
 
         <Route path="/terms" element={<Protected><TermsAcceptPage /></Protected>} />
 
@@ -214,6 +253,7 @@ export default function App() {
         {/* Admin console */}
         <Route path="admin" element={<Protected requireAdmin><AdminLayout /></Protected>}>
           <Route index element={<AdminPulsePage />} />
+          <Route path="signups" element={<AdminSignupsPage />} />
           <Route path="clients" element={<AdminClientsPage />} />
           <Route path="backtests/upload" element={<AdminBacktestUploadPage />} />
           <Route path="terms" element={<AdminTermsPage />} />
@@ -243,6 +283,10 @@ function HomeGate() {
   if (!me) return <LandingPage />;
   const isAdmin = me.role === "main_admin" || me.role === "sub_admin";
   if (isAdmin) return <Navigate to="/admin" replace />;
+  // Self-serve signup routing mirrors Protected — pending/rejected clients
+  // never see the dashboard directly.
+  if (me.signup_status === "pending_approval") return <Navigate to="/pending" replace />;
+  if (me.signup_status === "rejected") return <Navigate to="/rejected" replace />;
   if (me.needs_tnc_acceptance) return <Navigate to="/terms" replace />;
   return <Navigate to="/dashboard" replace />;
 }

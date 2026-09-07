@@ -67,6 +67,24 @@ class Settings(BaseSettings):
     # Observability
     SENTRY_DSN_BACKEND: str = ""
 
+    # ── Email (Gmail SMTP for signup admin-notify + client approve/reject) ──
+    # Gmail App Password required (regular Google password won't work — 2FA
+    # accounts have to mint an app-specific password from
+    # https://myaccount.google.com/apppasswords). Left empty on dev machines;
+    # emails silently no-op with a warning log when SMTP_HOST is unset so
+    # the signup flow still works locally without leaking real emails.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_FROM_NAME: str = "IFA Backtest Engine"
+    # Where signup notifications land — usually the main admin's inbox.
+    ADMIN_NOTIFY_EMAIL: str = ""
+    # Absolute base URL of the client-facing app, used in email CTAs
+    # ("Sign in at ..."). Falls back to LOCAL_BACKEND_BASE_URL when unset.
+    FRONTEND_BASE_URL: str = ""
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
@@ -75,6 +93,16 @@ class Settings(BaseSettings):
     def vam_configured(self) -> bool:
         """True when both VAM credentials are present. Endpoints return 503 if False."""
         return bool(self.VAM_ADMIN_EMAIL) and bool(self.VAM_ADMIN_PASSWORD)
+
+    @property
+    def email_configured(self) -> bool:
+        """True when SMTP is set up. When False, email helpers no-op with a warning."""
+        return bool(self.SMTP_HOST) and bool(self.SMTP_USER) and bool(self.SMTP_PASSWORD)
+
+    @property
+    def frontend_url(self) -> str:
+        """Best-effort absolute URL to the client-facing app root."""
+        return (self.FRONTEND_BASE_URL or self.LOCAL_BACKEND_BASE_URL).rstrip("/")
 
 
 @lru_cache

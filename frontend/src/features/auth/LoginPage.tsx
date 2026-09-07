@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
@@ -42,6 +42,17 @@ export default function LoginPage() {
         return;
       }
       setMe(me);
+      // Self-serve signup gate — a returning client whose approval is still
+      // pending (or was rejected) needs to land on the correct waiting/
+      // rejected screen instead of the dashboard.
+      if (me.signup_status === "pending_approval") {
+        navigate("/pending");
+        return;
+      }
+      if (me.signup_status === "rejected") {
+        navigate("/rejected");
+        return;
+      }
       if (me.needs_tnc_acceptance) navigate("/terms");
       else navigate("/dashboard");
     } catch (err: unknown) {
@@ -144,7 +155,13 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-4 text-[11px] text-ink-400 text-center">
-          No account? Contact your IFA account manager.
+          Don't have an account?{" "}
+          <Link
+            to="/signup"
+            className="text-accent-700 dark:text-accent-300 hover:underline font-medium"
+          >
+            Request access →
+          </Link>
         </p>
         <p className="mt-3 text-[11px] text-ink-400 text-center">
           IFA team member? <a href="/admin/login" className="text-accent-700 dark:text-accent-300 hover:underline">Sign in to admin console →</a>

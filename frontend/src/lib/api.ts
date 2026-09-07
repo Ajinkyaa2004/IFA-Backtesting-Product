@@ -146,11 +146,26 @@ export type LifecycleStep = {
   description: string;
 };
 
+/** Self-serve signup gate. Drives routing between /pending, /rejected and
+ *  the real dashboard. Separate from `status` because rejection is a
+ *  distinct end-state from suspension (which admin can toggle any time). */
+export type SignupStatus = "pending_approval" | "approved" | "rejected";
+
+export type SignupMetadata = {
+  name?: string;
+  company?: string;
+  phone?: string;
+  purpose?: string | null;
+};
+
 export type Me = {
   id: string;
   email: string;
   role: "client" | "sub_admin" | "main_admin";
   status: "active" | "suspended";
+  signup_status: SignupStatus;
+  signup_rejection_reason: string | null;
+  signup_metadata: SignupMetadata;
   client: {
     id: string;
     name: string;
@@ -364,6 +379,74 @@ export function extractTierGate(err: unknown): TierGateDetail | null {
 
 export async function fetchMe(): Promise<Me> {
   const res = await api.get<Me>("/me");
+  return res.data;
+}
+
+// ── Self-serve signup + admin approval ─────────────────────────────
+export type SignupPayload = {
+  id_token: string;
+  name: string;
+  company: string;
+  phone: string;
+  purpose?: string | null;
+};
+
+export type SignupResponse = {
+  ok: boolean;
+  user_id: string;
+  signup_status: SignupStatus;
+};
+
+/** Post a Firebase ID token + profile fields to the backend to create a
+ *  pending signup row. Called by the /signup page right after Firebase
+ *  createUserWithEmailAndPassword resolves. */
+export async function submitSignup(payload: SignupPayload): Promise<SignupResponse> {
+  const res = await api.post<SignupResponse>("/auth/signup", payload);
+  return res.data;
+}
+
+export type PendingSignup = {
+  id: string;
+  email: string;
+  signup_status: SignupStatus;
+  signup_requested_at: string | null;
+  signup_approved_at: string | null;
+  signup_rejection_reason: string | null;
+  metadata: SignupMetadata;
+};
+
+export async function adminListSignups(
+  status: "pending_approval" | "approved" | "rejected" | "all" = "pending_approval",
+): Promise<PendingSignup[]> {
+  const res = await api.get<PendingSignup[]>("/admin/signups", {
+    params: { signup_status: status },
+  });
+  return res.data;
+}
+
+export type ApproveSignupPayload = {
+  tier: "tier1" | "tier2" | "tier3";
+  engagement_type: "existing" | "bespoke" | "manual";
+  deliverable?: string;
+  company_name: string;
+  whatsapp_group_link?: string | null;
+};
+
+export async function adminApproveSignup(
+  userId: string,
+  payload: ApproveSignupPayload,
+): Promise<PendingSignup> {
+  const res = await api.post<PendingSignup>(`/admin/signups/${userId}/approve`, payload);
+  return res.data;
+}
+
+export async function adminRejectSignup(
+  userId: string,
+  reason: string,
+): Promise<PendingSignup> {
+  const res = await api.post<PendingSignup>(`/admin/signups/${userId}/reject`, {
+    reason,
+  });
   return res.data;
 }
 

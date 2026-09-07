@@ -125,6 +125,14 @@ export default function OverviewPage() {
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.16em] text-ink-500 dark:text-ink-400">
               {showWelcome ? "Getting started" : "Welcome back"}
+              {me?.signup_metadata?.name ? (
+                <span className="normal-case tracking-normal">
+                  {", "}
+                  <span className="font-semibold text-ink-800 dark:text-ink-100">
+                    {me.signup_metadata.name.split(" ")[0]}
+                  </span>
+                </span>
+              ) : null}
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">
               {me?.client?.name}

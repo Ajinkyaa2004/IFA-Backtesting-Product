@@ -18,6 +18,7 @@ import {
   ScrollText,
   Shield,
   Sun,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -31,6 +32,7 @@ import NotificationBell from "./NotificationBell";
 
 const NAV_ADMIN = [
   { to: "/admin", label: "Pulse", icon: Activity, end: true },
+  { to: "/admin/signups", label: "Pending signups", icon: UserPlus },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/engines", label: "Engine registry", icon: Cpu },
   { to: "/admin/backtests/upload", label: "Upload backtest", icon: BarChart3 },

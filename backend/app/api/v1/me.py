@@ -80,6 +80,15 @@ class MeOut(BaseModel):
     email: str
     role: str
     status: str
+    # Self-serve signup gate — separate from `status` so the frontend can
+    # route a pending user to /pending or a rejected user to /rejected
+    # instead of dumping them on the login form.
+    signup_status: str = "approved"
+    signup_rejection_reason: str | None = None
+    # Client-supplied signup profile (name/company/phone/purpose). Echoed
+    # back so /pending can show "waiting on approval for [Company]" without
+    # a second API call.
+    signup_metadata: dict = {}
     client: ClientOut | None
     needs_tnc_acceptance: bool
     latest_tnc_version_id: str | None
@@ -218,6 +227,9 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
         email=user.email,
         role=user.role,
         status=user.status,
+        signup_status=user.signup_status,
+        signup_rejection_reason=user.signup_rejection_reason,
+        signup_metadata=user.signup_metadata or {},
         client=client_out,
         needs_tnc_acceptance=needs_tnc,
         latest_tnc_version_id=latest_id,
