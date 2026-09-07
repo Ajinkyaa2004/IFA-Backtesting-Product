@@ -20,7 +20,7 @@ import { createUserWithEmailAndPassword, signOut, updateProfile } from "firebase
 import { Building2, CheckCircle2, Loader2, Mail, Phone, Sparkles, User as UserIcon } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchMe, submitSignup } from "../../lib/api";
+import { submitSignup } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { useAuth } from "../../store/auth";
 
@@ -110,17 +110,23 @@ export default function SignupPage() {
         purpose: purpose.trim() || null,
       });
 
-      // 4. Load /me so the auth store carries their pending status. This
-      //    lets /pending render "waiting on approval for [Company]" without
-      //    a second network round-trip.
+      // 4. Sign the user OUT — Firebase auto-logged them in when the
+      //    account was created, but we don't want them to reach any
+      //    protected route yet. Route them back to /login with a
+      //    success banner instead. They'll sign in later once the
+      //    approval email arrives.
       try {
-        const me = await fetchMe();
-        setMe(me);
+        await signOut(auth);
       } catch {
-        /* If /me fails, /pending will retry via App.tsx onAuthStateChanged */
+        /* ignore — worst case the App.tsx listener routes them via /pending */
       }
+      setMe(null);
 
-      navigate("/pending", { replace: true });
+      const successEmail = email.trim();
+      navigate(
+        `/login?just_signed_up=1&email=${encodeURIComponent(successEmail)}`,
+        { replace: true },
+      );
     } catch (err: unknown) {
       // If Firebase user creation succeeded but the backend call failed we
       // sign the user out so they can retry with the same email later.

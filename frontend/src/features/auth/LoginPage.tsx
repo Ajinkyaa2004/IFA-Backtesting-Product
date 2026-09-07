@@ -1,6 +1,7 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { CheckCircle2, Mail } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
@@ -8,7 +9,18 @@ import { useAuth } from "../../store/auth";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [searchParams] = useSearchParams();
+  // Post-signup banner. SignupPage sends the user here with
+  // ?just_signed_up=1&email=xxx after successfully submitting the signup form.
+  // We pre-fill the email input so they don't have to retype it on their
+  // eventual return visit.
+  const justSignedUp = searchParams.get("just_signed_up") === "1";
+  const signupEmailParam = useMemo(
+    () => searchParams.get("email") ?? "",
+    [searchParams],
+  );
+
+  const [email, setEmail] = useState(signupEmailParam);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -105,6 +117,38 @@ export default function LoginPage() {
         <p className="text-sm text-ink-500 dark:text-ink-400 mb-6">
           Use the credentials shared by your account manager.
         </p>
+
+        {justSignedUp && (
+          <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2
+                size={18}
+                className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Signup received — you're on the list
+                </div>
+                <div className="mt-1 text-xs text-emerald-800/90 dark:text-emerald-200/80 leading-relaxed">
+                  Our team is reviewing your request and will get back to you
+                  within one business day.
+                  {signupEmailParam ? (
+                    <>
+                      {" "}Watch{" "}
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <Mail size={11} /> {signupEmailParam}
+                      </span>{" "}
+                      for the approval email.
+                    </>
+                  ) : (
+                    " Check your inbox — we'll email you the moment access is unlocked."
+                  )}
+                  {" "}Come back and sign in below once you receive it.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
