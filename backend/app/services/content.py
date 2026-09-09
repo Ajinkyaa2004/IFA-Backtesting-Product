@@ -94,7 +94,7 @@ DEFAULTS: dict[str, dict] = {
     },
     "support_footer": {
         "hours": "10 AM – 7 PM IST · Mon–Fri",
-        "email": "support@insightfusionanalytics.com",
+        "email": "insightfusionanalytics@gmail.com",
         "copyright": "© Insight Fusion Analytics · Backtest Engine v1.0",
     },
     "announcement": {

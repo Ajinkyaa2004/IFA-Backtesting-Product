@@ -22,14 +22,12 @@ import {
   CheckCircle2,
   Cpu,
   FileCheck2,
-  Layers,
   LineChart,
   Lock,
   Mail,
   Rocket,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
@@ -140,9 +138,26 @@ const STEPS = [
  * `accent` picks the gradient for the icon panel so cards don't all look
  * identical when the client scrolls.
  */
-const PORTFOLIO = [
+type PortfolioKind =
+  | "backtest-engine"
+  | "vam-engine"
+  | "strategy-library"
+  | "market-pulse"
+  | "universe-scanner"
+  | "admin-console";
+
+const PORTFOLIO: {
+  kind: PortfolioKind;
+  accent: string;
+  category: string;
+  title: string;
+  body: string;
+  deliverables: string[];
+  tags: string[];
+  href?: string;
+}[] = [
   {
-    icon: <Cpu size={22} />,
+    kind: "backtest-engine",
     accent: "from-accent-500 to-violet-600",
     category: "Product",
     title: "IFA Backtest Engine",
@@ -156,7 +171,7 @@ const PORTFOLIO = [
     href: "https://backtestingengine.insightfusionanalytics.com",
   },
   {
-    icon: <TrendingUp size={22} />,
+    kind: "vam-engine",
     accent: "from-emerald-500 to-teal-600",
     category: "Live engine",
     title: "VAM — Volatility Adjusted Momentum",
@@ -170,7 +185,7 @@ const PORTFOLIO = [
     href: "https://backtestravi.insightfusionanalytics.com",
   },
   {
-    icon: <LineChart size={22} />,
+    kind: "strategy-library",
     accent: "from-sky-500 to-blue-600",
     category: "Strategy research",
     title: "Swing-trading strategy library",
@@ -183,7 +198,7 @@ const PORTFOLIO = [
     tags: ["Alligator", "CPR", "Supertrend", "Heikin-Ashi", "Fractals"],
   },
   {
-    icon: <BarChart3 size={22} />,
+    kind: "market-pulse",
     accent: "from-amber-500 to-orange-600",
     category: "Analytics",
     title: "Market Pulse dashboard",
@@ -196,7 +211,7 @@ const PORTFOLIO = [
     tags: ["FastAPI", "WebSockets", "React", "Recharts"],
   },
   {
-    icon: <Layers size={22} />,
+    kind: "universe-scanner",
     accent: "from-fuchsia-500 to-pink-600",
     category: "Custom engagement",
     title: "Bespoke Phase-A universe scanner",
@@ -209,7 +224,7 @@ const PORTFOLIO = [
     tags: ["Python", "yfinance/GDFL", "Pydantic", "Alembic"],
   },
   {
-    icon: <ShieldCheck size={22} />,
+    kind: "admin-console",
     accent: "from-slate-600 to-ink-800",
     category: "Compliance & ops",
     title: "T&C, audit + admin console",
@@ -222,6 +237,344 @@ const PORTFOLIO = [
     tags: ["Alembic migrations", "Row-level access", "Signed URLs"],
   },
 ];
+
+/**
+ * Product-specific hero mini-mockups for the portfolio cards. Each `kind`
+ * renders a self-contained SVG dashboard/chart/log widget that visually
+ * mirrors what the actual product does — chart for the engines, table for
+ * the scanner, log rows for the admin console — so the card doesn't
+ * degenerate into six identical gradient-plus-icon blocks.
+ *
+ * Rendered inside the h-32 header slot of each portfolio card.
+ * viewBox is 320x128 so the SVG scales cleanly at any card width.
+ */
+function PortfolioThumbnail({ kind }: { kind: PortfolioKind }) {
+  switch (kind) {
+    case "backtest-engine":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="bt-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#7c3aed" />
+              <stop offset="1" stopColor="#4c1d95" />
+            </linearGradient>
+            <linearGradient id="bt-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />
+              <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#bt-bg)" />
+          {/* KPI tiles */}
+          <g fill="rgba(255,255,255,0.14)">
+            <rect x="14" y="14" width="72" height="30" rx="6" />
+            <rect x="94" y="14" width="72" height="30" rx="6" />
+            <rect x="174" y="14" width="72" height="30" rx="6" />
+          </g>
+          <g fill="rgba(255,255,255,0.9)" fontFamily="ui-monospace, SFMono-Regular, monospace" fontSize="10" fontWeight="700">
+            <text x="20" y="34">+27.4%</text>
+            <text x="100" y="34">1.31</text>
+            <text x="180" y="34">-14.2%</text>
+          </g>
+          <g fill="rgba(255,255,255,0.55)" fontFamily="ui-sans-serif, system-ui" fontSize="6">
+            <text x="20" y="42">RETURN</text>
+            <text x="100" y="42">SHARPE</text>
+            <text x="180" y="42">MAX DD</text>
+          </g>
+          {/* Equity curve */}
+          <path
+            d="M 14 100 L 40 90 L 62 96 L 88 78 L 114 82 L 140 66 L 170 72 L 200 54 L 232 60 L 260 46 L 290 50 L 306 42"
+            fill="none"
+            stroke="rgba(255,255,255,0.9)"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M 14 100 L 40 90 L 62 96 L 88 78 L 114 82 L 140 66 L 170 72 L 200 54 L 232 60 L 260 46 L 290 50 L 306 42 L 306 116 L 14 116 Z"
+            fill="url(#bt-area)"
+          />
+        </svg>
+      );
+
+    case "vam-engine":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="vam-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#10b981" />
+              <stop offset="1" stopColor="#0f766e" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#vam-bg)" />
+          {/* Candlesticks — 20 of them, mostly green with a couple red */}
+          {(() => {
+            const candles = [
+              { x: 14,  o: 82, c: 74 }, { x: 24, o: 78, c: 68 }, { x: 34, o: 72, c: 78 },
+              { x: 44,  o: 76, c: 66 }, { x: 54, o: 68, c: 60 }, { x: 64, o: 62, c: 70 },
+              { x: 74,  o: 68, c: 58 }, { x: 84, o: 60, c: 52 }, { x: 94, o: 54, c: 60 },
+              { x: 104, o: 58, c: 46 }, { x: 114, o: 48, c: 40 }, { x: 124, o: 42, c: 48 },
+              { x: 134, o: 44, c: 34 }, { x: 144, o: 36, c: 28 }, { x: 154, o: 30, c: 38 },
+              { x: 164, o: 34, c: 24 }, { x: 174, o: 26, c: 20 }, { x: 184, o: 22, c: 30 },
+              { x: 194, o: 28, c: 18 }, { x: 204, o: 20, c: 14 },
+            ];
+            return candles.map((k) => {
+              const green = k.c < k.o;
+              const top = Math.min(k.o, k.c);
+              const h = Math.max(2, Math.abs(k.o - k.c));
+              return (
+                <g key={k.x}>
+                  <line
+                    x1={k.x + 3}
+                    y1={top - 4}
+                    x2={k.x + 3}
+                    y2={top + h + 4}
+                    stroke="rgba(255,255,255,0.55)"
+                    strokeWidth="1"
+                  />
+                  <rect
+                    x={k.x}
+                    y={top}
+                    width={6}
+                    height={h}
+                    fill={green ? "rgba(255,255,255,0.9)" : "rgba(15,23,42,0.6)"}
+                    rx="1"
+                  />
+                </g>
+              );
+            });
+          })()}
+          {/* Buy signal marker */}
+          <g>
+            <circle cx="94" cy="60" r="6" fill="rgba(255,255,255,0.95)" />
+            <path d="M 91 60 L 94 63 L 98 57" stroke="#059669" strokeWidth="1.75" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+          {/* Live label */}
+          <g>
+            <rect x="230" y="12" width="76" height="20" rx="10" fill="rgba(0,0,0,0.35)" />
+            <circle cx="242" cy="22" r="3" fill="#4ade80">
+              <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite" />
+            </circle>
+            <text x="250" y="26" fill="rgba(255,255,255,0.95)" fontFamily="ui-sans-serif, system-ui" fontSize="10" fontWeight="700">
+              LIVE · VAM
+            </text>
+          </g>
+          {/* Ticker text bottom */}
+          <text x="14" y="118" fill="rgba(255,255,255,0.7)" fontFamily="ui-monospace" fontSize="9">
+            RELIANCE · +2.4%  ·  INFY · +1.8%
+          </text>
+        </svg>
+      );
+
+    case "strategy-library":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="sl-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#0ea5e9" />
+              <stop offset="1" stopColor="#1d4ed8" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#sl-bg)" />
+          {/* Grid lines */}
+          <g stroke="rgba(255,255,255,0.08)" strokeWidth="1">
+            <line x1="0" y1="40" x2="320" y2="40" />
+            <line x1="0" y1="70" x2="320" y2="70" />
+            <line x1="0" y1="100" x2="320" y2="100" />
+          </g>
+          {/* Three different strategy equity curves */}
+          <path
+            d="M 14 96 L 40 92 L 68 84 L 96 78 L 128 70 L 158 66 L 190 54 L 222 50 L 254 42 L 288 32 L 306 30"
+            fill="none"
+            stroke="rgba(255,255,255,0.95)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 14 100 L 40 96 L 68 92 L 96 88 L 128 82 L 158 82 L 190 74 L 222 70 L 254 68 L 288 60 L 306 56"
+            fill="none"
+            stroke="rgba(163,230,253,0.9)"
+            strokeWidth="1.4"
+            strokeDasharray="3 3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 14 104 L 40 100 L 68 102 L 96 96 L 128 94 L 158 88 L 190 90 L 222 84 L 254 76 L 288 74 L 306 68"
+            fill="none"
+            stroke="rgba(56,189,248,0.9)"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          {/* Legend chips */}
+          <g fontFamily="ui-sans-serif, system-ui" fontSize="8" fontWeight="600">
+            <g transform="translate(14, 14)">
+              <rect width="68" height="16" rx="8" fill="rgba(0,0,0,0.28)" />
+              <circle cx="8" cy="8" r="3" fill="rgba(255,255,255,0.95)" />
+              <text x="16" y="11" fill="rgba(255,255,255,0.95)">Alligator+CPR</text>
+            </g>
+            <g transform="translate(88, 14)">
+              <rect width="80" height="16" rx="8" fill="rgba(0,0,0,0.28)" />
+              <circle cx="8" cy="8" r="3" fill="rgba(163,230,253,0.95)" />
+              <text x="16" y="11" fill="rgba(255,255,255,0.95)">Supertrend+HA</text>
+            </g>
+            <g transform="translate(174, 14)">
+              <rect width="76" height="16" rx="8" fill="rgba(0,0,0,0.28)" />
+              <circle cx="8" cy="8" r="3" fill="rgba(56,189,248,0.95)" />
+              <text x="16" y="11" fill="rgba(255,255,255,0.95)">RSI Reversion</text>
+            </g>
+          </g>
+        </svg>
+      );
+
+    case "market-pulse":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="mp-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#f59e0b" />
+              <stop offset="1" stopColor="#c2410c" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#mp-bg)" />
+          {/* Sector heatmap grid — 8 columns × 4 rows */}
+          {(() => {
+            const cells: { r: number; c: number; a: number }[] = [];
+            // deterministic pseudo-random alphas so it always looks the same
+            const seeds = [
+              0.82, 0.35, 0.55, 0.75, 0.9, 0.42, 0.68, 0.28,
+              0.6, 0.85, 0.4, 0.5, 0.72, 0.88, 0.34, 0.62,
+              0.44, 0.66, 0.78, 0.36, 0.58, 0.8, 0.52, 0.48,
+              0.7, 0.38, 0.6, 0.86, 0.46, 0.7, 0.32, 0.55,
+            ];
+            for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) {
+              cells.push({ r, c, a: seeds[r * 8 + c] });
+            }
+            return cells.map((cell) => (
+              <rect
+                key={`${cell.r}-${cell.c}`}
+                x={14 + cell.c * 36}
+                y={40 + cell.r * 16}
+                width="32"
+                height="12"
+                rx="2"
+                fill="rgba(255,255,255,0.95)"
+                opacity={cell.a}
+              />
+            ));
+          })()}
+          {/* Header labels */}
+          <g fontFamily="ui-sans-serif, system-ui" fontSize="7" fill="rgba(255,255,255,0.85)" fontWeight="600">
+            <text x="14" y="30">SECTOR HEATMAP · TODAY</text>
+          </g>
+          {/* Bottom stats row */}
+          <g fontFamily="ui-monospace" fontSize="9" fill="rgba(255,255,255,0.95)" fontWeight="700">
+            <text x="14" y="120">ADV: 1,842</text>
+            <text x="94" y="120">DEC: 984</text>
+            <text x="164" y="120">RATIO: 1.87</text>
+            <text x="240" y="120">VIX: 12.4</text>
+          </g>
+        </svg>
+      );
+
+    case "universe-scanner":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="us-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#d946ef" />
+              <stop offset="1" stopColor="#be185d" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#us-bg)" />
+          {/* Header */}
+          <text x="14" y="20" fill="rgba(255,255,255,0.95)" fontFamily="ui-sans-serif, system-ui" fontSize="9" fontWeight="700">
+            RANKED SHORTLIST · ₹1K–20K CR
+          </text>
+          {/* Table header */}
+          <g fill="rgba(255,255,255,0.55)" fontFamily="ui-sans-serif, system-ui" fontSize="7" fontWeight="700">
+            <text x="14" y="38">#</text>
+            <text x="34" y="38">TICKER</text>
+            <text x="122" y="38">SCORE</text>
+            <text x="180" y="38">TREND</text>
+            <text x="248" y="38">Δ 3M</text>
+          </g>
+          {/* Divider */}
+          <line x1="14" y1="42" x2="306" y2="42" stroke="rgba(255,255,255,0.25)" />
+          {/* 5 rows */}
+          {[
+            { i: "1", t: "POLYCAB", s: "94.6", d: "+22.4%" },
+            { i: "2", t: "AUBANK",  s: "91.3", d: "+18.7%" },
+            { i: "3", t: "TATAPWR", s: "88.1", d: "+16.2%" },
+            { i: "4", t: "COFORGE", s: "85.4", d: "+13.9%" },
+            { i: "5", t: "DELHIVR", s: "82.7", d: "+11.5%" },
+          ].map((row, idx) => (
+            <g key={row.t} fontFamily="ui-monospace" fontSize="8" fill="rgba(255,255,255,0.9)">
+              <text x="14" y={56 + idx * 14}>{row.i}</text>
+              <text x="34" y={56 + idx * 14} fontWeight="700">{row.t}</text>
+              <text x="122" y={56 + idx * 14}>{row.s}</text>
+              {/* trend bar */}
+              <rect
+                x="180"
+                y={49 + idx * 14}
+                width={parseFloat(row.s) * 0.55}
+                height="6"
+                rx="1"
+                fill="rgba(255,255,255,0.75)"
+              />
+              <text x="248" y={56 + idx * 14}>{row.d}</text>
+            </g>
+          ))}
+        </svg>
+      );
+
+    case "admin-console":
+      return (
+        <svg viewBox="0 0 320 128" className="w-full h-full" aria-hidden>
+          <defs>
+            <linearGradient id="ac-bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#475569" />
+              <stop offset="1" stopColor="#0f172a" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="128" fill="url(#ac-bg)" />
+          {/* Header row */}
+          <g fontFamily="ui-sans-serif, system-ui" fontSize="8" fontWeight="700">
+            <text x="14" y="18" fill="rgba(255,255,255,0.95)">AUDIT LOG</text>
+            <g transform="translate(266, 8)">
+              <rect width="40" height="14" rx="7" fill="rgba(16,185,129,0.28)" />
+              <circle cx="8" cy="7" r="2" fill="#34d399" />
+              <text x="14" y="10" fill="rgba(255,255,255,0.95)" fontSize="7">SIGNED</text>
+            </g>
+          </g>
+          {/* Log rows */}
+          {[
+            { t: "14:32", a: "signup.approve",  who: "admin",   ok: true },
+            { t: "14:18", a: "backtest.upload", who: "chirag",  ok: true },
+            { t: "14:04", a: "terms.accept",    who: "client",  ok: true },
+            { t: "13:47", a: "quote.send",      who: "admin",   ok: true },
+            { t: "13:22", a: "engagement.edit", who: "admin",   ok: true },
+          ].map((row, idx) => (
+            <g key={idx} fontFamily="ui-monospace" fontSize="8">
+              <rect
+                x="14"
+                y={30 + idx * 18}
+                width="292"
+                height="14"
+                rx="3"
+                fill="rgba(255,255,255,0.05)"
+              />
+              <text x="22" y={40 + idx * 18} fill="rgba(255,255,255,0.55)">{row.t}</text>
+              <text x="58" y={40 + idx * 18} fill="rgba(255,255,255,0.95)" fontWeight="700">{row.a}</text>
+              <text x="180" y={40 + idx * 18} fill="rgba(255,255,255,0.7)">{row.who}</text>
+              <g transform={`translate(280, ${34 + idx * 18})`}>
+                <circle cx="4" cy="4" r="4" fill="#10b981" />
+                <path d="M 2 4 L 3.5 5.5 L 6 3" stroke="white" strokeWidth="1" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+            </g>
+          ))}
+        </svg>
+      );
+  }
+}
 
 const FAQ = [
   {
@@ -490,23 +843,8 @@ function PortfolioSection() {
               key={p.title}
               className="group flex flex-col rounded-2xl border border-ink-200/70 dark:border-ink-800 bg-white dark:bg-ink-900 overflow-hidden hover:shadow-pop transition-shadow"
             >
-              <div
-                className={`h-32 bg-gradient-to-br ${p.accent} flex items-center justify-center relative overflow-hidden`}
-                aria-hidden
-              >
-                {/* Subtle grid backdrop so the gradient reads as "product art"
-                    instead of a solid colour block. */}
-                <div
-                  className="absolute inset-0 opacity-15"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-                <div className="size-14 rounded-2xl bg-white/25 backdrop-blur-sm text-white flex items-center justify-center ring-1 ring-white/40 shadow-lg relative">
-                  {p.icon}
-                </div>
+              <div className="h-32 relative overflow-hidden border-b border-ink-200/70 dark:border-ink-800">
+                <PortfolioThumbnail kind={p.kind} />
               </div>
 
               <div className="p-5 flex flex-col flex-1">
