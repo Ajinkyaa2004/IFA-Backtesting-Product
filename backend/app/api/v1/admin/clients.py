@@ -284,13 +284,26 @@ def create_client(
     from datetime import datetime
     from app.db.models import Engagement
     year = datetime.utcnow().year
-    year_count = (
-        db.query(Engagement)
+    # MAX(existing) + 1 — count()+1 breaks when demo/QA rows are deleted
+    # and leave gaps, causing UniqueViolation on the next approve.
+    latest_code = (
+        db.query(Engagement.code)
         .filter(Engagement.code.like(f"ENG-{year}-%"))
-        .count()
+        .order_by(Engagement.code.desc())
+        .first()
     )
+    next_num = 1
+    if latest_code and latest_code[0]:
+        try:
+            next_num = int(latest_code[0].rsplit("-", 1)[1]) + 1
+        except (IndexError, ValueError):
+            next_num = (
+                db.query(Engagement)
+                .filter(Engagement.code.like(f"ENG-{year}-%"))
+                .count()
+            ) + 1
     engagement = Engagement(
-        code=f"ENG-{year}-{year_count + 1:04d}",
+        code=f"ENG-{year}-{next_num:04d}",
         client_id=client.id,
         status="pending",   # T&C not yet accepted — matches Chirag Section 4
         tier=payload.tier,

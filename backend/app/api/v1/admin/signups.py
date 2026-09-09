@@ -126,16 +126,31 @@ def approve_signup(
     # 2. Create the Engagement row so the lifecycle stepper on the client
     #    dashboard has something to render. Everything else (scope, engine,
     #    strategy, T&C) admin fills in later from the client drawer.
-    #    Code format matches admin/clients.py: ENG-YYYY-NNNN based on
-    #    year + engagement count for that year.
+    #    Code format: ENG-YYYY-NNNN based on the MAX existing numeric
+    #    suffix + 1. count()+1 was wrong when we deleted stale demo/QA
+    #    rows — the "hole" in the sequence produced duplicate codes and a
+    #    UniqueViolation on the next approve.
     year = now.year
-    year_count = (
-        db.query(Engagement)
+    latest_code = (
+        db.query(Engagement.code)
         .filter(Engagement.code.like(f"ENG-{year}-%"))
-        .count()
+        .order_by(Engagement.code.desc())
+        .first()
     )
+    next_num = 1
+    if latest_code and latest_code[0]:
+        try:
+            next_num = int(latest_code[0].rsplit("-", 1)[1]) + 1
+        except (IndexError, ValueError):
+            # Fall back to count-based numbering if a code was manually
+            # inserted in a non-standard shape.
+            next_num = (
+                db.query(Engagement)
+                .filter(Engagement.code.like(f"ENG-{year}-%"))
+                .count()
+            ) + 1
     engagement = Engagement(
-        code=f"ENG-{year}-{year_count + 1:04d}",
+        code=f"ENG-{year}-{next_num:04d}",
         client_id=client.id,
         # 'pending' — Chirag Section 4 — flips to 'active' after the client
         # accepts T&C on first login.
