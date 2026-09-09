@@ -559,6 +559,8 @@ export type BacktestListItem = {
   name: string;
   status: string;
   engine: BacktestEngine;
+  /** Canned example row auto-provisioned on signup approval. UI shows a DEMO badge. */
+  is_demo: boolean;
   completed_at: string | null;
   created_at: string;
 };
@@ -569,6 +571,7 @@ export type BacktestDetail = {
   name: string;
   status: string;
   engine: BacktestEngine;
+  is_demo: boolean;
   assumptions: Record<string, unknown> | null;
   metrics: Record<string, unknown> | null;
   // For engine === "manual": v1.0 BacktestResult shape.

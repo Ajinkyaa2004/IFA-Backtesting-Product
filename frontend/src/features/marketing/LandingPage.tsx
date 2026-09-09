@@ -22,11 +22,14 @@ import {
   CheckCircle2,
   Cpu,
   FileCheck2,
+  Layers,
   LineChart,
   Lock,
   Mail,
+  Rocket,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
@@ -127,6 +130,99 @@ const STEPS = [
   },
 ];
 
+/**
+ * Portfolio of products + client engagements we've shipped. Rendered in the
+ * PortfolioSection between "How it works" and "Pick your tier". Content is
+ * modeled after an Upwork portfolio card: title, category tag, one-liner,
+ * two or three concrete deliverables, and a tag row for the tech / method.
+ *
+ * `href` is optional — a live URL (VAM engine, WordPress site) links out.
+ * `accent` picks the gradient for the icon panel so cards don't all look
+ * identical when the client scrolls.
+ */
+const PORTFOLIO = [
+  {
+    icon: <Cpu size={22} />,
+    accent: "from-accent-500 to-violet-600",
+    category: "Product",
+    title: "IFA Backtest Engine",
+    body: "The very platform you're on. Serviced client portal + backtest engine, tier-gated with immutable results, an admin console with audit trail, and a per-engagement quote system.",
+    deliverables: [
+      "Self-serve signup + admin approval flow",
+      "Locked v1.0 result schema — every backtest reproducible",
+      "Tiered engagements + WhatsApp delivery workflow",
+    ],
+    tags: ["FastAPI", "React 19", "PostgreSQL", "Firebase Auth"],
+    href: "https://backtestingengine.insightfusionanalytics.com",
+  },
+  {
+    icon: <TrendingUp size={22} />,
+    accent: "from-emerald-500 to-teal-600",
+    category: "Live engine",
+    title: "VAM — Volatility Adjusted Momentum",
+    body: "Live systematic momentum engine that trades Indian equities. Runs a proprietary volatility-adjusted score and executes with position sizing that scales inversely to realised risk.",
+    deliverables: [
+      "Real-time signal generation + broker routing",
+      "Parameter-tuning UI for approved clients",
+      "Live dashboard with equity + drawdown streaming",
+    ],
+    tags: ["Python", "NumPy/pandas", "TradingView data", "Zerodha Kite"],
+    href: "https://backtestravi.insightfusionanalytics.com",
+  },
+  {
+    icon: <LineChart size={22} />,
+    accent: "from-sky-500 to-blue-600",
+    category: "Strategy research",
+    title: "Swing-trading strategy library",
+    body: "Ready-to-backtest rulebooks — Alligator + Central Pivot Range, Supertrend + Heikin-Ashi + Fractals, RSI mean-reversion — with clear entries, stops, R-multiples, and holding rules for pullback and breakout setups.",
+    deliverables: [
+      "Rulebooks in plain English + code",
+      "Three entry-timing models per strategy",
+      "Backtested across midcaps + Nifty universe",
+    ],
+    tags: ["Alligator", "CPR", "Supertrend", "Heikin-Ashi", "Fractals"],
+  },
+  {
+    icon: <BarChart3 size={22} />,
+    accent: "from-amber-500 to-orange-600",
+    category: "Analytics",
+    title: "Market Pulse dashboard",
+    body: "Live market-breadth and macro dashboard for internal desk use — advance/decline, sector rotation, volatility regime, and open-interest heatmaps rolled up into one view.",
+    deliverables: [
+      "Real-time NSE breadth ingestion",
+      "Sector rotation + heatmap widgets",
+      "Publishable snapshots for research notes",
+    ],
+    tags: ["FastAPI", "WebSockets", "React", "Recharts"],
+  },
+  {
+    icon: <Layers size={22} />,
+    accent: "from-fuchsia-500 to-pink-600",
+    category: "Custom engagement",
+    title: "Bespoke Phase-A universe scanner",
+    body: "Company selection module for a swing-trading engagement — ranks a ₹1k-20k crore universe on 3/6/9-month trends, smoothness, higher-highs consistency and quarterly fundamentals, with every setting exposed for admin tuning.",
+    deliverables: [
+      "Reproducible ranked shortlist per selection date",
+      "Adjustable trend + fundamentals filters",
+      "Full audit trail on every selection run",
+    ],
+    tags: ["Python", "yfinance/GDFL", "Pydantic", "Alembic"],
+  },
+  {
+    icon: <ShieldCheck size={22} />,
+    accent: "from-slate-600 to-ink-800",
+    category: "Compliance & ops",
+    title: "T&C, audit + admin console",
+    body: "Every action on the platform is signed by a user and timestamped. Version-controlled engagement terms, per-user acceptance ledger, an inbox for pending review items, and a live-edit content CMS for the marketing surface.",
+    deliverables: [
+      "Version-locked T&C with click-signed acceptance",
+      "Append-only audit log with IP + actor",
+      "Content editor with live preview iframe",
+    ],
+    tags: ["Alembic migrations", "Row-level access", "Signed URLs"],
+  },
+];
+
 const FAQ = [
   {
     q: "Is this a self-serve SaaS?",
@@ -213,6 +309,7 @@ export default function LandingPage() {
         <Hero />
         <FeatureGrid />
         <HowItWorks />
+        <PortfolioSection />
         <TierSection />
         <FAQSection />
         <CTASection />
@@ -240,6 +337,7 @@ function TopNav() {
         <div className="flex items-center gap-1 sm:gap-4">
           <a href="#features" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">Features</a>
           <a href="#how" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">How it works</a>
+          <a href="#portfolio" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">Portfolio</a>
           <a href="#tiers" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">Pricing</a>
           <a href="#faq" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">FAQ</a>
           <Link
@@ -350,6 +448,126 @@ function HowItWorks() {
             </li>
           ))}
         </ol>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * "What we've built" — portfolio-style showcase between How it works and
+ * Pick your tier. Style matches an Upwork portfolio: category tag, title,
+ * one-liner, three bullets of concrete deliverables, and a tag row. Cards
+ * with an `href` open the live product in a new tab.
+ *
+ * Data source is the PORTFOLIO const above. Admin can move this into the
+ * content CMS later; for now it's edit-in-code, which keeps the section
+ * out of the DB round-trip on every landing-page load.
+ */
+function PortfolioSection() {
+  return (
+    <section
+      id="portfolio"
+      className="py-16 sm:py-20 border-t border-ink-100 dark:border-ink-900"
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto text-center mb-12">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-accent-500/10 text-accent-700 dark:text-accent-300 ring-1 ring-inset ring-accent-500/20 mb-3">
+            <Rocket size={11} /> Portfolio &amp; products
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            What we've built for our clients
+          </h2>
+          <p className="mt-3 text-ink-600 dark:text-ink-300">
+            Backtest engines, live trading systems, research dashboards and
+            bespoke strategy work. Every product below is either shipped and
+            running or actively delivered to a paying client.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {PORTFOLIO.map((p) => (
+            <article
+              key={p.title}
+              className="group flex flex-col rounded-2xl border border-ink-200/70 dark:border-ink-800 bg-white dark:bg-ink-900 overflow-hidden hover:shadow-pop transition-shadow"
+            >
+              <div
+                className={`h-32 bg-gradient-to-br ${p.accent} flex items-center justify-center relative overflow-hidden`}
+                aria-hidden
+              >
+                {/* Subtle grid backdrop so the gradient reads as "product art"
+                    instead of a solid colour block. */}
+                <div
+                  className="absolute inset-0 opacity-15"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px)",
+                    backgroundSize: "24px 24px",
+                  }}
+                />
+                <div className="size-14 rounded-2xl bg-white/25 backdrop-blur-sm text-white flex items-center justify-center ring-1 ring-white/40 shadow-lg relative">
+                  {p.icon}
+                </div>
+              </div>
+
+              <div className="p-5 flex flex-col flex-1">
+                <div className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400">
+                  {p.category}
+                </div>
+                <h3 className="mt-1 text-base font-semibold tracking-tight text-ink-900 dark:text-ink-50">
+                  {p.title}
+                </h3>
+                <p className="mt-2 text-sm text-ink-600 dark:text-ink-300 leading-relaxed">
+                  {p.body}
+                </p>
+
+                <ul className="mt-4 space-y-1.5">
+                  {p.deliverables.map((d) => (
+                    <li key={d} className="flex items-start gap-2 text-xs text-ink-600 dark:text-ink-300">
+                      <CheckCircle2
+                        size={13}
+                        className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      />
+                      <span>{d}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {p.tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-ink-100 dark:bg-ink-800 text-ink-600 dark:text-ink-300"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                {p.href && (
+                  <a
+                    href={p.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent-700 dark:text-accent-300 hover:underline"
+                  >
+                    Visit live <ArrowRight size={12} />
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p className="mt-10 text-center text-xs text-ink-500 dark:text-ink-400">
+          Have a systematic strategy you want backtested or a bespoke engine
+          in mind?{" "}
+          <Link
+            to="/signup"
+            className="text-accent-700 dark:text-accent-300 hover:underline font-medium"
+          >
+            Start a signup →
+          </Link>
+        </p>
       </div>
     </section>
   );

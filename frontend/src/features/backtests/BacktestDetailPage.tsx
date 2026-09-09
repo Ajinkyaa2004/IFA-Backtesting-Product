@@ -133,6 +133,21 @@ export default function BacktestDetailPage() {
 
   return (
     <div className="space-y-6">
+      {bt.is_demo && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-amber-500/25 text-amber-800 dark:text-amber-200 ring-1 ring-inset ring-amber-600/30 shrink-0 mt-0.5">
+            Demo
+          </span>
+          <div className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
+            <span className="font-semibold">This is a demo backtest.</span>{" "}
+            It's here so you can see exactly how a real result will render —
+            KPIs, equity curve, drawdown, trades, everything. It's not tied
+            to your strategy. Your first real backtest will appear separately
+            and won't carry this badge.
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="min-w-0">
           <Link to="/backtests" className="text-xs text-ink-500 hover:text-ink-900 inline-flex items-center gap-1.5 mb-2">
@@ -141,6 +156,11 @@ export default function BacktestDetailPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">{bt.name}</h1>
             <Badge status={bt.status} dot>{bt.status.replace("_", " ")}</Badge>
+            {bt.is_demo && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-500/30">
+                Demo
+              </span>
+            )}
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs text-ink-500 dark:text-ink-400">
             <span className="font-mono tabular">{bt.code}</span>

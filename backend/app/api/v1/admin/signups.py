@@ -29,6 +29,7 @@ from app.core.deps import require_role
 from app.db.models import Client, Engagement, User
 from app.db.session import get_db
 from app.services import audit
+from app.services.demo_seed import provision_demo_backtest
 from app.services.email import (
     send_client_approval_email,
     send_client_rejection_email,
@@ -154,6 +155,13 @@ def approve_signup(
     user.signup_status = "approved"
     user.signup_approved_at = now
     user.signup_approved_by = admin.id
+
+    # 4. Provision a demo backtest so the freshly-approved client has
+    #    something to look at while they wait for their first real
+    #    result. The helper is best-effort — approval must succeed
+    #    even if the demo asset can't be loaded, so failure is logged
+    #    but never raised.
+    provision_demo_backtest(db, client)
 
     db.commit()
     db.refresh(user)

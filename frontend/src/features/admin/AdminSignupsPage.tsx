@@ -9,7 +9,6 @@
  * each signup is a business decision that deserves a look.
  */
 
-import { formatDistanceToNow } from "date-fns";
 import {
   BadgeCheck,
   Building2,
@@ -51,6 +50,32 @@ const ENGAGEMENT_TYPES = [
   { value: "existing", label: "Existing — reuse a live engine (e.g. VAM)" },
   { value: "bespoke", label: "Bespoke — build a new engine" },
 ] as const;
+
+/**
+ * Native relative-time formatter — no dependency needed. Same output shape
+ * as date-fns' formatDistanceToNow (e.g. "3 minutes ago", "yesterday").
+ */
+function formatRelative(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const seconds = Math.round((now - then) / 1000);
+  if (Number.isNaN(seconds)) return "—";
+  if (seconds < 45) return "just now";
+  if (seconds < 90) return "a minute ago";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 45) return `${minutes} minutes ago`;
+  if (minutes < 90) return "an hour ago";
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hours ago`;
+  if (hours < 42) return "yesterday";
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} days ago`;
+  if (days < 45) return "a month ago";
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months} months ago`;
+  const years = Math.round(months / 12);
+  return years === 1 ? "a year ago" : `${years} years ago`;
+}
 
 export default function AdminSignupsPage() {
   const [tab, setTab] = useState<TabKey>("pending_approval");
@@ -197,7 +222,7 @@ function SignupRow({
 }) {
   const meta = row.metadata ?? {};
   const requestedAgo = row.signup_requested_at
-    ? formatDistanceToNow(new Date(row.signup_requested_at), { addSuffix: true })
+    ? formatRelative(row.signup_requested_at)
     : "—";
   const isPending = row.signup_status === "pending_approval";
 

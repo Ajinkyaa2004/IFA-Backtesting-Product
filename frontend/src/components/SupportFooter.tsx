@@ -1,4 +1,5 @@
-import { Clock, Mail, ShieldCheck } from "lucide-react";
+import { Clock, FileText, Mail, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../store/auth";
 import { useContent } from "../store/content";
 import PaymentDisclaimer from "./PaymentDisclaimer";
@@ -39,6 +40,15 @@ export default function SupportFooter() {
           >
             {footer.email}
           </a>
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <FileText size={12} className="text-ink-400 dark:text-ink-500"/>
+          <Link
+            to="/terms/review"
+            className="font-medium text-accent-700 dark:text-accent-300 hover:underline"
+          >
+            Terms & Conditions
+          </Link>
         </span>
         <span className="ml-auto text-[10px] text-ink-400 dark:text-ink-500">
           {footer.copyright}

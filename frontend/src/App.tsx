@@ -15,6 +15,7 @@ import BacktestsListPage from "./features/backtests/BacktestsListPage";
 import BacktestDetailPage from "./features/backtests/BacktestDetailPage";
 import ClientRunBacktestPage from "./features/vam/ClientRunBacktestPage";
 import TermsAcceptPage from "./features/terms/TermsAcceptPage";
+import TermsReviewPage from "./features/terms/TermsReviewPage";
 import AdminLayout from "./components/AdminLayout";
 import AdminPulsePage from "./features/admin/AdminPulsePage";
 import AdminClientsPage from "./features/admin/AdminClientsPage";
@@ -248,6 +249,7 @@ export default function App() {
           <Route path="backtests" element={<BacktestsListPage />} />
           <Route path="backtests/new" element={<ClientRunBacktestPage />} />
           <Route path="backtests/:id" element={<BacktestDetailPage />} />
+          <Route path="terms/review" element={<TermsReviewPage />} />
         </Route>
 
         {/* Admin console */}

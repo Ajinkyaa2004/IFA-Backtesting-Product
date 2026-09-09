@@ -26,6 +26,7 @@ class BacktestListItem(BaseModel):
     name: str
     status: str
     engine: str  # 'manual' (v1.0 schema) or 'vam' (VAM-native) — drives renderer choice
+    is_demo: bool = False  # canned example row — UI badges as DEMO
     completed_at: datetime | None
     created_at: datetime
 
@@ -36,6 +37,7 @@ class BacktestDetail(BaseModel):
     name: str
     status: str
     engine: str  # see BacktestListItem.engine
+    is_demo: bool = False
     assumptions: dict | None
     metrics: dict | None
     result: dict | None  # Full envelope from storage — v1.0 or vam-1.0 shape per `engine`
@@ -60,6 +62,7 @@ def list_backtests(
             name=r.name,
             status=r.status,
             engine=r.engine,
+            is_demo=bool(r.is_demo),
             completed_at=r.completed_at,
             created_at=r.created_at,
         )
@@ -100,6 +103,7 @@ def get_backtest(
         name=row.name,
         status=row.status,
         engine=row.engine,
+        is_demo=bool(row.is_demo),
         assumptions=row.assumptions,
         metrics=row.metrics,
         result=result_payload,

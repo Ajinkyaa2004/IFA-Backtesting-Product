@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, String
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,6 +25,13 @@ class Backtest(UUIDPKMixin, TimestampMixin, Base):
     #   "vam"    → VAM-native renderer (backtest.vam.schema.json)
     # Default 'manual' preserves all historical rows.
     engine: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
+    # Canned example row auto-provisioned on signup approval. UI shows a
+    # DEMO badge and hides these from tier-usage counting so a client's
+    # first real backtest still reads as the first one. Never toggle at
+    # runtime — set exactly once at insert time.
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     assumptions: Mapped[dict | None] = mapped_column(JSONB)
     metrics: Mapped[dict | None] = mapped_column(JSONB)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

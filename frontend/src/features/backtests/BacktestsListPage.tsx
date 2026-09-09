@@ -107,11 +107,25 @@ export default function BacktestsListPage() {
                 </tr>
               ))}
               {rows.map((b) => (
-                <tr key={b.id} className="hover:bg-ink-50/70 dark:hover:bg-ink-800/30">
+                <tr
+                  key={b.id}
+                  className={`hover:bg-ink-50/70 dark:hover:bg-ink-800/30 ${
+                    b.is_demo ? "bg-amber-50/30 dark:bg-amber-500/[0.04]" : ""
+                  }`}
+                >
                   <td className="px-5 py-3 font-mono text-xs text-ink-700 dark:text-ink-200 tabular">
                     {b.code}
                   </td>
-                  <td className="px-5 py-3 font-medium text-ink-900 dark:text-ink-50">{b.name}</td>
+                  <td className="px-5 py-3 font-medium text-ink-900 dark:text-ink-50">
+                    <span className="inline-flex items-center gap-2">
+                      {b.name}
+                      {b.is_demo && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-500/30">
+                          Demo
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-5 py-3 text-ink-500 dark:text-ink-400 tabular">
                     {new Date(b.created_at).toLocaleDateString()}
                   </td>

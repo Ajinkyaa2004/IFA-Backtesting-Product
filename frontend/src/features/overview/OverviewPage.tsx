@@ -62,7 +62,21 @@ export default function OverviewPage() {
   const active = backtests.filter((b) => ["in_progress", "approved"].includes(b.status)).length;
   const completed = backtests.filter((b) => b.status === "completed").length;
   const pendingQuote = backtests.filter((b) => ["quote_requested", "quote_sent"].includes(b.status)).length;
-  const demo = backtests.find((b) => b.code === "BT-2026-0001");
+  // Any demo backtest works for the welcome CTA — Sterling's seed row
+  // (BT-2026-0001), any of the extra seeded variants, or the BT-DEMO-*
+  // row auto-provisioned on signup approval. We prefer the newest so a
+  // freshly-approved client sees their own demo, not Sterling's.
+  const demo =
+    [...backtests]
+      .filter((b) => b.is_demo)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )[0]
+    // Legacy fallback: some older environments have the demo row without
+    // the is_demo flag set (backfilled by migration on prod but not on any
+    // dev DBs someone might spin up fresh).
+    ?? backtests.find((b) => b.code === "BT-2026-0001");
 
   const setMe = useAuth((s) => s.setMe);
   const refreshMe = async () => {
