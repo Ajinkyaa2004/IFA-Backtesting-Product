@@ -450,6 +450,72 @@ export async function adminRejectSignup(
   return res.data;
 }
 
+// ── Admin data explorer ────────────────────────────────────────────
+export type AdminColumnType =
+  | "uuid"
+  | "int"
+  | "float"
+  | "bool"
+  | "text"
+  | "datetime"
+  | "date"
+  | "json"
+  | "other";
+
+export type AdminColumnSchema = {
+  name: string;
+  type: AdminColumnType;
+  nullable: boolean;
+};
+
+export type AdminTableInfo = {
+  name: string;
+  row_count: number;
+  columns: AdminColumnSchema[];
+};
+
+export type AdminTableRows = {
+  table: string;
+  columns: AdminColumnSchema[];
+  rows: Record<string, unknown>[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export async function adminListTables(): Promise<AdminTableInfo[]> {
+  const res = await api.get<AdminTableInfo[]>("/admin/data/tables");
+  return res.data;
+}
+
+export type AdminReadTableParams = {
+  table: string;
+  limit?: number;
+  offset?: number;
+  order_by?: string | null;
+  order_dir?: "asc" | "desc";
+  search?: string | null;
+};
+
+export async function adminReadTable(
+  params: AdminReadTableParams,
+): Promise<AdminTableRows> {
+  const { table, ...rest } = params;
+  const res = await api.get<AdminTableRows>(
+    `/admin/data/tables/${encodeURIComponent(table)}`,
+    {
+      params: {
+        limit: rest.limit ?? 50,
+        offset: rest.offset ?? 0,
+        order_dir: rest.order_dir ?? "desc",
+        ...(rest.order_by ? { order_by: rest.order_by } : {}),
+        ...(rest.search ? { search: rest.search } : {}),
+      },
+    },
+  );
+  return res.data;
+}
+
 export type TermsClause = { id: string; title: string; body: string; required: boolean };
 export type Terms = {
   id: string;

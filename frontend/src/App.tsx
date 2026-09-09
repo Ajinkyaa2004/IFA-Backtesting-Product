@@ -23,6 +23,7 @@ import AdminBacktestUploadPage from "./features/admin/AdminBacktestUploadPage";
 import AdminNotificationsPage from "./features/admin/AdminNotificationsPage";
 import AdminAuditPage from "./features/admin/AdminAuditPage";
 import AdminContentPage from "./features/admin/AdminContentPage";
+import AdminDataPage from "./features/admin/AdminDataPage";
 import AdminEnginesPage from "./features/admin/AdminEnginesPage";
 import AdminSignupsPage from "./features/admin/AdminSignupsPage";
 import AdminTermsPage from "./features/admin/AdminTermsPage";
@@ -257,6 +258,7 @@ export default function App() {
           <Route index element={<AdminPulsePage />} />
           <Route path="signups" element={<AdminSignupsPage />} />
           <Route path="clients" element={<AdminClientsPage />} />
+          <Route path="data" element={<AdminDataPage />} />
           <Route path="backtests/upload" element={<AdminBacktestUploadPage />} />
           <Route path="terms" element={<AdminTermsPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />

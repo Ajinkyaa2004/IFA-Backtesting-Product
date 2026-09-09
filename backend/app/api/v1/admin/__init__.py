@@ -1,12 +1,13 @@
 from fastapi import APIRouter
 
-from app.api.v1.admin import audit, backtests, client_requests, clients, content, engagements, engines, exports, impersonate, inbox, notifications, quotes, signups, stats, strategies, terms, vam
+from app.api.v1.admin import audit, backtests, client_requests, clients, content, data_explorer, engagements, engines, exports, impersonate, inbox, notifications, quotes, signups, stats, strategies, terms, vam
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
 admin_router.include_router(stats.router)
 admin_router.include_router(inbox.router)
 admin_router.include_router(clients.router)
 admin_router.include_router(signups.router)
+admin_router.include_router(data_explorer.router)
 admin_router.include_router(client_requests.router)
 admin_router.include_router(strategies.router)
 admin_router.include_router(backtests.router)
