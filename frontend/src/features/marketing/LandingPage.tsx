@@ -614,7 +614,7 @@ export default function LandingPage() {
     sameAs: [] as string[],
     contactPoint: {
       "@type": "ContactPoint",
-      email: "hello@insightfusionanalytics.com",
+      email: "insightfusionanalytics@gmail.com",
       contactType: "Sales",
       areaServed: "IN",
     },
@@ -730,7 +730,7 @@ function Hero() {
         </p>
         <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
           <a
-            href="mailto:hello@insightfusionanalytics.com?subject=IFA%20Backtest%20-%20discovery%20call"
+            href="mailto:insightfusionanalytics@gmail.com?subject=IFA%20Backtest%20-%20discovery%20call"
             className="inline-flex items-center gap-1.5 h-11 px-5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium shadow-sm transition-colors"
           >
             Book a discovery call <ArrowRight size={14}/>
@@ -948,7 +948,7 @@ function TierSection() {
                 ))}
               </ul>
               <a
-                href={`mailto:hello@insightfusionanalytics.com?subject=IFA%20Backtest%20-%20${encodeURIComponent(t.name)}%20tier`}
+                href={`mailto:insightfusionanalytics@gmail.com?subject=IFA%20Backtest%20-%20${encodeURIComponent(t.name)}%20tier`}
                 className={`mt-6 inline-flex items-center justify-center gap-1.5 w-full h-10 rounded-xl text-sm font-medium transition-colors ${
                   t.highlighted
                     ? "bg-accent-600 hover:bg-accent-700 text-white"
@@ -1005,7 +1005,7 @@ function CTASection() {
         </p>
         <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
           <a
-            href="mailto:hello@insightfusionanalytics.com?subject=IFA%20Backtest%20-%20discovery%20call"
+            href="mailto:insightfusionanalytics@gmail.com?subject=IFA%20Backtest%20-%20discovery%20call"
             className="inline-flex items-center gap-1.5 h-11 px-5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium transition-colors"
           >
             <Mail size={14}/> Email us
@@ -1051,11 +1051,11 @@ function Footer() {
           <ul className="space-y-1.5 text-ink-600 dark:text-ink-300">
             <li className="min-w-0">
               <a
-                href="mailto:hello@insightfusionanalytics.com"
+                href="mailto:insightfusionanalytics@gmail.com"
                 className="hover:text-ink-900 dark:hover:text-ink-50 flex items-start gap-1 break-all"
               >
                 <Mail size={12} className="mt-0.5 shrink-0" />
-                <span className="break-all">hello@insightfusionanalytics.com</span>
+                <span className="break-all">insightfusionanalytics@gmail.com</span>
               </a>
             </li>
             <li><span className="inline-flex items-center gap-1"><Users size={12} aria-hidden/> Serving India</span></li>
