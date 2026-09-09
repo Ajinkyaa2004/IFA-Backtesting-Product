@@ -23,8 +23,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  ExternalLink,
   RefreshCw,
   Search,
+  Sheet,
   Table as TableIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -39,6 +41,71 @@ import {
 import { toast } from "../../store/toast";
 
 const PAGE_SIZE = 50;
+
+// Hard ceiling on the "Open in Google Sheets" export. Anything above
+// this is almost certainly not what the admin wants pasted into a
+// spreadsheet — export the CSV out-of-band instead.
+const EXPORT_MAX_ROWS = 10000;
+
+/**
+ * Convert a rows-and-columns snapshot into a TSV string.
+ *   - TSV (not CSV) because Google Sheets pastes TSV natively — each
+ *     tab-separated field becomes its own cell without a "Split text
+ *     to columns" step.
+ *   - Any embedded tab, newline or carriage return in a cell is
+ *     replaced with a space so the paste survives.
+ *   - JSON columns are stringified so an object cell doesn't turn
+ *     into the literal "[object Object]".
+ */
+function rowsToTsv(
+  columns: { name: string; type: string }[],
+  rows: Record<string, unknown>[],
+): string {
+  const cleanCell = (v: unknown): string => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "object") {
+      try {
+        return JSON.stringify(v).replace(/[\t\r\n]/g, " ");
+      } catch {
+        return "";
+      }
+    }
+    return String(v).replace(/[\t\r\n]/g, " ");
+  };
+  const header = columns.map((c) => c.name).join("\t");
+  const body = rows
+    .map((row) => columns.map((c) => cleanCell(row[c.name])).join("\t"))
+    .join("\n");
+  return `${header}\n${body}`;
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  // The modern navigator.clipboard API is HTTPS-only + gated behind
+  // user activation, which is true on button click. Fallback stays
+  // available for browsers that reject the async API mid-flight.
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 export default function AdminDataPage() {
   const [tables, setTables] = useState<AdminTableInfo[]>([]);
@@ -176,6 +243,7 @@ function TableView({
   const [orderDir, setOrderDir] = useState<"asc" | "desc">("desc");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   // Debounce the search input so we don't hit the server on every keystroke.
   useEffect(() => {
@@ -223,6 +291,93 @@ function TableView({
     [tables, tableName],
   );
 
+  /**
+   * Google Sheets export.
+   *
+   *   1. Fetch every row of the current table (up to 10 000) with the
+   *      user's current search + sort applied so what they see is what
+   *      they get.
+   *   2. Turn it into TSV, copy to clipboard.
+   *   3. Open sheets.new in a new tab. Admin presses Cmd+V (Ctrl+V on
+   *      Windows) and Google auto-parses the tabs into columns — no
+   *      Import dialog needed.
+   *
+   * If clipboard copy or the popup is blocked, we fall back to a plain
+   * CSV download so the admin never gets stuck with no result.
+   */
+  const exportToSheets = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const full = await adminReadTable({
+        table: tableName,
+        limit: EXPORT_MAX_ROWS,
+        offset: 0,
+        order_by: orderBy,
+        order_dir: orderDir,
+        search: search || null,
+      });
+      if (full.total > EXPORT_MAX_ROWS) {
+        toast.info(
+          "Row cap hit",
+          `${tableName} has ${full.total.toLocaleString()} rows; exporting the first ${EXPORT_MAX_ROWS.toLocaleString()}.`,
+        );
+      }
+      if (full.rows.length === 0) {
+        toast.info("Nothing to export", "This table has no rows to send.");
+        return;
+      }
+      const tsv = rowsToTsv(full.columns, full.rows);
+      const copied = await copyToClipboard(tsv);
+      const opened = window.open("https://sheets.new", "_blank", "noopener");
+      if (copied && opened) {
+        toast.success(
+          "Opened a new Google Sheet",
+          `${full.rows.length.toLocaleString()} rows copied to your clipboard. Press ${
+            navigator.platform.toLowerCase().includes("mac") ? "⌘V" : "Ctrl+V"
+          } in the sheet.`,
+        );
+      } else if (copied) {
+        toast.info(
+          "Data copied to clipboard",
+          "Your browser blocked the popup — open sheets.new manually and paste.",
+        );
+      } else {
+        // Fallback: trigger a CSV download so the admin can still land
+        // the data somewhere useful without the clipboard path.
+        const csvHeader = full.columns.map((c) => `"${c.name}"`).join(",");
+        const csvBody = full.rows
+          .map((row) =>
+            full.columns
+              .map((c) => {
+                const v = row[c.name];
+                if (v === null || v === undefined) return "";
+                const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+                return `"${s.replace(/"/g, '""')}"`;
+              })
+              .join(","),
+          )
+          .join("\n");
+        const csv = `${csvHeader}\n${csvBody}`;
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${tableName}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.info(
+          "Downloaded CSV instead",
+          "Clipboard blocked — open Google Sheets, File → Import, upload this file.",
+        );
+      }
+    } catch (e) {
+      toast.error("Export failed", (e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleSort = (colName: string) => {
     if (orderBy !== colName) {
       setOrderBy(colName);
@@ -267,6 +422,16 @@ function TableView({
             className="h-8 pl-7 pr-3 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 w-48 sm:w-64 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
           />
         </div>
+        <button
+          onClick={exportToSheets}
+          disabled={exporting || total === 0}
+          title="Copies every row (with your current search + sort) to your clipboard as TSV, opens a fresh Google Sheet — paste with ⌘V"
+          className="h-8 px-3 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <Sheet size={13} />
+          {exporting ? "Preparing…" : "Open in Google Sheets"}
+          <ExternalLink size={11} className="opacity-80" />
+        </button>
       </div>
 
       <div className="overflow-x-auto min-w-0">

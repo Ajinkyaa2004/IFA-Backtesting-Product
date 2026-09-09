@@ -158,7 +158,7 @@ def list_tables(
 @router.get("/tables/{table_name}", response_model=TableRowsOut)
 def read_table(
     table_name: str,
-    limit: int = Query(default=50, ge=1, le=500),
+    limit: int = Query(default=50, ge=1, le=10000),
     offset: int = Query(default=0, ge=0),
     order_by: str | None = Query(default=None),
     order_dir: Literal["asc", "desc"] = Query(default="desc"),
