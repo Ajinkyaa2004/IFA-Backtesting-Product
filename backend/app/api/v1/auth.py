@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.deps import _TOKEN_PUBLIC_MESSAGES, current_user
 from app.core.rate_limit import limiter
 from app.core.security import TokenError, verify_id_token
-from app.db.models import User
+from app.db.models import Client, User
 from app.db.session import get_db
 from app.services.email import send_admin_signup_notification
 
@@ -62,6 +62,22 @@ def login(request: Request, payload: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not provisioned")
     if user.status != "active":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User suspended")
+
+    # Suspended-client gate (audit LT2). If the client the user belongs
+    # to is suspended, refuse the login even though the User row itself
+    # is still 'active'. Without this an admin can suspend a client and
+    # they'd still sign in and reach the dashboard — the suspension
+    # would only take effect on the NEXT admin action against them.
+    if user.role == "client" and user.client_id:
+        client = db.query(Client).filter(Client.id == user.client_id).first()
+        if client and client.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "This account is currently suspended. Please contact your "
+                    "IFA account manager to reactivate it."
+                ),
+            )
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()

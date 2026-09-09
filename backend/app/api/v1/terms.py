@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.deps import current_user
-from app.db.models import TermsAcceptance, TermsVersion, User
+from app.db.models import Engagement, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 from app.services import audit
 
@@ -97,13 +97,35 @@ def accept_terms(
     db.add(acceptance)
     db.flush()
 
+    # Activate the client's engagement now that the wall is cleared
+    # (audit BE2). Without this, the lifecycle stepper stays on
+    # 'pending' forever even after the client did everything asked of
+    # them. Also stamps accepted_tnc_version_id so we know which
+    # version this engagement was live under.
+    engagement_activated = False
+    if user.role == "client" and user.client_id:
+        engagement = (
+            db.query(Engagement)
+            .filter(Engagement.client_id == user.client_id)
+            .first()
+        )
+        if engagement:
+            engagement.accepted_tnc_version_id = latest.id
+            if engagement.status == "pending":
+                engagement.status = "active"
+                engagement_activated = True
+
     audit.record(
         db,
         actor_user_id=user.id,
         action="tnc.accept",
         target_type="terms_version",
         target_id=latest.id,
-        payload={"clauses": payload.accepted_clauses, "version": latest.version},
+        payload={
+            "clauses": payload.accepted_clauses,
+            "version": latest.version,
+            "engagement_activated": engagement_activated,
+        },
         ip=request.client.host if request.client else None,
     )
     db.commit()

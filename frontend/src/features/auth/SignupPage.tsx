@@ -85,11 +85,13 @@ export default function SignupPage() {
     setSubmitting(true);
 
     let firebaseUserCreated = false;
+    let credRef: Awaited<ReturnType<typeof createUserWithEmailAndPassword>> | null = null;
     try {
       // 1. Create the Firebase user. This also signs the user in so we can
       //    mint an ID token to send to the backend.
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
       firebaseUserCreated = true;
+      credRef = cred;
 
       // 2. Set displayName so the Firebase console shows something useful.
       //    Best-effort — a failure here doesn't block the signup.
@@ -128,15 +130,22 @@ export default function SignupPage() {
         { replace: true },
       );
     } catch (err: unknown) {
-      // If Firebase user creation succeeded but the backend call failed we
-      // sign the user out so they can retry with the same email later.
-      // (The Firebase account persists — a retry will hit "already in use".
-      // Handling that requires a rare cleanup path we skip for MVP.)
+      // If Firebase created the account but the backend call failed the
+      // classic MVP bug (audit FE4) was to leave the Firebase user
+      // stranded — the email was 'already in use', the DB had no row,
+      // login returned 403 'not provisioned', and the user was stuck.
+      // We have a fresh credential in hand right after createUser, so
+      // Firebase permits us to delete the user without re-auth.
+      // Delete → the user can retry signup with the same email cleanly.
       if (firebaseUserCreated) {
         try {
-          await signOut(auth);
+          if (credRef?.user) await credRef.user.delete();
         } catch {
-          /* ignore */
+          // If delete fails (e.g. token expired between create + delete)
+          // we fall back to the old signOut path so at least the session
+          // doesn't linger. The email will still be taken; the friendly
+          // error message tells them to sign in instead.
+          try { await signOut(auth); } catch { /* ignore */ }
         }
         setMe(null);
       }

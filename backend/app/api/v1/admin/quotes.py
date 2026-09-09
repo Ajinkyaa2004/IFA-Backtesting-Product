@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import require_role
 from app.db.models import Client, Quote, Service, User
 from app.db.session import get_db
-from app.services import audit
+from app.services import audit, notify
 
 router = APIRouter()
 
@@ -216,6 +216,11 @@ def send_quote(
         target_type="quote", target_id=q.id,
         payload={"code": q.code, "amount_inr": q.amount_inr},
         ip=request.client.host if request.client else None,
+    )
+    # Notify the client — same transaction so the state flip and the
+    # signal always land together. (Audit PB2.)
+    notify.quote_sent(
+        db, client_id=q.client_id, quote_id=q.id, code=q.code, title_str=q.title,
     )
     db.commit()
     db.refresh(q)

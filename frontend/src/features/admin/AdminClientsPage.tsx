@@ -11,6 +11,8 @@ import {
   type BacktestStatus,
   changeBacktestStatus,
   type ClientRequest,
+  type ClientRequestStatus,
+  adminUpdateRequestStatus,
   createAdminClient,
   deleteAdminClient,
   downloadAdminCsv,
@@ -429,6 +431,18 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
               <ul className="space-y-2 max-h-72 overflow-y-auto">
                 {requests.map((r) => {
                   const summary = (r.payload.summary as string) || (r.payload.question as string) || (r.payload.details as string) || "(no summary)";
+                  const changeStatus = async (next: ClientRequestStatus) => {
+                    if (next === r.status) return;
+                    try {
+                      await adminUpdateRequestStatus(r.id, next);
+                      // Refresh the requests list from source of truth
+                      const fresh = await fetchClientRequests(client.id);
+                      setRequests(fresh);
+                      toast.success("Request updated", `Now ${next.replace("_", " ")}. Client notified.`);
+                    } catch (e) {
+                      toast.error("Update failed", (e as Error).message);
+                    }
+                  };
                   return (
                     <li key={r.id} className="flex items-start gap-2.5 p-2.5 rounded-lg border border-ink-200 dark:border-ink-700">
                       <span className="size-8 rounded-lg bg-ink-100 dark:bg-ink-800 flex items-center justify-center text-ink-500 shrink-0">
@@ -438,6 +452,18 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium capitalize">{r.type.replace("_", " ")}</span>
                           <Badge status={r.status} dot>{r.status.replace("_", " ")}</Badge>
+                          <select
+                            value={r.status}
+                            onChange={(e) => changeStatus(e.target.value as ClientRequestStatus)}
+                            className="ml-auto h-6 px-1.5 text-[11px] rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+                            title="Change status — client is notified automatically"
+                          >
+                            <option value="open">Open</option>
+                            <option value="in_review">In review</option>
+                            <option value="quoted">Quoted</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
                         </div>
                         <div className="text-xs text-ink-500 dark:text-ink-400 mt-0.5 break-words">{summary.slice(0, 200)}</div>
                         <div className="text-[10px] text-ink-400 tabular mt-1">{new Date(r.submitted_at).toLocaleString()}</div>

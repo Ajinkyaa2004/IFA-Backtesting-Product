@@ -17,6 +17,18 @@ from app.core.config import get_settings
 from app.services import local_storage as _local
 
 
+class StorageObjectMissing(Exception):
+    """The requested object does not exist in the backend.
+
+    Distinct from network / auth / decode failures so callers can render
+    a specific "we never wrote this file" error instead of a generic
+    "storage backend unreachable". Raised by download_bytes only.
+    """
+    def __init__(self, path: str):
+        super().__init__(f"storage object not found: {path}")
+        self.path = path
+
+
 # ── Supabase backend (kept inline since it's a thin wrapper) ───────────────
 
 
@@ -77,10 +89,30 @@ def upload_bytes(path: str, content: bytes, content_type: str = "application/oct
 
 
 def download_bytes(path: str) -> bytes:
+    """Fetch the bytes stored at `path`.
+
+    Raises:
+      StorageObjectMissing — the object does not exist. Callers render this
+                             as a clear "file was never written / has been
+                             deleted" state rather than a generic 500.
+      Exception            — any other failure (network, auth, corruption)
+                             so callers can still 502.
+    """
     if _is_local():
-        return _local.download_bytes(path)
+        try:
+            return _local.download_bytes(path)
+        except FileNotFoundError as e:
+            raise StorageObjectMissing(path) from e
     s = get_settings()
-    return _supabase_client().storage.from_(s.SUPABASE_BUCKET).download(path)
+    try:
+        return _supabase_client().storage.from_(s.SUPABASE_BUCKET).download(path)
+    except Exception as e:  # supabase raises its own StorageException hierarchy
+        # Match the common "object not found" message shape — supabase-py 2.x
+        # surfaces this in the exception body or code.
+        text = f"{type(e).__name__}: {e}"
+        if "not found" in text.lower() or "404" in text or "Object not found" in text:
+            raise StorageObjectMissing(path) from e
+        raise
 
 
 def delete_object(path: str) -> None:

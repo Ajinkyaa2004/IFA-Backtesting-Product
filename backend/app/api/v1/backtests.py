@@ -16,6 +16,7 @@ from app.core.tier_deps import require_feature
 from app.db.models import Backtest, BacktestFile, Client, StrategyDocument, TermsAcceptance, TermsVersion, User
 from app.db.session import get_db
 from app.services import audit, benchmark, report, storage
+from app.services.storage import StorageObjectMissing
 
 router = APIRouter()
 
@@ -41,6 +42,15 @@ class BacktestDetail(BaseModel):
     assumptions: dict | None
     metrics: dict | None
     result: dict | None  # Full envelope from storage — v1.0 or vam-1.0 shape per `engine`
+    # New in LT1/PB1 fix — the frontend renders three distinct empty
+    # states off this instead of the ambiguous "Awaiting delivery"
+    # sitting silently over a broken storage layer.
+    #   "ok"          — result is present (or none needed because status<completed)
+    #   "not_written" — file row exists but the bytes are missing (staging
+    #                   inconsistency; happens when we redeploy without
+    #                   migrating storage-local, or Supabase project sleeps)
+    #   "storage_error" — the backend couldn't reach storage at all
+    result_status: str = "ok"
     completed_at: datetime | None
     created_at: datetime
 
@@ -85,6 +95,7 @@ def get_backtest(
         raise HTTPException(status_code=404, detail="Backtest not found")
 
     result_payload: dict | None = None
+    result_status = "ok"
     result_file = (
         db.query(BacktestFile)
         .filter(BacktestFile.backtest_id == row.id, BacktestFile.file_type == "result_json")
@@ -94,8 +105,23 @@ def get_backtest(
         try:
             raw = storage.download_bytes(result_file.storage_key)
             result_payload = json.loads(raw)
-        except Exception:
-            result_payload = None  # graceful: storage hiccup shouldn't 500 the detail page
+        except StorageObjectMissing:
+            # File row exists in the DB, bytes are gone. This is what
+            # bit us during the Supabase-paused window + the storage-local
+            # container rebuild. Distinct from generic error so the client
+            # UI can show "result file missing — contact admin" instead of
+            # the ambiguous "Awaiting delivery".
+            result_status = "not_written"
+            logger.warning(
+                "Backtest {} result file missing at {} — storage returned no object",
+                row.id, result_file.storage_key,
+            )
+        except Exception as e:
+            result_status = "storage_error"
+            logger.exception(
+                "Backtest {} result download failed at {}: {}",
+                row.id, result_file.storage_key, e,
+            )
 
     return BacktestDetail(
         id=str(row.id),
@@ -107,6 +133,7 @@ def get_backtest(
         assumptions=row.assumptions,
         metrics=row.metrics,
         result=result_payload,
+        result_status=result_status,
         completed_at=row.completed_at,
         created_at=row.created_at,
     )
@@ -195,6 +222,16 @@ def download_backtest_report(
     try:
         raw = storage.download_bytes(result_file.storage_key)
         result_json = json.loads(raw)
+    except StorageObjectMissing as e:
+        # File was written once but the bytes are gone — same root as the
+        # LT1 "Awaiting delivery" bug. Give the client a specific message
+        # so they know to ping admin rather than assume the export flow
+        # is broken across every backtest they have.
+        logger.warning("Result file missing for backtest {} at {}", row.id, result_file.storage_key)
+        raise HTTPException(
+            status_code=410,
+            detail="This backtest's result file is no longer available. Contact your account manager to redeliver.",
+        ) from e
     except Exception as e:
         logger.warning("Failed to load result JSON for backtest {}: {}", row.id, e)
         raise HTTPException(status_code=502, detail="Failed to load result payload from storage") from e

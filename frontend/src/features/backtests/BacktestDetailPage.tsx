@@ -169,14 +169,44 @@ export default function BacktestDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ExportReportButton backtestId={bt.id} status={bt.status} />
+          {/* Gate the export button on result presence — not just status.
+              A completed backtest whose bytes are missing must not offer
+              a broken "Download PDF" that always 502s. (Audit PF1.) */}
+          {result && bt.result_status === "ok" && (
+            <ExportReportButton backtestId={bt.id} status={bt.status} />
+          )}
         </div>
       </div>
 
-      {!result && (
+      {!result && bt.result_status === "not_written" && (
+        <Card>
+          <SectionTitle sub="Result file missing from storage.">
+            Result no longer available
+          </SectionTitle>
+          <p className="text-sm text-ink-500 mt-1">
+            This backtest was marked completed, but the result file isn't
+            present in storage. Please contact your IFA account manager
+            to redeliver it. Your other backtests are unaffected.
+          </p>
+        </Card>
+      )}
+
+      {!result && bt.result_status === "storage_error" && (
+        <Card>
+          <SectionTitle sub="Storage backend was temporarily unreachable.">
+            Couldn't load result
+          </SectionTitle>
+          <p className="text-sm text-ink-500 mt-1">
+            The result file exists but we couldn't fetch it right now.
+            Refresh the page in a few minutes — this is usually transient.
+          </p>
+        </Card>
+      )}
+
+      {!result && bt.result_status === "ok" && (
         <Card>
           <SectionTitle sub="No completed result yet for this backtest.">Awaiting delivery</SectionTitle>
-          <p className="text-sm text-ink-500">
+          <p className="text-sm text-ink-500 mt-1">
             Once IFA marks this backtest completed, the full results — equity curve, drawdown, trade log,
             and metrics — will appear here.
           </p>

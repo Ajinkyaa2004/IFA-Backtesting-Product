@@ -631,6 +631,18 @@ export type BacktestListItem = {
   created_at: string;
 };
 
+/**
+ * Signal from the backtests endpoint about whether we could actually
+ * pull the result file for this backtest:
+ *   "ok"            — result is present (or none needed because status < completed)
+ *   "not_written"   — file row exists in DB but bytes are missing (storage
+ *                     redeploy / paused Supabase / manual deletion).
+ *                     UI shows a distinct "contact admin to redeliver" state.
+ *   "storage_error" — backend couldn't reach storage at all; UI shows a
+ *                     retriable "storage temporarily unreachable" state.
+ */
+export type BacktestResultStatus = "ok" | "not_written" | "storage_error";
+
 export type BacktestDetail = {
   id: string;
   code: string;
@@ -644,6 +656,8 @@ export type BacktestDetail = {
   // For engine === "vam":    VamPersistedBacktest envelope.
   // Use the discriminator on `engine` (not on result internals) before casting.
   result: BacktestResult | VamPersistedBacktest | null;
+  /** How the backend fared trying to load `result`. Default 'ok'. */
+  result_status: BacktestResultStatus;
   completed_at: string | null;
   created_at: string;
 };
@@ -859,6 +873,22 @@ export async function fetchAdminInbox(): Promise<AdminInbox> {
 // Admin: list a specific client's requests (uses the same /admin/inbox under the hood
 // would be nice but inbox only shows OPEN. We need full list per client.)
 // We'll route via a new admin endpoint added below.
+export type ClientRequestStatus = "open" | "in_review" | "quoted" | "resolved" | "rejected";
+
+/** Admin PATCH — moves a request through its lifecycle. Fires a client
+ *  notification server-side. */
+export async function adminUpdateRequestStatus(
+  requestId: string,
+  status: ClientRequestStatus,
+  note?: string,
+): Promise<ClientRequest> {
+  const res = await api.patch<ClientRequest>(`/admin/requests/${requestId}`, {
+    status,
+    note: note ?? null,
+  });
+  return res.data;
+}
+
 export async function fetchClientRequests(clientId: string): Promise<ClientRequest[]> {
   const r = await api.get<ClientRequest[]>(`/admin/clients/${clientId}/requests`);
   return r.data;

@@ -16,7 +16,7 @@ from app.core.deps import require_role
 from app.core.tier_deps import check_backtest_limit_for_client
 from app.db.models import Backtest, BacktestFile, Client
 from app.db.session import get_db
-from app.services import audit, storage
+from app.services import audit, notify, storage
 
 router = APIRouter()
 
@@ -209,6 +209,17 @@ def upload_backtest_result(
         },
         ip=request.client.host if request.client else None,
     )
+
+    # Auto-notify the client that their real (non-demo) backtest is
+    # ready. Failure is swallowed by the notify helper. (Audit PB2.)
+    notify.backtest_delivered(
+        db,
+        client_id=client.id,
+        backtest_id=backtest.id,
+        code=backtest.code,
+        name=backtest.name,
+    )
+
     db.commit()
     logger.info("Admin uploaded backtest {} for client {}", backtest.code, client.name)
 
@@ -291,6 +302,27 @@ def change_backtest_status(
     # historical timestamps if an admin flips completed → revision_requested → completed).
     if payload.new_status == "completed" and row.completed_at is None:
         row.completed_at = datetime.now(timezone.utc)
+
+    # Auto-notify the client about the status change (audit PB2). Only
+    # fires on client-meaningful transitions and only for non-demo rows.
+    if not row.is_demo:
+        if payload.new_status == "completed" and from_status != "completed":
+            notify.backtest_delivered(
+                db,
+                client_id=row.client_id,
+                backtest_id=row.id,
+                code=row.code,
+                name=row.name,
+            )
+        else:
+            notify.backtest_status_changed(
+                db,
+                client_id=row.client_id,
+                backtest_id=row.id,
+                code=row.code,
+                from_status=from_status,
+                to_status=payload.new_status,
+            )
 
     audit.record(
         db,

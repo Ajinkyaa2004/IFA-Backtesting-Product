@@ -1,7 +1,9 @@
+import { signOut } from "firebase/auth";
+import { AlertCircle, Check, ChevronLeft, ChevronRight, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 import { acceptTerms, fetchMe, fetchTerms, type Terms } from "../../lib/api";
+import { auth } from "../../lib/firebase";
 import { useAuth } from "../../store/auth";
 import PaymentDisclaimer from "../../components/PaymentDisclaimer";
 
@@ -10,17 +12,61 @@ export default function TermsAcceptPage() {
   const [step, setStep] = useState(0);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Two-error state (audit FE1): loadError unmounts the wizard because
+  // we can't render clauses we don't have. submitError renders inline
+  // and keeps the wizard mounted so the user can retry without losing
+  // their ticked boxes.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const setMe = useAuth((s) => s.setMe);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const loadTerms = () => {
+    setLoadError(null);
     fetchTerms()
       .then(setTerms)
-      .catch((e) => setError(e?.response?.data?.detail ?? "Failed to load T&C"));
+      .catch((e) => setLoadError(e?.response?.data?.detail ?? "Failed to load T&C"));
+  };
+
+  useEffect(() => {
+    loadTerms();
   }, []);
 
-  if (error) return <Centered>{error}</Centered>;
+  const signOutAndBounce = async () => {
+    try { await signOut(auth); } catch { /* ignore */ }
+    setMe(null);
+    navigate("/login", { replace: true });
+  };
+
+  if (loadError) {
+    return (
+      <Centered>
+        <div className="max-w-md mx-auto text-center space-y-4 px-6">
+          <div className="mx-auto size-12 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center">
+            <AlertCircle size={22} />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">Couldn't load the terms</h1>
+            <p className="text-sm text-ink-500 dark:text-ink-400">{loadError}</p>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={loadTerms}
+              className="inline-flex items-center gap-1.5 px-3.5 h-9 text-sm font-medium rounded-lg bg-accent-600 hover:bg-accent-700 text-white"
+            >
+              <RefreshCw size={13} /> Retry
+            </button>
+            <button
+              onClick={signOutAndBounce}
+              className="inline-flex items-center gap-1.5 px-3.5 h-9 text-sm font-medium rounded-lg border border-ink-200 dark:border-ink-700 text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800"
+            >
+              <LogOut size={13} /> Sign out
+            </button>
+          </div>
+        </div>
+      </Centered>
+    );
+  }
   if (!terms) return <Centered>Loading…</Centered>;
 
   const clauses = terms.clauses;
@@ -39,14 +85,14 @@ export default function TermsAcceptPage() {
 
   const submit = async () => {
     setSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
       await acceptTerms(terms.id, Array.from(accepted));
       const me = await fetchMe();
       setMe(me);
       navigate("/dashboard");
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Failed to accept");
+      setSubmitError(e?.response?.data?.detail ?? "Failed to accept. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -142,9 +188,9 @@ export default function TermsAcceptPage() {
                   Some required clauses are not ticked. Go back and accept them.
                 </div>
               )}
-              {error && (
+              {submitError && (
                 <div className="mt-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg px-3 py-2">
-                  {error}
+                  {submitError}
                 </div>
               )}
             </>
@@ -154,9 +200,9 @@ export default function TermsAcceptPage() {
         {/* Error banner — always rendered (was only inside review step before),
             so a submit failure followed by a back-navigation still tells the
             user what's wrong. Sweep finding #13. */}
-        {error && (
+        {submitError && (
           <div className="px-7 pb-3 -mt-1 text-xs text-red-600 dark:text-red-400">
-            {error}
+            {submitError}
           </div>
         )}
 
