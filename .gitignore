@@ -46,5 +46,7 @@ logs/
 .cache/
 .parcel-cache/
 *.local.txt
+*.local.md
+*.local.*
 storage-local/
 backend/tests/screenshots/
