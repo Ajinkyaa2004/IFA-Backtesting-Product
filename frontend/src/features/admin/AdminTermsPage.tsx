@@ -104,7 +104,23 @@ export default function AdminTermsPage() {
 
           <div className="flex items-center justify-between pt-2">
             <span className="text-xs text-emerald-600">{msg}</span>
-            <Button variant="accent" icon={<Send size={15}/>} onClick={publish} disabled={!version || clauses.length === 0 || submitting}>
+            {/*
+              Audit PF3: publishing a version with an empty title or body
+              on any clause silently propagates a blank required clause
+              and forces every client to re-accept nothing. Disable the
+              button until every clause has both fields filled.
+            */}
+            <Button
+              variant="accent"
+              icon={<Send size={15}/>}
+              onClick={publish}
+              disabled={
+                !version ||
+                clauses.length === 0 ||
+                clauses.some((c) => !c.title.trim() || !c.body.trim()) ||
+                submitting
+              }
+            >
               {submitting ? "Publishing…" : "Publish version"}
             </Button>
           </div>

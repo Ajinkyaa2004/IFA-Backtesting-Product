@@ -248,6 +248,14 @@ function SignupRow({
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[12px]">
             <MetaItem icon={<Building2 size={11} />} label="Company" value={meta.company || "-"} />
             <MetaItem icon={<Phone size={11} />} label="Phone" value={meta.phone || "-"} />
+            {meta.upwork_ref ? (
+              <MetaItem
+                icon={<Layers size={11} />}
+                label="Upwork"
+                value={meta.upwork_ref}
+                span2
+              />
+            ) : null}
             <MetaItem
               icon={<HelpCircle size={11} />}
               label="Purpose"
@@ -255,6 +263,11 @@ function SignupRow({
               span2
             />
           </div>
+          {meta.upwork_ref ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10.5px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-800 dark:text-amber-300 ring-1 ring-inset ring-amber-500/30">
+              Upwork engagement - keep quotes off the portal
+            </div>
+          ) : null}
 
           <div className="mt-3 flex items-center gap-2 text-[11px] text-ink-500">
             <span>Requested {requestedAgo}</span>
@@ -332,10 +345,29 @@ function ApproveModal({
   const [engagementType, setEngagementType] = useState<"manual" | "existing" | "bespoke">("manual");
   const [companyName, setCompanyName] = useState(meta.company || "");
   const [whatsappLink, setWhatsappLink] = useState("");
-  const [deliverable, setDeliverable] = useState(
-    "One backtest + tunable rerun once engine reaches live",
-  );
+  // Per-engagement-type deliverable defaults (audit PF13). Manual clients
+  // should never see "once engine reaches live" on their scope panel;
+  // bespoke should own the "engine build" language up front; existing
+  // should mention which engine.
+  const defaultDeliverableFor = (t: "manual" | "existing" | "bespoke") =>
+    t === "manual"
+      ? "Backtest delivered as JSON + PDF report in the portal."
+      : t === "bespoke"
+        ? "Bespoke engine build + first backtest once the engine is isolation-tested."
+        : "Runs on a shared live engine. First backtest after scope call.";
+  const [deliverable, setDeliverable] = useState(defaultDeliverableFor("manual"));
+  // Track whether admin has hand-edited so we don't stomp their custom
+  // wording every time they toggle the engagement type.
+  const [deliverableEdited, setDeliverableEdited] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Resync default when admin flips engagement type (unless they already
+  // typed something).
+  useEffect(() => {
+    if (!deliverableEdited) {
+      setDeliverable(defaultDeliverableFor(engagementType));
+    }
+  }, [engagementType, deliverableEdited]);
 
   const canSave = companyName.trim().length > 0 && !saving;
 
@@ -434,11 +466,16 @@ function ApproveModal({
           <label className="text-xs font-medium text-ink-600 dark:text-ink-300">Deliverable</label>
           <input
             value={deliverable}
-            onChange={(e) => setDeliverable(e.target.value)}
+            onChange={(e) => {
+              setDeliverable(e.target.value);
+              setDeliverableEdited(true);
+            }}
             className="mt-1 w-full h-9 px-2.5 text-sm rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
           />
           <div className="mt-1 text-[10.5px] text-ink-500">
-            One-liner shown on client's scope panel. Editable later from the client drawer.
+            One-liner shown on client's scope panel. Auto-updates when
+            you change the engagement type - edit to lock in your own
+            wording.
           </div>
         </div>
 

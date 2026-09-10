@@ -55,6 +55,11 @@ export default function SignupPage() {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [purpose, setPurpose] = useState("");
+  // Optional. Feeds audit BE15 (Client.source tagging) once we act on it -
+  // for now the value lands in signup_metadata.upwork so admin sees it
+  // in the pending-signup drawer and knows whether to route quotes on
+  // or off the portal.
+  const [upworkRef, setUpworkRef] = useState("");
   // Honeypot: hidden field. Real humans never touch it; form-crawling
   // bots that submit everything will fill it and the backend rejects
   // the request. (Audit BE3.)
@@ -114,6 +119,7 @@ export default function SignupPage() {
         company: company.trim(),
         phone: phone.trim(),
         purpose: purpose.trim() || null,
+        upwork_ref: upworkRef.trim() || null,
         // Honeypot value - real users never touch this input.
         website: website.trim() || null,
       });
@@ -172,16 +178,16 @@ export default function SignupPage() {
             <div>
               <div className="text-base font-semibold tracking-tight">Backtest Engine</div>
               <div className="text-[11px] text-ink-500 uppercase tracking-wider">
-                Request access
+                Set up your workspace
               </div>
             </div>
           </div>
 
           <h1 className="text-xl font-semibold tracking-tight mb-1">
-            Create your account
+            Set up your IFA workspace
           </h1>
           <p className="text-sm text-ink-500 dark:text-ink-400 mb-6">
-            Tell us who you are. An IFA admin will review and approve you within one business day.
+            Anmol reviews every request personally, usually within a few hours.
           </p>
 
           <form onSubmit={onSubmit} className="space-y-3">
@@ -269,6 +275,22 @@ export default function SignupPage() {
                 className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40 resize-y"
                 placeholder="Swing-trading backtests on Nifty midcaps…"
               />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
+                <HelpCircle size={12} /> Upwork contract or project (optional)
+              </label>
+              <input
+                type="text"
+                value={upworkRef}
+                onChange={(e) => setUpworkRef(e.target.value)}
+                className="mt-1 w-full h-10 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                placeholder="Upwork project name or contract ID"
+              />
+              <p className="mt-1 text-[10.5px] text-ink-400">
+                If we're already working together on Upwork, tell us how to
+                find you there. Skip if this is a direct engagement.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

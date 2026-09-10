@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
 
           <h1 className="text-xl font-semibold tracking-tight mb-1">Staff sign in</h1>
           <p className="text-sm text-ink-500 dark:text-ink-400 mb-6">
-            For IFA team members only. Clients sign in at <a href="/login" className="text-accent-700 dark:text-accent-300 hover:underline">/login</a>.
+            For IFA team members only. Clients sign in at <a href="/login" className="text-accent-700 dark:text-accent-300 hover:underline">the client portal</a>.
           </p>
 
           <form onSubmit={onSubmit} className="space-y-3">
@@ -93,7 +93,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 w-full h-10 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                placeholder="admin@insightfusionanalytics.com"
+                placeholder="you@insightfusionanalytics.com"
                 autoComplete="email"
               />
             </div>

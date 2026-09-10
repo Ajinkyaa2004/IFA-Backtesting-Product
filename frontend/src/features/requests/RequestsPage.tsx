@@ -190,19 +190,19 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
           <Field label="Summary" className="md:col-span-2">
             <input className={`h-9 ${fieldCls}`} value={payload.summary ?? ""} onChange={(e) => set("summary", e.target.value)} placeholder="e.g. 24m walk-forward backtest on smallcap momentum" required />
           </Field>
-          <Field label="Engagement type">
+          <Field label="What you'll receive">
             <select className={`h-9 ${fieldCls}`} value={payload.engagement ?? ""} onChange={(e) => set("engagement", e.target.value)}>
               <option value="">-</option>
               <option>Single backtest</option>
-              <option>Walk-forward (12m)</option>
+              <option>Walk-forward (12 months)</option>
               <option>Paper trading</option>
             </select>
           </Field>
-          <Field label="Turnaround">
+          <Field label="When you need it">
             <select className={`h-9 ${fieldCls}`} value={payload.turnaround ?? ""} onChange={(e) => set("turnaround", e.target.value)}>
               <option value="">-</option>
-              <option>Standard (5 biz days)</option>
-              <option>Rush (2 biz days · +40%)</option>
+              <option>Standard (5 business days)</option>
+              <option>Sooner if possible</option>
             </select>
           </Field>
           <Field label="Date range - from">

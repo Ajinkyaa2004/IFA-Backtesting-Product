@@ -694,6 +694,12 @@ function TopNav() {
           <a href="#tiers" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">Pricing</a>
           <a href="#faq" className="hidden md:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50">FAQ</a>
           <Link
+            to="/signup"
+            className="hidden sm:inline text-sm text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50"
+          >
+            Request access
+          </Link>
+          <Link
             to="/login"
             className="ml-2 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-ink-900 hover:bg-ink-700 dark:bg-ink-50 dark:hover:bg-white text-white dark:text-ink-900 text-sm font-medium"
           >
@@ -735,7 +741,7 @@ function Hero() {
             href="mailto:insightfusionanalytics@gmail.com?subject=IFA%20Backtest%20-%20discovery%20call"
             className="inline-flex items-center gap-1.5 h-11 px-5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium shadow-sm transition-colors"
           >
-            Book a discovery call <ArrowRight size={14}/>
+            Email Anmol to schedule a call <ArrowRight size={14}/>
           </a>
           <Link
             to="/login"
@@ -744,6 +750,10 @@ function Hero() {
             Sign in <Lock size={13}/>
           </Link>
         </div>
+        <p className="mt-3 text-[11px] text-ink-500 dark:text-ink-400">
+          Anmol reads every email personally, usually within a few hours.
+          Calls happen on Zoom or Google Meet - pick either in your reply.
+        </p>
         <div className="mt-8 flex items-center justify-center gap-6 text-xs text-ink-500 dark:text-ink-400 flex-wrap">
           <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500"/> Isolation-tested engines</span>
           <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500"/> Holdout enforced</span>

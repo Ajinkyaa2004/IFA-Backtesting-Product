@@ -156,6 +156,7 @@ export type SignupMetadata = {
   company?: string;
   phone?: string;
   purpose?: string | null;
+  upwork_ref?: string | null;
 };
 
 export type Me = {
@@ -389,6 +390,10 @@ export type SignupPayload = {
   company: string;
   phone: string;
   purpose?: string | null;
+  /** Optional. Upwork project name or contract id - lands in
+   *  signup_metadata.upwork_ref so admin knows to keep quotes off the
+   *  portal (Upwork's off-platform policy). Feeds BE15 once it lands. */
+  upwork_ref?: string | null;
   /** Honeypot: bots fill this, humans never see it. Server rejects
    *  the whole request when populated. Always send empty string
    *  or omit from real submissions. */

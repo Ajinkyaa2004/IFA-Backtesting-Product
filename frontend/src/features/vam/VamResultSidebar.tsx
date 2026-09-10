@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Play } from "lucide-react";
+import { classifyVamRunError } from "./vamRunErrors";
 import {
   fetchVamSchema,
   fetchVamSymbols,
@@ -81,15 +82,16 @@ export default function VamResultSidebar({ step, initialParams }: VamResultSideb
       // remount its VamResultSidebar, and seed it with the new run's params.
       nav(`/backtests/${out.backtest_id}`);
     } catch (e: unknown) {
-      const ax = (e as { response?: { status?: number; data?: { detail?: unknown } } }).response;
-      const status = ax?.status;
-      const detail = ax?.data?.detail;
-      if (status === 429) setErr("Rate limit hit - wait a moment before rerunning.");
-      else if (status === 422 && typeof detail === "object" && detail !== null && "violations" in detail) {
-        setErr("Engine rejected the parameters. Check ranges.");
-      } else if (status === 503) setErr("Engine offline.");
-      else if (status === 502) setErr("Engine error - please retry.");
-      else setErr("Run failed. Try again.");
+      // Shared classifier (audit PF25). Uses the same tier_gate + rate
+      // limit + validation copy that ClientRunBacktestPage renders on
+      // its main CTA - clients now see the same guidance whether they
+      // click Rerun here or Run on the dedicated page.
+      const classified = classifyVamRunError(e);
+      const suffix =
+        classified.kind === "validation" && classified.violations?.length
+          ? " " + classified.violations.map((v) => v.path).join(", ")
+          : "";
+      setErr(classified.message + suffix);
     } finally {
       setSubmitting(false);
     }

@@ -61,6 +61,22 @@ def publish_terms(
 ):
     if db.query(TermsVersion).filter(TermsVersion.version == payload.version).first():
         raise HTTPException(status_code=409, detail=f"Version {payload.version} already exists")
+
+    # Every clause must have a non-empty title AND body (audit PF3).
+    # Without this an admin can publish a version with a required clause
+    # that renders blank in the client wizard, and re-acceptance is
+    # forced on every client. Server-side check backs the frontend
+    # button-disable so a malicious or scripted POST can't slip through.
+    empty = [
+        i for i, c in enumerate(payload.clauses, start=1)
+        if not (c.title and c.title.strip()) or not (c.body and c.body.strip())
+    ]
+    if empty:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Clauses {empty} have an empty title or body. Fill them in before publishing.",
+        )
+
     tv = TermsVersion(
         version=payload.version,
         body=payload.body,

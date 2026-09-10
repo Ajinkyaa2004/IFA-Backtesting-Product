@@ -34,12 +34,14 @@ import { useAuth } from "../../store/auth";
 import { VamParamForm } from "./VamParamForm";
 import { VAM_STEP_OPTIONS, defaultsFromSchema } from "./vamParams";
 
-type RunErr = {
-  kind: "config" | "ratelimit" | "validation" | "engine" | "unknown";
-  message: string;
-  violations?: { path: string; message: string }[];
-  retryAfter?: number;
-};
+// Shared classifier lives in vamRunErrors.ts (audit PF25) so the
+// sidebar's "Rerun with these params" surfaces the same guidance
+// as this page. Aliased to the local names so no other code changes.
+import {
+  classifyVamRunError as classifyError,
+  extractMessage,
+  type RunErr,
+} from "./vamRunErrors";
 
 export default function ClientRunBacktestPage() {
   // HOOKS MUST ALL RUN ON EVERY RENDER. The hard route guard for non-VAM
@@ -318,53 +320,4 @@ function RunError({ err }: { err: RunErr }) {
   );
 }
 
-// ── Error helpers ──────────────────────────────────────────────────────────
-
-function extractMessage(e: unknown): string {
-  if (typeof e === "object" && e !== null && "response" in e) {
-    const ax = e as { response?: { data?: { detail?: unknown }; status?: number } };
-    const d = ax.response?.data?.detail;
-    if (typeof d === "string") return d;
-    if (typeof d === "object" && d !== null && "error" in d) {
-      return String((d as { error: unknown }).error);
-    }
-  }
-  if (e instanceof Error) return e.message;
-  return String(e);
-}
-
-function classifyError(e: unknown): RunErr {
-  const ax = (e as { response?: { status?: number; data?: { detail?: unknown }; headers?: Record<string, string> } }).response;
-  const status = ax?.status;
-  const detail = ax?.data?.detail;
-  // Tier-gate first — both 403 (feature unavailable) and 429 (limit hit)
-  // ride this shape. Render as a friendly upgrade prompt.
-  if (typeof detail === "object" && detail !== null && (detail as { error?: string }).error === "tier_gate") {
-    const g = detail as { message: string; kind: string };
-    return {
-      kind: g.kind === "limit" ? "ratelimit" : "config",
-      message: `${g.message} Contact us via the Requests tab to upgrade your plan.`,
-    };
-  }
-  if (status === 503) {
-    return { kind: "config", message: "The engine is currently offline. Please try again shortly." };
-  }
-  if (status === 429) {
-    return {
-      kind: "ratelimit",
-      message: "You've made several runs in quick succession. Please pause for a moment.",
-      retryAfter: parseInt(ax?.headers?.["retry-after"] ?? "0", 10) || undefined,
-    };
-  }
-  if (status === 422 && typeof detail === "object" && detail !== null && "violations" in detail) {
-    return {
-      kind: "validation",
-      message: "The engine rejected one or more parameters:",
-      violations: (detail as { violations: { path: string; message: string }[] }).violations,
-    };
-  }
-  if (status === 502) {
-    return { kind: "engine", message: "Engine error - please retry. If it keeps happening, contact support." };
-  }
-  return { kind: "unknown", message: extractMessage(e) || "Run failed" };
-}
+// Error classifier + extractor come from ./vamRunErrors (audit PF25).

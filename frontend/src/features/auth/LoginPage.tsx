@@ -115,7 +115,7 @@ export default function LoginPage() {
 
         <h1 className="text-xl font-semibold tracking-tight mb-1">Sign in</h1>
         <p className="text-sm text-ink-500 dark:text-ink-400 mb-6">
-          Use the credentials shared by your account manager.
+          Use the email and password you registered with.
         </p>
 
         {justSignedUp && (

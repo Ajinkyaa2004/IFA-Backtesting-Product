@@ -165,29 +165,49 @@ def send_client_approval_email(
     name: str,
     login_url: str,
 ) -> bool:
-    """Tell the client their account is approved and ready to use."""
-    subject = "Your IFA Backtest Engine account is approved"
+    """Tell the client their account is approved and ready to use.
+
+    Signed as Anmol personally (audit C6). A contracted client expects
+    to hear from the person they hired, not from a generic "IFA team"
+    inbox. The next-step line tells them what to expect after sign-in.
+    """
+    subject = "Your IFA workspace is ready"
 
     text = (
         f"Hi {name},\n\n"
-        f"Good news - your IFA Backtest Engine account has been approved. "
-        f"You can now sign in with the same credentials you used to register.\n\n"
-        f"Sign in: {login_url}\n\n"
+        f"Your IFA workspace is set up. Sign in with the email and "
+        f"password you registered with:\n\n"
+        f"{login_url}\n\n"
         f"On your first sign-in you'll be asked to accept the terms of "
-        f"engagement, then you'll land on your personalized dashboard.\n\n"
-        f"- The IFA team"
+        f"engagement, then you'll land on your dashboard. I'll message "
+        f"you separately to schedule the kickoff and walk through the "
+        f"scope.\n\n"
+        f"Anything urgent, just reply to this email.\n\n"
+        f"- Anmol\n"
+        f"Insight Fusion Analytics"
     )
 
     html = _wrap_html(
-        f'<h2 style="font-size: 20px; margin: 0 0 12px;">You\'re in.</h2>'
+        f'<h2 style="font-size: 20px; margin: 0 0 12px;">Your workspace is ready.</h2>'
         f'<p style="margin: 0 0 12px;">Hi {name},</p>'
         f'<p style="color: #475569; margin: 0 0 20px;">'
-        f'Good news - your IFA Backtest Engine account has been approved. '
-        f'Sign in with the same credentials you used to register.</p>'
-        f'{_button(login_url, "Sign in to your dashboard")}'
-        f'<p style="color: #64748b; font-size: 13px; margin-top: 24px;">'
-        f'On your first sign-in you\'ll be asked to accept the terms of '
-        f'engagement, then you\'ll land on your personalized dashboard.</p>'
+        f"Your IFA workspace is set up. Sign in with the email and "
+        f"password you registered with.</p>"
+        f'{_button(login_url, "Sign in to your workspace")}'
+        f'<p style="color: #475569; font-size: 14px; margin-top: 24px;">'
+        f"On your first sign-in you'll be asked to accept the terms of "
+        f"engagement, then you'll land on your dashboard. I'll message "
+        f"you separately to schedule the kickoff and walk through the scope."
+        f"</p>"
+        f'<p style="color: #64748b; font-size: 13px; margin-top: 20px;">'
+        f"Anything urgent, just reply to this email."
+        f"</p>"
+        f'<p style="color: #0f172a; font-size: 14px; margin-top: 24px; margin-bottom: 0;">'
+        f"- Anmol"
+        f"</p>"
+        f'<p style="color: #64748b; font-size: 12px; margin: 0;">'
+        f"Insight Fusion Analytics"
+        f"</p>"
     )
     return _send(to_email, subject, text, html)
 
@@ -198,33 +218,46 @@ def send_client_rejection_email(
     name: str,
     reason: str,
 ) -> bool:
-    """Tell the client their signup was not approved, with the reason."""
-    subject = "Update on your IFA Backtest Engine signup"
+    """Tell the client their signup was not approved, with the reason.
+
+    Signed as Anmol personally (audit C6) - a rejection from a named
+    person reads as considered rather than institutional. Includes an
+    explicit reply invite so the client has an obvious next step.
+    """
+    subject = "About your IFA workspace request"
 
     text = (
         f"Hi {name},\n\n"
-        f"Thanks for your interest in the IFA Backtest Engine. After reviewing "
-        f"your request, we're not able to approve access at this time.\n\n"
+        f"Thanks for reaching out. After reviewing your request I'm "
+        f"not able to set up a workspace right now.\n\n"
         f"Reason: {reason}\n\n"
-        f"If you'd like to discuss this or provide more context, please "
-        f"reply to this email and we'll get back to you.\n\n"
-        f"- The IFA team"
+        f"If any of this reads wrong, or you'd like to give me more "
+        f"context, just reply to this email - I read every response.\n\n"
+        f"- Anmol\n"
+        f"Insight Fusion Analytics"
     )
 
     html = _wrap_html(
-        f'<h2 style="font-size: 20px; margin: 0 0 12px;">About your signup</h2>'
+        f'<h2 style="font-size: 20px; margin: 0 0 12px;">About your request</h2>'
         f'<p style="margin: 0 0 12px;">Hi {name},</p>'
         f'<p style="color: #475569; margin: 0 0 16px;">'
-        f'Thanks for your interest in the IFA Backtest Engine. After reviewing '
-        f'your request, we\'re not able to approve access at this time.</p>'
+        f"Thanks for reaching out. After reviewing your request I'm "
+        f"not able to set up a workspace right now.</p>"
         f'<div style="background: #fef2f2; border-left: 3px solid #ef4444; '
         f'padding: 12px 16px; margin: 16px 0; border-radius: 4px;">'
         f'<div style="font-size: 12px; color: #991b1b; font-weight: 600; '
         f'text-transform: uppercase; letter-spacing: 0.05em;">Reason</div>'
         f'<div style="margin-top: 4px;">{reason}</div>'
         f'</div>'
-        f'<p style="color: #64748b; font-size: 13px;">'
-        f'If you\'d like to discuss this or share more context, just reply to '
-        f'this email and we\'ll get back to you.</p>'
+        f'<p style="color: #475569; font-size: 14px;">'
+        f"If any of this reads wrong, or you'd like to give me more "
+        f"context, just reply to this email - I read every response."
+        f"</p>"
+        f'<p style="color: #0f172a; font-size: 14px; margin-top: 24px; margin-bottom: 0;">'
+        f"- Anmol"
+        f"</p>"
+        f'<p style="color: #64748b; font-size: 12px; margin: 0;">'
+        f"Insight Fusion Analytics"
+        f"</p>"
     )
     return _send(to_email, subject, text, html)

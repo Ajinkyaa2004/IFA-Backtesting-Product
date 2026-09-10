@@ -94,6 +94,10 @@ class SignupIn(BaseModel):
     company: str = Field(min_length=1, max_length=200)
     phone: str = Field(min_length=4, max_length=40)
     purpose: str | None = Field(default=None, max_length=1000)
+    # Optional Upwork project / contract reference. Lands in
+    # signup_metadata so admin sees it on the pending signup card and
+    # knows to keep quotes off the portal (Upwork off-platform policy).
+    upwork_ref: str | None = Field(default=None, max_length=200)
     # Honeypot - hidden in the signup form so real users never see it.
     # A bot that submits every field will fill this; we drop the request
     # silently with 400. Cheap defence against form-crawler bots without
@@ -186,6 +190,7 @@ def signup(
             "company": payload.company,
             "phone": payload.phone,
             "purpose": payload.purpose,
+            "upwork_ref": payload.upwork_ref,
         },
         signup_requested_at=now,
     )

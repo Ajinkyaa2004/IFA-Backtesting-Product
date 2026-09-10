@@ -69,16 +69,24 @@ export default function PendingApprovalPage() {
           </div>
 
           <h1 className="text-xl font-semibold tracking-tight mb-2">
-            You're on the list, {displayName}.
+            Your workspace is being set up, {displayName}.
           </h1>
           <p className="text-sm text-ink-500 dark:text-ink-400 mb-5">
-            Thanks for signing up. An IFA admin will review your request
+            You'll get an email from Anmol
             {meta.company ? (
               <>
-                {" "}for <span className="font-medium text-ink-700 dark:text-ink-200">{meta.company}</span>
+                {" "}about <span className="font-medium text-ink-700 dark:text-ink-200">{meta.company}</span>
               </>
             ) : null}
-            {" "}and get back to you within one business day.
+            {" "}within a few hours. Questions? Reply to that email or
+            reach us at{" "}
+            <a
+              href="mailto:insightfusionanalytics@gmail.com"
+              className="text-accent-700 dark:text-accent-300 hover:underline"
+            >
+              insightfusionanalytics@gmail.com
+            </a>
+            .
           </p>
 
           <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4 text-left space-y-2 mb-6">
