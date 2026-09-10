@@ -48,7 +48,7 @@ class ImpersonateExitOut(BaseModel):
 def start_impersonation(
     client_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     """Validate + audit-log the start of a support impersonation session."""

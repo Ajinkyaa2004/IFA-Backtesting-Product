@@ -56,7 +56,7 @@ def list_terms(
 def publish_terms(
     payload: PublishTermsIn,
     request: Request,
-    admin=Depends(require_role("main_admin", "sub_admin")),
+    admin=Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     if db.query(TermsVersion).filter(TermsVersion.version == payload.version).first():

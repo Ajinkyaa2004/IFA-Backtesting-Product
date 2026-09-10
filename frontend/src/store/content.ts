@@ -83,13 +83,30 @@ function deepMergePlain(base: any, override: any): any {
 // Auto-wire preview postMessage listener at module load. The admin editor
 // posts `{ type: 'ifa-content-preview', content: <partial> }` and the
 // iframe applies it live.
+//
+// Origin + source check (audit FE3 / SEC7). Without these two checks
+// any window that can call window.open(portal + '?admin-preview=1')
+// followed by postMessage(fake_content, '*') could rewrite the copy
+// (mailto links included) on the real IFA origin - phishing on your
+// own domain. React escapes text so it's not script XSS, but the CTAs
+// and email links would be attacker-controlled.
+//
+// The correct sender is our own admin editor's iframe, so:
+//   - e.origin must match our own origin
+//   - e.source must be our own parent window (the admin editor)
 if (typeof window !== "undefined" && isPreviewMode()) {
   window.addEventListener("message", (e: MessageEvent) => {
+    if (e.origin !== window.location.origin) return;
+    if (e.source !== window.parent) return;
     if (e.data && e.data.type === "ifa-content-preview" && e.data.content) {
       useContent.getState().applyPreview(e.data.content);
     }
   });
   // Ping the parent so the admin can send an initial snapshot without
-  // waiting for the first edit.
-  window.parent?.postMessage({ type: "ifa-content-preview-ready" }, "*");
+  // waiting for the first edit. Target our own origin, not "*" - the
+  // parent is on the same origin so this is tight.
+  window.parent?.postMessage(
+    { type: "ifa-content-preview-ready" },
+    window.location.origin,
+  );
 }

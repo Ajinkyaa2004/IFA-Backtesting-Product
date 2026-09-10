@@ -218,6 +218,17 @@ export default function TermsAcceptPage() {
           >
             <ChevronLeft size={14} /> Back
           </button>
+          {/* Escape hatch (audit FE2) - a client who wants to read the
+              terms later, or who signed in on a shared device, needs a
+              way out that isn't "close the tab". Sits between Back and
+              the primary CTA, styled as a low-emphasis link. */}
+          <button
+            onClick={signOutAndBounce}
+            disabled={submitting}
+            className="inline-flex items-center gap-1.5 px-3 h-9 text-xs font-medium text-ink-500 hover:text-ink-800 dark:hover:text-ink-200 disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <LogOut size={12} /> Read later - sign out
+          </button>
           {!isReviewStep ? (
             <button
               onClick={() => setStep((s) => s + 1)}

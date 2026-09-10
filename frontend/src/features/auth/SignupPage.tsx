@@ -55,6 +55,10 @@ export default function SignupPage() {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [purpose, setPurpose] = useState("");
+  // Honeypot: hidden field. Real humans never touch it; form-crawling
+  // bots that submit everything will fill it and the backend rejects
+  // the request. (Audit BE3.)
+  const [website, setWebsite] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +114,8 @@ export default function SignupPage() {
         company: company.trim(),
         phone: phone.trim(),
         purpose: purpose.trim() || null,
+        // Honeypot value - real users never touch this input.
+        website: website.trim() || null,
       });
 
       // 4. Sign the user OUT — Firebase auto-logged them in when the
@@ -179,6 +185,23 @@ export default function SignupPage() {
           </p>
 
           <form onSubmit={onSubmit} className="space-y-3">
+            {/* Honeypot - hidden off-screen with aria-hidden + autocomplete="off"
+                so screen readers + password managers ignore it. Bots that
+                fill every field will trip this and get a 400. */}
+            <div
+              aria-hidden="true"
+              className="absolute left-[-9999px] top-[-9999px] w-px h-px overflow-hidden"
+            >
+              <label htmlFor="ifa-website">Website (leave blank)</label>
+              <input
+                id="ifa-website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </div>
             <div>
               <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
                 <UserIcon size={12} /> Full name

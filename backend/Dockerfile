@@ -67,7 +67,14 @@ EXPOSE 8000
 
 # Render injects $PORT — fall back to 8000 for local docker run.
 # Use `sh -c` so the env var actually expands.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir /app/backend"]
+# --proxy-headers + --forwarded-allow-ips="*": we run behind host nginx
+# which sets X-Forwarded-For, but the container's peer is the Docker
+# bridge gateway, not nginx. Without these flags every request looks
+# like it came from the same gateway IP, so slowapi rate-limits become
+# one global bucket and audit_log.ip is worthless. (Audit BE1.)
+# The port is only bound to 127.0.0.1 on the host so trusting all
+# forwarded IPs is safe here - only nginx can reach us.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir /app/backend --proxy-headers --forwarded-allow-ips=*"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
     CMD curl -fsS http://localhost:${PORT:-8000}/healthz || exit 1

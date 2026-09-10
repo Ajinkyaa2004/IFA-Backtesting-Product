@@ -662,6 +662,7 @@ export default function LandingPage() {
         <FeatureGrid />
         <HowItWorks />
         <PortfolioSection />
+        <HowWeWorkSection />
         <TierSection />
         <FAQSection />
         <CTASection />
@@ -916,14 +917,73 @@ function PortfolioSection() {
   );
 }
 
+/**
+ * How we work with you - servicing-first framing that sits above the
+ * tier grid. Anmol's decision 2026-09-08 (audit C3): today IFA delivers
+ * every engagement bespoke, priced per scope on Upwork or by direct
+ * invoice. Self-serve tiers are on the roadmap and the block below is
+ * labelled "Coming soon" so it doesn't clash with the actual servicing
+ * flow above.
+ */
+function HowWeWorkSection() {
+  return (
+    <section id="how-we-work" className="py-16 sm:py-20 border-t border-ink-100 dark:border-ink-900">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">How we work with you</h2>
+          <p className="mt-3 text-ink-600 dark:text-ink-300">
+            Every engagement is scoped as a one-off today. You describe
+            what you want backtested, we quote a fixed price and delivery
+            window, and you get the results in the portal you're already
+            looking at.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {[
+            {
+              title: "Scope call",
+              body: "30 minutes on WhatsApp or Google Meet. You describe the strategy, we ask the questions that make the backtest reproducible.",
+            },
+            {
+              title: "Fixed-price quote",
+              body: "Within 2 business days: scope, deliverable, fee and delivery window. Paid on Upwork if you found us there; direct invoice otherwise.",
+            },
+            {
+              title: "Delivery in the portal",
+              body: "Trade log, equity curve, drawdown, PDF report - all delivered as an immutable backtest row on your dashboard.",
+            },
+          ].map((s, i) => (
+            <div
+              key={s.title}
+              className="p-5 rounded-2xl bg-white dark:bg-ink-950 border border-ink-200/70 dark:border-ink-800"
+            >
+              <div className="size-8 rounded-lg bg-accent-600/10 text-accent-700 dark:text-accent-300 flex items-center justify-center text-sm font-semibold mb-3">
+                {i + 1}
+              </div>
+              <h3 className="text-base font-semibold tracking-tight">{s.title}</h3>
+              <p className="mt-2 text-sm text-ink-600 dark:text-ink-300 leading-relaxed">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TierSection() {
   return (
-    <section id="tiers" className="py-16 sm:py-20">
+    <section id="tiers" className="py-16 sm:py-20 border-t border-ink-100 dark:border-ink-900 bg-ink-50/60 dark:bg-ink-900/40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Pick your tier</h2>
+          <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-800 dark:text-amber-300 ring-1 ring-inset ring-amber-500/30 mb-4">
+            Coming soon
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Self-serve tiers</h2>
           <p className="mt-3 text-ink-600 dark:text-ink-300">
-            All engagements come with terms, T&amp;C, versioned engines and an audit log. Tiers change how many backtests, how tight the SLA, and whether we build a bespoke engine for your family.
+            Recurring monthly subscriptions with a fixed number of
+            backtests, a tuning UI and an SLA. Not launched yet - if any
+            of these look right for your workflow, mention it on the
+            discovery call and we'll factor it into your scope quote.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

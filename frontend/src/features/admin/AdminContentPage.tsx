@@ -58,9 +58,13 @@ export default function AdminContentPage() {
   // Push draft to iframe whenever it changes (and iframe is ready).
   const pushToPreview = useCallback((payload: Partial<ContentDoc>) => {
     if (!iframeReady.current || !iframeRef.current?.contentWindow) return;
+    // Target our own origin explicitly (audit FE3/SEC7). Sending with
+    // "*" would let any hostile page listening in that iframe read the
+    // draft. Same-origin is fine because we're framing a page on our
+    // own domain.
     iframeRef.current.contentWindow.postMessage(
       { type: "ifa-content-preview", content: payload },
-      "*",
+      window.location.origin,
     );
   }, []);
 

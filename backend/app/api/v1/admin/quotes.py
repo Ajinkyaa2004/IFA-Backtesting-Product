@@ -119,7 +119,7 @@ def create_quote(
     client_id: uuid.UUID,
     payload: QuoteCreateIn,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     client = db.query(Client).filter(Client.id == client_id).first()
@@ -161,7 +161,7 @@ def patch_quote(
     quote_id: uuid.UUID,
     payload: QuotePatchIn,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     q = db.query(Quote).filter(Quote.id == quote_id).first()
@@ -201,7 +201,7 @@ def patch_quote(
 def send_quote(
     quote_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     q = db.query(Quote).filter(Quote.id == quote_id).first()

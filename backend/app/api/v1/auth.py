@@ -94,6 +94,11 @@ class SignupIn(BaseModel):
     company: str = Field(min_length=1, max_length=200)
     phone: str = Field(min_length=4, max_length=40)
     purpose: str | None = Field(default=None, max_length=1000)
+    # Honeypot - hidden in the signup form so real users never see it.
+    # A bot that submits every field will fill this; we drop the request
+    # silently with 400. Cheap defence against form-crawler bots without
+    # a captcha dependency. (Audit BE3.)
+    website: str | None = Field(default=None, max_length=200)
 
 
 class SignupOut(BaseModel):
@@ -122,6 +127,16 @@ def signup(
       4. Background task pings the admin email
       5. Frontend redirects to /pending
     """
+    # Honeypot check (BE3). Silently drop bot submissions with a 400 so
+    # we never write a DB row, never mint a Firebase token, and never
+    # email admin about a fake signup.
+    if payload.website and payload.website.strip():
+        logger.info(
+            "Signup rejected: honeypot filled (from={})",
+            request.client.host if request.client else "?",
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid submission")
+
     try:
         decoded = verify_id_token(payload.id_token)
     except TokenError as e:

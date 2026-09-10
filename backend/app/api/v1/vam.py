@@ -23,6 +23,7 @@ from collections import defaultdict, deque
 from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -198,9 +199,49 @@ async def client_run_via_vam(
         # Belt-and-braces: race with a soft-delete in another tab.
         raise HTTPException(status_code=404, detail="Client not found")
 
-    vam_params = {**payload.params, "step": payload.step}
+    # Local param + holdout validation (audit PB4). VAM's own /run
+    # endpoint will 422 on out-of-range values, but that's a black box
+    # we don't control. Running the same checks locally means we can
+    # give a specific error, keep the audit trail honest, and prevent
+    # a client from burning through their monthly cap on rejected
+    # runs. We fetch the step's schema once per run.
+    vam_client = get_vam_client()
     try:
-        vam_response = await get_vam_client().run_backtest(vam_params)
+        step_schema = await vam_client.get_step_schema(payload.step)
+    except Exception as e:
+        # If VAM can't tell us the schema for this step we don't block
+        # the run - fall through to VAM's own 422 rather than 500ing
+        # here. Log so ops sees repeated occurrences.
+        logger.warning("VAM step-schema fetch failed for {}: {}", payload.step, e)
+        step_schema = None
+
+    if step_schema:
+        from app.services import param_schema as _psm
+        violations = _psm.validate_params(step_schema, payload.params)
+        if violations:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "param_out_of_range",
+                    "violations": violations[:10],
+                },
+            )
+        # enforce_holdout returns adjusted params + a note per trimmed
+        # field. We accept the adjusted params silently but include the
+        # notes in audit so the run record shows exactly what got
+        # clamped.
+        adjusted, holdout_notes = _psm.enforce_holdout(step_schema, payload.params)
+        if holdout_notes:
+            logger.info(
+                "VAM holdout enforcement clamped {} field(s) for client {}: {}",
+                len(holdout_notes), client_id, holdout_notes,
+            )
+        vam_params = {**adjusted, "step": payload.step}
+    else:
+        vam_params = {**payload.params, "step": payload.step}
+
+    try:
+        vam_response = await vam_client.run_backtest(vam_params)
     except Exception as e:
         raise _translate_vam_error(e) from e
 

@@ -389,6 +389,10 @@ export type SignupPayload = {
   company: string;
   phone: string;
   purpose?: string | null;
+  /** Honeypot: bots fill this, humans never see it. Server rejects
+   *  the whole request when populated. Always send empty string
+   *  or omit from real submissions. */
+  website?: string | null;
 };
 
 export type SignupResponse = {

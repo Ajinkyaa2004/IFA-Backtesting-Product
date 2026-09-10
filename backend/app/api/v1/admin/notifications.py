@@ -42,7 +42,7 @@ class NotifOut(BaseModel):
 def broadcast(
     payload: BroadcastIn,
     request: Request,
-    admin=Depends(require_role("main_admin", "sub_admin")),
+    admin=Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     n = Notification(
@@ -77,7 +77,7 @@ def broadcast(
 def personal(
     payload: PersonalIn,
     request: Request,
-    admin=Depends(require_role("main_admin", "sub_admin")),
+    admin=Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     """Sends to every active user under the given client_id."""

@@ -50,7 +50,7 @@ def patch_content(
     key: str,
     payload: ContentPatchIn,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     if key not in content.CATEGORY_KEYS:
@@ -78,7 +78,7 @@ def patch_content(
 def reset_content(
     key: str,
     request: Request,
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
     """Drop the admin override for a category - client sees the hardcoded

@@ -98,7 +98,7 @@ def approve_signup(
     background: BackgroundTasks,
     request: Request,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
 ):
     user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
     if not user:
@@ -225,7 +225,7 @@ def reject_signup(
     background: BackgroundTasks,
     request: Request,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_role("main_admin", "sub_admin")),
+    admin: User = Depends(require_role("main_admin")),
 ):
     user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
     if not user:
