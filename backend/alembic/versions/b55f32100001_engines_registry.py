@@ -92,7 +92,7 @@ def upgrade() -> None:
             covers, param_schema, isolation_passed_at, isolation_notes
         ) VALUES (
             'ENG-VAM-001',
-            'VAM — Volatility Adjusted Momentum',
+            'VAM - Volatility Adjusted Momentum',
             'ravi@ifa.com',
             'vam',
             'live',

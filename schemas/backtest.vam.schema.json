@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://insightfusionanalytics.com/schemas/backtest.vam.schema.json",
-  "title": "IFA Backtest Result — VAM-native (Volatility-Adjusted Momentum)",
-  "description": "Persisted form of a backtest run produced by the VAM engine at backtestravi.insightfusionanalytics.com. Wraps VAM's response shape verbatim — VAM's structure is preserved 1:1 under `engine_response`; the surrounding envelope ties it to our client + audit trail. This schema is sibling to backtest.schema.json (v1.0); they are NOT interchangeable. Choose by the `engine` column on the backtests row.",
+  "title": "IFA Backtest Result - VAM-native (Volatility-Adjusted Momentum)",
+  "description": "Persisted form of a backtest run produced by the VAM engine at backtestravi.insightfusionanalytics.com. Wraps VAM's response shape verbatim - VAM's structure is preserved 1:1 under `engine_response`; the surrounding envelope ties it to our client + audit trail. This schema is sibling to backtest.schema.json (v1.0); they are NOT interchangeable. Choose by the `engine` column on the backtests row.",
   "type": "object",
   "required": [
     "schema_version",
@@ -55,7 +55,7 @@
     },
     "triggered_by": {
       "type": "object",
-      "description": "Audit info — who initiated this run.",
+      "description": "Audit info - who initiated this run.",
       "required": ["actor_type", "actor_id"],
       "additionalProperties": false,
       "properties": {
@@ -66,14 +66,14 @@
     },
     "engine_response": {
       "type": "object",
-      "description": "Verbatim response body from VAM /api/backtest/run. Shape preserved as-is — DO NOT reshape fields, DO NOT pair flat trade actions into round-trips. This is the canonical artifact for what VAM produced. Top-level fields below match VAM's contract (inferred from the dashboard's JS client).",
+      "description": "Verbatim response body from VAM /api/backtest/run. Shape preserved as-is - DO NOT reshape fields, DO NOT pair flat trade actions into round-trips. This is the canonical artifact for what VAM produced. Top-level fields below match VAM's contract (inferred from the dashboard's JS client).",
       "required": ["metrics", "trades", "chart_data"],
       "additionalProperties": true,
       "properties": {
         "cached": { "type": "boolean" },
         "metrics": {
           "type": "object",
-          "description": "VAM's flat metrics block. Some fields appear only on certain steps (alpha_vs_spy_pct, etc.) — additionalProperties is open.",
+          "description": "VAM's flat metrics block. Some fields appear only on certain steps (alpha_vs_spy_pct, etc.) - additionalProperties is open.",
           "additionalProperties": true,
           "properties": {
             "final_value": { "type": ["number", "null"] },
@@ -96,7 +96,7 @@
         },
         "trades": {
           "type": "array",
-          "description": "VAM's flat action log — each item is ONE BUY or SELL event, NOT a round-trip. Renderer should NOT attempt to pair these.",
+          "description": "VAM's flat action log - each item is ONE BUY or SELL event, NOT a round-trip. Renderer should NOT attempt to pair these.",
           "items": {
             "type": "object",
             "additionalProperties": true,
