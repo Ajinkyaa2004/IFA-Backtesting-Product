@@ -1004,9 +1004,9 @@ function CTASection() {
         <div className="inline-flex size-14 rounded-2xl bg-accent-600/10 text-accent-700 dark:text-accent-300 items-center justify-center mb-5">
           <Zap size={26} aria-hidden/>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Ready to see your strategy tested honestly?</h2>
+        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Ready to get your strategy backtested?</h2>
         <p className="mt-3 text-ink-600 dark:text-ink-300 max-w-xl mx-auto">
-          A 30-minute discovery call is enough to scope your engagement, pick a tier, and get a signed proposal within 2 business days.
+          A 30-minute call is enough to scope the work, pick a tier, and get a signed proposal within 2 business days.
         </p>
         <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
           <a

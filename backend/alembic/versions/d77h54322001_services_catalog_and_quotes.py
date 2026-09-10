@@ -79,11 +79,11 @@ LIFECYCLE_CUSTOM = [
 ]
 
 SEED_SERVICES = [
-    {"code": "backtesting",       "name": "Systematic Backtesting",    "tagline": "Test your strategy on historical data with honest reports",       "icon": "📊", "sort_order": 10, "template": LIFECYCLE_BACKTESTING},
-    {"code": "crypto_ops",        "name": "Crypto / Binance Ops",      "tagline": "Automated trading bots on your Binance / crypto exchange account", "icon": "🪙", "sort_order": 20, "template": LIFECYCLE_CRYPTO_OPS},
-    {"code": "sports_predictions", "name": "Sports Predictions",       "tagline": "Data-driven predictions for sports betting or fantasy",           "icon": "🎯", "sort_order": 30, "template": LIFECYCLE_SPORTS},
-    {"code": "video_editing",     "name": "Video Editing",             "tagline": "Post-production for content creators and brands",                  "icon": "🎬", "sort_order": 40, "template": LIFECYCLE_VIDEO},
-    {"code": "custom",            "name": "Custom Development",        "tagline": "Bespoke technical work outside our standard catalog",              "icon": "🛠️", "sort_order": 90, "template": LIFECYCLE_CUSTOM},
+    {"code": "backtesting",       "name": "Systematic Backtesting",    "tagline": "Test your strategy on historical data with a full report and trade log",       "icon": "BarChart3", "sort_order": 10, "template": LIFECYCLE_BACKTESTING},
+    {"code": "crypto_ops",        "name": "Crypto / Binance Ops",      "tagline": "Automated trading bots on your Binance / crypto exchange account", "icon": "Coins", "sort_order": 20, "template": LIFECYCLE_CRYPTO_OPS},
+    {"code": "sports_predictions", "name": "Sports Predictions",       "tagline": "Data-driven predictions for sports betting or fantasy",           "icon": "Trophy", "sort_order": 30, "template": LIFECYCLE_SPORTS},
+    {"code": "video_editing",     "name": "Video Editing",             "tagline": "Post-production for content creators and brands",                  "icon": "Video", "sort_order": 40, "template": LIFECYCLE_VIDEO},
+    {"code": "custom",            "name": "Custom Development",        "tagline": "Bespoke technical work outside our standard catalog",              "icon": "Wrench", "sort_order": 90, "template": LIFECYCLE_CUSTOM},
 ]
 
 

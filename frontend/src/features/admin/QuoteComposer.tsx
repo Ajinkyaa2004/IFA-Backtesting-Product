@@ -134,7 +134,7 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
             >
               <option value="">- service (optional) -</option>
               {services.map((s) => (
-                <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
             <div className="relative">

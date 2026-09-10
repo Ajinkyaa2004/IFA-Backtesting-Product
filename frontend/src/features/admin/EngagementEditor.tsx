@@ -153,7 +153,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         >
           <option value="">- pick a service -</option>
           {services.map((s) => (
-            <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
         <div className="mt-1 text-[10px] text-ink-500 dark:text-ink-400">
