@@ -13,11 +13,12 @@ import {
   BadgeCheck,
   Building2,
   CheckCircle2,
+  HelpCircle,
+  Layers,
   Mail,
   MessageSquare,
   Phone,
   RefreshCw,
-  Sparkles,
   User as UserIcon,
   XCircle,
 } from "lucide-react";
@@ -40,15 +41,15 @@ const TABS: { key: TabKey; label: string; tone: string }[] = [
 ];
 
 const TIER_OPTIONS = [
-  { value: "tier1", label: "Tier 1 — Starter" },
-  { value: "tier2", label: "Tier 2 — Growth" },
-  { value: "tier3", label: "Tier 3 — Enterprise" },
+  { value: "tier1", label: "Tier 1 - Starter" },
+  { value: "tier2", label: "Tier 2 - Growth" },
+  { value: "tier3", label: "Tier 3 - Enterprise" },
 ] as const;
 
 const ENGAGEMENT_TYPES = [
-  { value: "manual", label: "Manual — hand-uploaded backtests" },
-  { value: "existing", label: "Existing — reuse a live engine (e.g. VAM)" },
-  { value: "bespoke", label: "Bespoke — build a new engine" },
+  { value: "manual", label: "Manual - hand-uploaded backtests" },
+  { value: "existing", label: "Existing - reuse a live engine (e.g. VAM)" },
+  { value: "bespoke", label: "Bespoke - build a new engine" },
 ] as const;
 
 /**
@@ -59,7 +60,7 @@ function formatRelative(iso: string): string {
   const now = Date.now();
   const then = new Date(iso).getTime();
   const seconds = Math.round((now - then) / 1000);
-  if (Number.isNaN(seconds)) return "—";
+  if (Number.isNaN(seconds)) return "-";
   if (seconds < 45) return "just now";
   if (seconds < 90) return "a minute ago";
   const minutes = Math.round(seconds / 60);
@@ -102,7 +103,7 @@ export default function AdminSignupsPage() {
 
   const counts = useMemo(
     () => ({
-      pending: tab === "pending_approval" ? rows.length : "—",
+      pending: tab === "pending_approval" ? rows.length : "-",
     }),
     [rows, tab],
   );
@@ -223,7 +224,7 @@ function SignupRow({
   const meta = row.metadata ?? {};
   const requestedAgo = row.signup_requested_at
     ? formatRelative(row.signup_requested_at)
-    : "—";
+    : "-";
   const isPending = row.signup_status === "pending_approval";
 
   return (
@@ -245,12 +246,12 @@ function SignupRow({
           </div>
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[12px]">
-            <MetaItem icon={<Building2 size={11} />} label="Company" value={meta.company || "—"} />
-            <MetaItem icon={<Phone size={11} />} label="Phone" value={meta.phone || "—"} />
+            <MetaItem icon={<Building2 size={11} />} label="Company" value={meta.company || "-"} />
+            <MetaItem icon={<Phone size={11} />} label="Phone" value={meta.phone || "-"} />
             <MetaItem
-              icon={<Sparkles size={11} />}
+              icon={<HelpCircle size={11} />}
               label="Purpose"
-              value={meta.purpose || "—"}
+              value={meta.purpose || "-"}
               span2
             />
           </div>
@@ -414,7 +415,7 @@ function ApproveModal({
 
         <div>
           <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
-            <Sparkles size={12} /> Engagement type
+            <Layers size={12} /> Engagement type
           </label>
           <select
             value={engagementType}
@@ -503,7 +504,7 @@ function RejectModal({
     >
       <p className="text-xs text-ink-500 mb-3">
         The reason is visible to the client on their /rejected screen and included in the
-        rejection email. Be specific — vague rejections cause reply-back questions.
+        rejection email. Be specific - vague rejections cause reply-back questions.
       </p>
       <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
         Reason for rejection

@@ -1,13 +1,13 @@
-"""Transactional email — Gmail SMTP.
+"""Transactional email - Gmail SMTP.
 
 Three templates for the signup + approval flow:
-  send_admin_signup_notification  — pings insightfusionanalytics@gmail.com when a
+  send_admin_signup_notification  - pings insightfusionanalytics@gmail.com when a
                                     new signup lands in the queue
-  send_client_approval_email      — tells the client they're approved
-  send_client_rejection_email     — tells the client they were rejected + reason
+  send_client_approval_email      - tells the client they're approved
+  send_client_rejection_email     - tells the client they were rejected + reason
 
 Design:
-  - All calls are safe to fire from BackgroundTasks — they catch every
+  - All calls are safe to fire from BackgroundTasks - they catch every
     exception and log it. Never let a signup fail because the SMTP handshake
     is slow or Gmail is briefly throttling.
   - When SMTP_HOST is unset (local dev) every helper no-ops with a warning.
@@ -32,7 +32,7 @@ from app.core.config import get_settings
 def _send(to: str, subject: str, text_body: str, html_body: str) -> bool:
     """Blocking SMTP send. Returns True on success, False on any failure.
 
-    Failures NEVER raise — the caller is a signup or approval action that
+    Failures NEVER raise - the caller is a signup or approval action that
     must succeed even if the email queue is unreachable. Ops sees the log.
     """
     settings = get_settings()
@@ -121,24 +121,24 @@ def send_admin_signup_notification(
     settings = get_settings()
     to = settings.ADMIN_NOTIFY_EMAIL or settings.SMTP_USER
     if not to:
-        logger.warning("Admin signup notification skipped — no ADMIN_NOTIFY_EMAIL")
+        logger.warning("Admin signup notification skipped - no ADMIN_NOTIFY_EMAIL")
         return False
 
-    subject = f"New signup request — {name} ({email})"
+    subject = f"New signup request - {name} ({email})"
 
     text = (
         f"A new client has requested access to the IFA Backtest Engine portal.\n\n"
         f"Name: {name}\n"
         f"Email: {email}\n"
-        f"Company: {company or '—'}\n"
-        f"Phone: {phone or '—'}\n"
-        f"Purpose: {purpose or '—'}\n\n"
+        f"Company: {company or '-'}\n"
+        f"Phone: {phone or '-'}\n"
+        f"Purpose: {purpose or '-'}\n\n"
         f"Review and approve at: {admin_url}\n"
     )
 
     rows = "".join(
         f'<tr><td style="padding: 6px 12px 6px 0; color: #64748b; font-size: 13px;">'
-        f'{k}</td><td style="padding: 6px 0; font-weight: 500;">{v or "—"}</td></tr>'
+        f'{k}</td><td style="padding: 6px 0; font-weight: 500;">{v or "-"}</td></tr>'
         for k, v in [
             ("Name", name),
             ("Email", email),
@@ -170,19 +170,19 @@ def send_client_approval_email(
 
     text = (
         f"Hi {name},\n\n"
-        f"Good news — your IFA Backtest Engine account has been approved. "
+        f"Good news - your IFA Backtest Engine account has been approved. "
         f"You can now sign in with the same credentials you used to register.\n\n"
         f"Sign in: {login_url}\n\n"
         f"On your first sign-in you'll be asked to accept the terms of "
         f"engagement, then you'll land on your personalized dashboard.\n\n"
-        f"— The IFA team"
+        f"- The IFA team"
     )
 
     html = _wrap_html(
         f'<h2 style="font-size: 20px; margin: 0 0 12px;">You\'re in.</h2>'
         f'<p style="margin: 0 0 12px;">Hi {name},</p>'
         f'<p style="color: #475569; margin: 0 0 20px;">'
-        f'Good news — your IFA Backtest Engine account has been approved. '
+        f'Good news - your IFA Backtest Engine account has been approved. '
         f'Sign in with the same credentials you used to register.</p>'
         f'{_button(login_url, "Sign in to your dashboard")}'
         f'<p style="color: #64748b; font-size: 13px; margin-top: 24px;">'
@@ -208,7 +208,7 @@ def send_client_rejection_email(
         f"Reason: {reason}\n\n"
         f"If you'd like to discuss this or provide more context, please "
         f"reply to this email and we'll get back to you.\n\n"
-        f"— The IFA team"
+        f"- The IFA team"
     )
 
     html = _wrap_html(

@@ -14,7 +14,7 @@ class ContentSetting(Base):
     Keys used today: welcome, tier_card, onboarding, placeholder_tiles,
     support_footer, announcement, sections. Adding a new category means
     adding a new default in services/content.DEFAULTS and shipping the
-    admin editor UI for it — no migration.
+    admin editor UI for it - no migration.
     """
 
     __tablename__ = "content_settings"

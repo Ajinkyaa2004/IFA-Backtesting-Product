@@ -91,7 +91,7 @@ export default function ClientRunBacktestPage() {
           setStep(implemented[0].id);
         }
       } catch (e: unknown) {
-        setBootError(extractMessage(e) || "Could not load the engine — it may be offline.");
+        setBootError(extractMessage(e) || "Could not load the engine - it may be offline.");
       }
     })();
   }, []);
@@ -256,7 +256,7 @@ export default function ClientRunBacktestPage() {
             disabled={submitting}
             className="w-full md:w-2/3 h-9 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
           >
-            <option value="">— don't link to a specific strategy —</option>
+            <option value="">- don't link to a specific strategy -</option>
             {myStrategies.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} (v{s.version}) {s.is_source_of_truth ? "· SoT" : ""}
@@ -364,7 +364,7 @@ function classifyError(e: unknown): RunErr {
     };
   }
   if (status === 502) {
-    return { kind: "engine", message: "Engine error — please retry. If it keeps happening, contact support." };
+    return { kind: "engine", message: "Engine error - please retry. If it keeps happening, contact support." };
   }
   return { kind: "unknown", message: extractMessage(e) || "Run failed" };
 }

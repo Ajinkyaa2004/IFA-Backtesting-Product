@@ -133,7 +133,7 @@ export default function StrategiesPage() {
                             <BadgeCheck size={14}/> v{g.sourceOfTruth.version}
                           </span>
                         ) : (
-                          <span className="text-xs text-ink-400">—</span>
+                          <span className="text-xs text-ink-400">-</span>
                         )}
                       </td>
                     </tr>
@@ -308,7 +308,7 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     >
       <p className="text-sm text-ink-600 dark:text-ink-300 mb-4">
         Attach a PDF or DOCX (max 25MB) describing your strategy. We'll review and reach out within one business day.
-        If a strategy with the same name already exists, this creates a new version — history is preserved.
+        If a strategy with the same name already exists, this creates a new version - history is preserved.
       </p>
 
       <label className="block">

@@ -1,4 +1,4 @@
-"""Client-facing notifications endpoints — Phase 4.5 Day 6.
+"""Client-facing notifications endpoints - Phase 4.5 Day 6.
 
 Admin already had /admin/notifications/broadcast + /admin/notifications/personal
 to CREATE notifications. This module gives every user (client + admin) the

@@ -1,8 +1,8 @@
 """Admin content editing endpoints.
 
-    GET  /admin/content              — return full merged content dict + list
+    GET  /admin/content              - return full merged content dict + list
                                        of which keys have DB overrides vs. defaults
-    PATCH /admin/content/{key}       — overwrite one category's stored value
+    PATCH /admin/content/{key}       - overwrite one category's stored value
 
 Every write is audit-logged with the before/after diff so we can answer
 'who changed the welcome banner and when' three months later.
@@ -81,7 +81,7 @@ def reset_content(
     admin: User = Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
 ):
-    """Drop the admin override for a category — client sees the hardcoded
+    """Drop the admin override for a category - client sees the hardcoded
     default again on next load."""
     if key not in content.CATEGORY_KEYS:
         raise HTTPException(status_code=404, detail="Unknown content category")

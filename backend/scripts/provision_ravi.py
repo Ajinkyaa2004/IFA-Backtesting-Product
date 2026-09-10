@@ -13,7 +13,7 @@ What it does:
   3. Look up the User row linking Ravi's Firebase UID to that client. Create if
      absent. Role = client.
 
-Safe to re-run — every step is keyed on the email / firebase_uid so it won't
+Safe to re-run - every step is keyed on the email / firebase_uid so it won't
 duplicate.
 
 NOTE: this is the same credential pair we use for VAM_ADMIN_EMAIL/PASSWORD
@@ -32,8 +32,8 @@ from app.db.session import SessionLocal
 
 RAVI_EMAIL = "ravi@ifa.com"
 RAVI_PASSWORD = "Admin@2025"
-RAVI_CLIENT_NAME = "Insight Fusion Analytics — Ravi"
-RAVI_CLIENT_TIER = "tier3"  # he's effectively the principal — use the top tier
+RAVI_CLIENT_NAME = "Insight Fusion Analytics - Ravi"
+RAVI_CLIENT_TIER = "tier3"  # he's effectively the principal - use the top tier
 
 
 def main() -> None:

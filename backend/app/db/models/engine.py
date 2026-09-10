@@ -24,7 +24,7 @@ class Engine(UUIDPKMixin, TimestampMixin, Base):
       isolation_passed_at    NULL until isolation gate passes (Item #6)
       isolation_notes    free-form log of what tests passed
 
-    A row cannot transition to 'live' without isolation_passed_at set —
+    A row cannot transition to 'live' without isolation_passed_at set -
     enforced by services/engine.transition_status.
     """
 

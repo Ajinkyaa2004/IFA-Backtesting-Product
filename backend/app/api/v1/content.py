@@ -1,4 +1,4 @@
-"""Public content endpoint — the client reads UI copy from here on every
+"""Public content endpoint - the client reads UI copy from here on every
 dashboard load. No authentication required so the login screen etc. can
 also read customized copy in future.
 """

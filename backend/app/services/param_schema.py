@@ -70,7 +70,7 @@ class SchemaError(Exception):
 def flatten_params(schema: dict, params: dict) -> dict[str, Any]:
     """Merge groups so constraint expressions can reference `ema_fast`
     instead of `signal.ema_fast`. If two groups share a name, the later
-    group wins — same rule as JSON merge.
+    group wins - same rule as JSON merge.
     """
     flat: dict[str, Any] = {}
     for group_name, group_schema in (schema.get("params") or {}).items():

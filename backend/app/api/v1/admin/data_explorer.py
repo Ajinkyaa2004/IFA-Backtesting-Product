@@ -1,4 +1,4 @@
-"""Admin — Data Explorer.
+"""Admin - Data Explorer.
 
 A read-only tabular browser for every table in the DB, wired to
 /admin/data on the frontend. Lets an admin see rows without opening a
@@ -171,7 +171,7 @@ def read_table(
     Safety:
       - `table_name` must be in the allowlist (else 404)
       - `order_by` must be a real column on that table (else 400)
-      - `search` is passed as a bound parameter — never concatenated
+      - `search` is passed as a bound parameter - never concatenated
     """
     if table_name not in _ALLOWED_TABLES:
         raise HTTPException(status_code=404, detail="Unknown table")

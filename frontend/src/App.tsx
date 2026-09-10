@@ -214,12 +214,12 @@ export default function App() {
         */}
         <Route path="/" element={<HomeGate />} />
 
-        {/* Public login pages — role-gated so a client can't sneak in via /admin/login */}
+        {/* Public login pages - role-gated so a client can't sneak in via /admin/login */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
 
-        {/* Post-signup gating screens. Protected without a role requirement —
+        {/* Post-signup gating screens. Protected without a role requirement -
             a pending/rejected user has an active Firebase session but no
             client_id, so client-only routes bounce them here. */}
         <Route
@@ -241,7 +241,7 @@ export default function App() {
 
         <Route path="/terms" element={<Protected><TermsAcceptPage /></Protected>} />
 
-        {/* Client portal — dashboard root moved from `/` to `/dashboard` when the
+        {/* Client portal - dashboard root moved from `/` to `/dashboard` when the
             landing page took over `/`. Every other client URL stays the same. */}
         <Route element={<Protected requireClient requireTncDone><Layout /></Protected>}>
           <Route path="dashboard" element={<OverviewPage />} />

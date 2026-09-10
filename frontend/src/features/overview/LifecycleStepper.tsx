@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, Cpu, FileText, Loader, PauseCircle, PlayCircle, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Cpu, FileText, Loader, PauseCircle, PlayCircle, Rocket, XCircle } from "lucide-react";
 import { Card } from "../../components/ui";
 import type { EngagementSummary, TierFeatureKey } from "../../lib/api";
 
@@ -41,7 +41,7 @@ export default function LifecycleStepper({
   features,
 }: {
   engagement: EngagementSummary;
-  /** Tier feature keys — used to decide if 'Tuning unlocked' step is done. */
+  /** Tier feature keys - used to decide if 'Tuning unlocked' step is done. */
   features: TierFeatureKey[];
 }) {
   const steps = useMemo(() => buildSteps(engagement, features), [engagement, features]);
@@ -84,7 +84,7 @@ export default function LifecycleStepper({
         </div>
       </div>
 
-      {/* Horizontal stepper — dots + labels */}
+      {/* Horizontal stepper - dots + labels */}
       <div className="border-t border-ink-100 dark:border-ink-800 overflow-x-auto">
         <ol className="flex items-stretch px-2 py-3 min-w-max">
           {steps.map((step, i) => (
@@ -214,7 +214,7 @@ function buildGenericSteps(e: EngagementSummary): Step[] {
     return {
       key: step.key,
       label: step.label,
-      icon: <Sparkles size={14}/>,
+      icon: <Rocket size={14}/>,
       state,
       hint,
     };
@@ -236,7 +236,7 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
     {
       key: "setup",
       label: "Set up",
-      icon: <Sparkles size={14}/>,
+      icon: <Rocket size={14}/>,
       state: "done",
       hint: e.code,
     },

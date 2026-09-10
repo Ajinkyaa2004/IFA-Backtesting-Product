@@ -1,4 +1,4 @@
-"""Seed script — provisions the main admin and a demo client.
+"""Seed script - provisions the main admin and a demo client.
 
 Run:
     cd backend
@@ -56,7 +56,7 @@ def seed(db: Session) -> None:
     if not tnc:
         tnc = TermsVersion(
             version="v1.0",
-            body="IFA Backtest Engine — Engagement Terms v1.0",
+            body="IFA Backtest Engine - Engagement Terms v1.0",
             clauses=TNC_V1_CLAUSES,
             effective_from=now,
         )
@@ -193,7 +193,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
     variants = [
         {
             "code": "BT-2026-0006",
-            "name": "RSI Mean Reversion — Nifty Midcap",
+            "name": "RSI Mean Reversion - Nifty Midcap",
             "type": "long_only",
             "description": "Long-only mean reversion on Nifty Midcap 100. Enter when RSI(14) < 30 AND close > 200-day SMA. Exit when RSI(14) crosses 55 OR 10-day trailing stop.",
             "tags": ["mean-reversion", "midcap", "swing"],
@@ -203,7 +203,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
         },
         {
             "code": "BT-2026-0007",
-            "name": "Pairs Trade — HDFC / ICICI Bank",
+            "name": "Pairs Trade - HDFC / ICICI Bank",
             "type": "market_neutral",
             "description": "Market-neutral pairs trade on HDFC Bank vs ICICI Bank. Enter when z-score of the log-price spread exceeds ±2σ. Exit at reversion to 0.5σ.",
             "tags": ["pairs", "market-neutral", "stat-arb"],
@@ -213,7 +213,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
         },
         {
             "code": "BT-2026-0008",
-            "name": "Breakout Momentum — Nifty 50",
+            "name": "Breakout Momentum - Nifty 50",
             "type": "long_only",
             "description": "Long-only 20-day high breakout on Nifty 50 constituents with 10-day ATR-based sizing. Exit on close below 10-day SMA.",
             "tags": ["breakout", "momentum", "nifty50"],
@@ -272,7 +272,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
             size_bytes=len(raw),
             checksum=checksum,
         ))
-        logger.info("Seeded backtest {} ({}) — {}", v["code"], bt.id, v["name"])
+        logger.info("Seeded backtest {} ({}) - {}", v["code"], bt.id, v["name"])
     db.flush()
 
     # ── Status-variety stubs (no JSON, minimal fields) so the filter chips have
@@ -304,7 +304,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
 def _reset_local_state(db: Session) -> None:
     """Wipe backtests + strategies + requests + T&C acceptances for local
     dev. Keeps clients + users so re-seeding is fast. NEVER runs in
-    production — refuses if APP_ENV != 'local'.
+    production - refuses if APP_ENV != 'local'.
     """
     from app.core.config import get_settings
     from app.db.models import (
@@ -318,7 +318,7 @@ def _reset_local_state(db: Session) -> None:
             f"seed --reset refuses to run in APP_ENV={settings.APP_ENV!r}. "
             "This is a destructive operation. If you REALLY want it, edit seed.py."
         )
-    logger.warning("--reset requested — wiping local state (except clients + users)")
+    logger.warning("--reset requested - wiping local state (except clients + users)")
     for model in (BacktestFile, Backtest, StrategyDocument, Request, TermsAcceptance, AuditLog):
         n = db.query(model).delete()
         logger.info("  wiped {} × {}", n, model.__tablename__)

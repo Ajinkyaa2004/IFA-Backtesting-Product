@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, ChevronDown, ChevronRight, CircleDot, FileText, MessageSquare, PlayCircle, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ChevronRight, CircleDot, FileText, MessageSquare, PlayCircle, Rocket, X } from "lucide-react";
 import { Card } from "../../components/ui";
 import type { BacktestListItem, Me } from "../../lib/api";
 import { useContent } from "../../store/content";
@@ -93,7 +93,7 @@ export default function OnboardingChecklist({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="size-6 rounded-md bg-accent-600 text-white flex items-center justify-center shrink-0">
-              <Sparkles size={12}/>
+              <Rocket size={12}/>
             </span>
             <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
               Getting started

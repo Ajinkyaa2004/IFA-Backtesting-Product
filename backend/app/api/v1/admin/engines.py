@@ -179,12 +179,12 @@ def mark_isolation_passed(
     admin: User = Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
 ):
-    """Chirag Item #6 — the hard gate before an engine can go live.
+    """Chirag Item #6 - the hard gate before an engine can go live.
 
     Admin records that the isolation harness passed (no writes outside
     its scope, no other-tenant reads, no live-market side effects).
     isolation_passed_at is stamped; notes preserved for the audit trail.
-    Idempotent — subsequent calls overwrite notes.
+    Idempotent - subsequent calls overwrite notes.
     """
     row = db.query(Engine).filter(Engine.id == engine_id).first()
     if not row:

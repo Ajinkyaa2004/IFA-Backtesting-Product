@@ -36,7 +36,7 @@ export const pageTransition: Variants = {
   exit:    { opacity: 0, y: -6, transition: { duration: DURATION.fast, ease: EASE.standard } },
 };
 
-/** Card / section reveal — used on scroll or first mount. */
+/** Card / section reveal - used on scroll or first mount. */
 export const revealUp: Variants = {
   hidden:  { opacity: 0, y: 14 },
   visible: { opacity: 1, y: 0, transition: { duration: DURATION.base, ease: EASE.standard } },
@@ -52,35 +52,35 @@ export function staggerContainer(staggerChildren = 0.05, delayChildren = 0): Var
   };
 }
 
-/** Modal / popover open — scale from origin + fade. */
+/** Modal / popover open - scale from origin + fade. */
 export const modalScale: Variants = {
   hidden:  { opacity: 0, scale: 0.96, y: 6 },
   visible: { opacity: 1, scale: 1, y: 0, transition: { duration: DURATION.base, ease: EASE.standard } },
   exit:    { opacity: 0, scale: 0.96, y: 6, transition: { duration: DURATION.fast, ease: EASE.standard } },
 };
 
-/** Backdrop for modals — fade only. */
+/** Backdrop for modals - fade only. */
 export const backdropFade: Variants = {
   hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: { duration: DURATION.fast } },
   exit:    { opacity: 0, transition: { duration: DURATION.fast } },
 };
 
-/** Dropdown open — origin-aware scale + fade. */
+/** Dropdown open - origin-aware scale + fade. */
 export const dropdownScale: Variants = {
   hidden:  { opacity: 0, scale: 0.96, y: -4 },
   visible: { opacity: 1, scale: 1, y: 0, transition: { duration: DURATION.fast, ease: EASE.standard } },
   exit:    { opacity: 0, scale: 0.96, y: -4, transition: { duration: DURATION.fast * 0.6, ease: EASE.standard } },
 };
 
-/** Slide in from the right — used for drawers, toasts. */
+/** Slide in from the right - used for drawers, toasts. */
 export const slideInRight: Variants = {
   hidden:  { opacity: 0, x: 24 },
   visible: { opacity: 1, x: 0, transition: { duration: DURATION.base, ease: EASE.standard } },
   exit:    { opacity: 0, x: 24, transition: { duration: DURATION.fast, ease: EASE.standard } },
 };
 
-/** Banner/announcement — slide down from top with fade. */
+/** Banner/announcement - slide down from top with fade. */
 export const slideDown: Variants = {
   hidden:  { opacity: 0, y: -12 },
   visible: { opacity: 1, y: 0, transition: { duration: DURATION.base, ease: EASE.standard } },

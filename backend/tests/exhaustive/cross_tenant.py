@@ -1,4 +1,4 @@
-"""Cross-tenant isolation test — provisions a SECOND client, then attempts every
+"""Cross-tenant isolation test - provisions a SECOND client, then attempts every
 known way a client could possibly read or write another client's data.
 
 The one test that MUST always pass: client A cannot read or write client B's anything.

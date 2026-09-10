@@ -38,9 +38,9 @@ def login(request: Request, payload: LoginIn, db: Session = Depends(get_db)):
     Backend verifies it and confirms the user is provisioned in our DB.
 
     Error contract:
-      401 — token missing, malformed, expired, revoked
-      403 — token valid but user suspended OR user not provisioned in our DB
-      503 — Firebase certificate-fetch / service issue
+      401 - token missing, malformed, expired, revoked
+      403 - token valid but user suspended OR user not provisioned in our DB
+      503 - Firebase certificate-fetch / service issue
     """
     try:
         decoded = verify_id_token(payload.id_token)
@@ -207,7 +207,7 @@ def logout(user: User = Depends(current_user)):
     request with check_revoked=True, plus all refresh attempts).
 
     Without this, an ID token snapshot (devtools, malicious extension)
-    remained server-valid for up to ~1h after the user clicked Sign Out —
+    remained server-valid for up to ~1h after the user clicked Sign Out -
     a real shared-device leak. Sweep finding #18.
     """
     try:

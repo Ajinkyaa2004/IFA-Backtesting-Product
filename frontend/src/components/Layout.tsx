@@ -99,7 +99,7 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        {/* Close button — only shown inside the mobile drawer via context styling */}
+        {/* Close button - only shown inside the mobile drawer via context styling */}
         <button
           type="button"
           onClick={() => setMobileNavOpen(false)}
@@ -118,7 +118,7 @@ export default function Layout() {
           The opacity transition gives a soft crossfade rather than a hard cut.
         */}
         <div className="flex-1 min-h-0 flex flex-col">
-          {/* Section header — labels "Workspace" or "Parameters" depending on mode */}
+          {/* Section header - labels "Workspace" or "Parameters" depending on mode */}
           <div className="px-3 pt-4 pb-1 flex items-center justify-between">
             <div
               key={inOverrideMode ? "params-label" : "workspace-label"}
@@ -139,7 +139,7 @@ export default function Layout() {
             )}
           </div>
 
-          {/* Body — single scroll region; content swaps with opacity fade */}
+          {/* Body - single scroll region; content swaps with opacity fade */}
           <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
             <div
               key={inOverrideMode ? "override" : "nav"}
@@ -183,7 +183,7 @@ export default function Layout() {
                   {me?.client?.name ?? me?.email}
                 </div>
                 <div className="text-[10px] text-ink-500 dark:text-ink-400 truncate">
-                  Tier {me?.client?.tier?.replace("tier", "") ?? "—"}
+                  Tier {me?.client?.tier?.replace("tier", "") ?? "-"}
                 </div>
               </div>
             </div>
@@ -196,7 +196,7 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col bg-ink-50 dark:bg-ink-950 text-ink-900 dark:text-ink-100">
       <ImpersonationBanner />
       <div className="flex-1 flex min-h-0">
-      {/* Desktop sidebar — fixed rail on >= lg */}
+      {/* Desktop sidebar - fixed rail on >= lg */}
       <aside className="hidden lg:flex w-60 shrink-0 flex-col bg-white dark:bg-ink-900 border-r border-ink-200 dark:border-ink-800">
         {sidebarBody}
       </aside>
@@ -281,7 +281,7 @@ export default function Layout() {
                     <div className="fixed inset-0 z-30" onClick={() => setAvatarOpen(false)} />
                     <div className="absolute right-0 top-11 z-40 w-60 bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 rounded-xl shadow-pop overflow-hidden">
                       <div className="px-3.5 py-3 border-b border-ink-100 dark:border-ink-800">
-                        <div className="text-sm font-medium">{me?.client?.name ?? "—"}</div>
+                        <div className="text-sm font-medium">{me?.client?.name ?? "-"}</div>
                         <div className="text-[11px] text-ink-500 dark:text-ink-400 truncate">
                           {me?.email}
                         </div>

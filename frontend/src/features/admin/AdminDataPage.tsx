@@ -140,7 +140,7 @@ export default function AdminDataPage() {
   return (
     <div className="space-y-5">
       <SectionTitle
-        sub="Read-only view of every table. Sort, search and paginate — writes still go through the dedicated admin pages."
+        sub="Read-only view of every table. Sort, search and paginate - writes still go through the dedicated admin pages."
         action={
           <button
             onClick={loadTables}
@@ -340,7 +340,7 @@ function TableView({
       } else if (copied) {
         toast.info(
           "Data copied to clipboard",
-          "Your browser blocked the popup — open sheets.new manually and paste.",
+          "Your browser blocked the popup - open sheets.new manually and paste.",
         );
       } else {
         // Fallback: trigger a CSV download so the admin can still land
@@ -368,7 +368,7 @@ function TableView({
         URL.revokeObjectURL(url);
         toast.info(
           "Downloaded CSV instead",
-          "Clipboard blocked — open Google Sheets, File → Import, upload this file.",
+          "Clipboard blocked - open Google Sheets, File → Import, upload this file.",
         );
       }
     } catch (e) {
@@ -425,7 +425,7 @@ function TableView({
         <button
           onClick={exportToSheets}
           disabled={exporting || total === 0}
-          title="Copies every row (with your current search + sort) to your clipboard as TSV, opens a fresh Google Sheet — paste with ⌘V"
+          title="Copies every row (with your current search + sort) to your clipboard as TSV, opens a fresh Google Sheet - paste with ⌘V"
           className="h-8 px-3 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
         >
           <Sheet size={13} />
@@ -550,7 +550,7 @@ function CellRenderer({
       return (
         <details className="cursor-pointer">
           <summary className="font-mono text-[10.5px] text-accent-700 dark:text-accent-300">
-            JSON ({pretty.length} chars) — expand
+            JSON ({pretty.length} chars) - expand
           </summary>
           <pre className="mt-1 text-[10.5px] font-mono bg-ink-50 dark:bg-ink-950 rounded-md p-2 overflow-x-auto whitespace-pre-wrap break-all max-h-64 overflow-y-auto">
             {pretty}

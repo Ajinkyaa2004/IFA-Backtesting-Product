@@ -5,13 +5,13 @@ has one canned example to look at while they wait for their first real
 result. The row is flagged `is_demo=True` so the UI can badge it clearly
 and, if we ever choose to, hide it once real work lands.
 
-The demo payload is `schemas/backtest.example.json` — the same asset the
+The demo payload is `schemas/backtest.example.json` - the same asset the
 seed script uses for Sterling. Loading it inline keeps a single source
 of truth: fix a bug in the example, both Sterling and every new signup
 benefit.
 
 Best-effort: every failure is logged but never raised. Approval must
-succeed even if the schema file is missing or storage briefly hiccups —
+succeed even if the schema file is missing or storage briefly hiccups -
 admin can rerun via a manual endpoint later. We do NOT flush/commit
 here; the caller owns the transaction.
 """
@@ -59,7 +59,7 @@ def provision_demo_backtest(db: Session, client: Client) -> Backtest | None:
     try:
         if not _EXAMPLE_PATH.exists() or not _SCHEMA_PATH.exists():
             logger.warning(
-                "demo_seed: schema or example asset missing at {} / {} — skipping",
+                "demo_seed: schema or example asset missing at {} / {} - skipping",
                 _SCHEMA_PATH, _EXAMPLE_PATH,
             )
             return None
@@ -69,7 +69,7 @@ def provision_demo_backtest(db: Session, client: Client) -> Backtest | None:
         errors = list(Draft202012Validator(schema).iter_errors(example))
         if errors:
             logger.error(
-                "demo_seed: example.json fails schema validation ({} errors) — skipping",
+                "demo_seed: example.json fails schema validation ({} errors) - skipping",
                 len(errors),
             )
             return None
@@ -96,7 +96,7 @@ def provision_demo_backtest(db: Session, client: Client) -> Backtest | None:
         backtest = Backtest(
             id=bt_id,
             client_id=client.id,
-            name=f"Demo — {example['strategy']['name']}",
+            name=f"Demo - {example['strategy']['name']}",
             code=code,
             status="completed",
             engine="manual",

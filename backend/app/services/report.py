@@ -6,7 +6,7 @@ in-process (see svg_chart.py) so we don't depend on matplotlib.
 
 The report intentionally embeds the four mandatory legal disclaimers, the
 current T&C version the client accepted, and a SHA-256 checksum of the
-underlying result JSON — this closes Todoist section 15 and gives the
+underlying result JSON - this closes Todoist section 15 and gives the
 report evidentiary weight if a client ever disputes the delivered results.
 """
 
@@ -32,7 +32,7 @@ _env = Environment(
 
 def _fmt_currency(amount: float | int | None, currency: str | None) -> str:
     if amount is None:
-        return "—"
+        return "-"
     sym = {"INR": "₹", "USD": "$", "EUR": "€", "GBP": "£"}.get(currency or "", "")
     try:
         return f"{sym}{amount:,.0f}"
@@ -42,7 +42,7 @@ def _fmt_currency(amount: float | int | None, currency: str | None) -> str:
 
 def _fmt_pct(value: float | int | None, digits: int = 2) -> str:
     if value is None:
-        return "—"
+        return "-"
     try:
         return f"{value:.{digits}f}%"
     except (TypeError, ValueError):
@@ -51,7 +51,7 @@ def _fmt_pct(value: float | int | None, digits: int = 2) -> str:
 
 def _fmt_num(value: float | int | None, digits: int = 2) -> str:
     if value is None:
-        return "—"
+        return "-"
     try:
         if isinstance(value, int):
             return f"{value:,}"
@@ -62,7 +62,7 @@ def _fmt_num(value: float | int | None, digits: int = 2) -> str:
 
 def _build_metric_cards(summary: dict[str, Any]) -> list[dict[str, str]]:
     """The 12 metrics required by Todoist section 5. If any is missing from
-    the payload we simply skip it — better than showing '—' everywhere."""
+    the payload we simply skip it - better than showing '-' everywhere."""
     spec = [
         ("total_return_pct",     "Total return",    lambda v: (_fmt_pct(v), "pos" if v > 0 else "neg")),
         ("cagr_pct",             "CAGR",            lambda v: (_fmt_pct(v), "pos" if v > 0 else "neg")),
@@ -97,7 +97,7 @@ def _build_assumption_rows(assumptions: dict[str, Any] | None) -> list[dict[str,
     a = assumptions
     dr = a.get("date_range") or {}
     if dr.get("from") or dr.get("to"):
-        rows.append({"label": "Date range", "value": f"{dr.get('from','—')} → {dr.get('to','—')}"})
+        rows.append({"label": "Date range", "value": f"{dr.get('from','-')} → {dr.get('to','-')}"})
     ic = a.get("initial_capital") or {}
     if ic.get("amount") is not None:
         rows.append({"label": "Initial capital", "value": _fmt_currency(ic.get("amount"), ic.get("currency"))})
@@ -168,7 +168,7 @@ def _prep_trade_sample(payload: dict[str, Any], limit: int = 15) -> tuple[list[d
     for t in trades[:limit]:
         row = dict(t)
         pnl = t.get("pnl") or t.get("realised_pnl")
-        row["pnl_display"] = _fmt_num(pnl, 2) if pnl is not None else "—"
+        row["pnl_display"] = _fmt_num(pnl, 2) if pnl is not None else "-"
         sample.append(row)
     return sample, total
 

@@ -30,7 +30,7 @@ def _root() -> Path:
 
 def _safe_target(path: str) -> Path:
     """Resolve <path> against the storage root, refusing any path that
-    would escape the root via .. components. Defence-in-depth — the route
+    would escape the root via .. components. Defence-in-depth - the route
     handler also validates the HMAC, so this is just to make sure a bug
     upstream can't be turned into a path-traversal exploit."""
     target = (_root() / path).resolve()
@@ -42,7 +42,7 @@ def _safe_target(path: str) -> Path:
 def _sign(path: str) -> str:
     """HMAC-SHA256 the path with the configured local secret, hex-truncated.
 
-    24 hex chars (96 bits) is plenty to defeat brute-forcing a fake token —
+    24 hex chars (96 bits) is plenty to defeat brute-forcing a fake token -
     higher entropy without making URLs unwieldy.
     """
     secret = get_settings().STORAGE_LOCAL_SECRET.encode() or b"dev-local-storage-secret"
@@ -99,7 +99,7 @@ def signed_upload_url(path: str) -> dict:
 
 def signed_download_url(path: str, expires_in: int = 900) -> str:
     """expires_in is accepted for API parity with the Supabase backend but
-    is not enforced here — local-mode is for dev, not for serving untrusted
+    is not enforced here - local-mode is for dev, not for serving untrusted
     users, so token-without-expiry is acceptable."""
     token = _sign(path)
     base = get_settings().LOCAL_BACKEND_BASE_URL.rstrip("/")

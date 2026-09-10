@@ -26,7 +26,7 @@ def _sync_firebase_disabled(client_id: uuid.UUID, db: Session, disabled: bool) -
 
     Without this sync, when an admin suspended a client the backend would
     keep rejecting their API calls but Firebase would keep minting new ID
-    tokens — the user could repeatedly "log in" and see a confusing error
+    tokens - the user could repeatedly "log in" and see a confusing error
     instead of a clear account-disabled message. Sweep finding #17.
 
     Best-effort: a Firebase API failure does NOT block the DB update. The
@@ -107,7 +107,7 @@ def client_activity_timeline(
     _admin=Depends(require_role("main_admin", "sub_admin")),
     db: Session = Depends(get_db),
 ):
-    """Chronological event stream for one client — merges audit log rows
+    """Chronological event stream for one client - merges audit log rows
     whose target belongs to this client with recent backtest state
     changes. Powers the admin drawer's Activity tab so support can see
     exactly what's happened in the last N days without pivoting through
@@ -305,7 +305,7 @@ def create_client(
     engagement = Engagement(
         code=f"ENG-{year}-{next_num:04d}",
         client_id=client.id,
-        status="pending",   # T&C not yet accepted — matches Chirag Section 4
+        status="pending",   # T&C not yet accepted - matches Chirag Section 4
         tier=payload.tier,
         scope_in=["Backtest delivery via the IFA portal"],
         scope_out=[],

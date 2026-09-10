@@ -12,7 +12,11 @@
  * landing is auth-gated. The landing explicitly opts in with `robots="index, follow"`.
  */
 
-const SITE = "https://backtestingengine.insightfusionanalytics.com";
+// Runtime-configured site URL — swaps to any domain with an env change,
+// no code edit needed. Falls back to the previous prod host so any
+// stale build during transition still produces valid links.
+const SITE = (import.meta.env.VITE_SITE_URL as string | undefined)
+  ?? "https://backtestingengine.insightfusionanalytics.com";
 
 export default function SEOHead({
   title,

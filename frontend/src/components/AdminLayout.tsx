@@ -167,7 +167,7 @@ export default function AdminLayout() {
         {sidebarBody}
       </aside>
 
-      {/* Mobile off-canvas drawer — slides in from the left with a backdrop */}
+      {/* Mobile off-canvas drawer - slides in from the left with a backdrop */}
       <AnimatePresence>
         {mobileNavOpen && (
           <>
@@ -222,7 +222,7 @@ export default function AdminLayout() {
               >
                 {dark ? <Sun size={15} /> : <Moon size={15} />}
               </button>
-              {/* System notifications (broadcasts + personal) — mirrors the
+              {/* System notifications (broadcasts + personal) - mirrors the
                   bell on the client side. Distinct from the InboxBell below
                   which shows client-work waiting on the admin. */}
               <NotificationBell />
@@ -258,7 +258,7 @@ export default function AdminLayout() {
                       <div className="max-h-[420px] overflow-y-auto">
                         {!inbox || inbox.items.length === 0 ? (
                           <div className="px-4 py-6 text-center text-xs text-ink-500">
-                            Inbox zero — nothing waiting on you.
+                            Inbox zero - nothing waiting on you.
                           </div>
                         ) : (
                           <ul className="divide-y divide-ink-100 dark:divide-ink-800">

@@ -15,11 +15,11 @@ class Engagement(UUIDPKMixin, TimestampMixin, Base):
     scattered across the Client row, T&C version, and implicit scope. Every
     downstream object (backtests, requests, strategy uploads) is contextually
     'against' the current engagement, though the FK on those rows still
-    points at client_id — a change of engagement is a change of the same
+    points at client_id - a change of engagement is a change of the same
     client's contract, not a new client.
 
     Cardinality: one engagement per client. If we ever offer a client
-    multiple concurrent contracts (rare — mostly a "sunset the old, start
+    multiple concurrent contracts (rare - mostly a "sunset the old, start
     a new" flow), we drop the UNIQUE and introduce an active flag.
 
     Versioning: `scope_version` bumps on any scope edit. The client must

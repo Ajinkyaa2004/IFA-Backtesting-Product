@@ -5,7 +5,7 @@ both PUT (frontend uploading to a signed URL the backend just issued) and
 GET (anyone with a valid token can download).
 
 Why this exists: in production, the frontend PUTs strategy docs directly to
-Supabase Storage via a server-issued signed URL — the backend never sees
+Supabase Storage via a server-issued signed URL - the backend never sees
 the bytes. To preserve that flow in offline-local mode, we issue signed
 URLs pointing at OURSELVES and accept PUTs at this endpoint, validating
 the same HMAC token. Functionally identical to the production flow from
@@ -13,7 +13,7 @@ the frontend's perspective.
 
 Security: every request is HMAC-validated. Path-traversal is blocked at
 the filesystem layer (see local_storage._safe_target). This endpoint is
-NOT auth-gated — the signed token IS the auth, same as a Supabase signed
+NOT auth-gated - the signed token IS the auth, same as a Supabase signed
 URL. Local-mode is for dev only; never enable on a public deployment.
 """
 from __future__ import annotations

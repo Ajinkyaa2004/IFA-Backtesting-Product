@@ -26,8 +26,8 @@ class BacktestListItem(BaseModel):
     code: str
     name: str
     status: str
-    engine: str  # 'manual' (v1.0 schema) or 'vam' (VAM-native) — drives renderer choice
-    is_demo: bool = False  # canned example row — UI badges as DEMO
+    engine: str  # 'manual' (v1.0 schema) or 'vam' (VAM-native) - drives renderer choice
+    is_demo: bool = False  # canned example row - UI badges as DEMO
     completed_at: datetime | None
     created_at: datetime
 
@@ -41,7 +41,7 @@ class BacktestDetail(BaseModel):
     is_demo: bool = False
     assumptions: dict | None
     metrics: dict | None
-    result: dict | None  # Full envelope from storage — v1.0 or vam-1.0 shape per `engine`
+    result: dict | None  # Full envelope from storage - v1.0 or vam-1.0 shape per `engine`
     # New in LT1/PB1 fix — the frontend renders three distinct empty
     # states off this instead of the ambiguous "Awaiting delivery"
     # sitting silently over a broken storage layer.
@@ -113,7 +113,7 @@ def get_backtest(
             # the ambiguous "Awaiting delivery".
             result_status = "not_written"
             logger.warning(
-                "Backtest {} result file missing at {} — storage returned no object",
+                "Backtest {} result file missing at {} - storage returned no object",
                 row.id, result_file.storage_key,
             )
         except Exception as e:
@@ -141,7 +141,7 @@ def get_backtest(
 
 _ENGINE_LABEL = {
     "manual": "Manual JSON upload (v1.0 schema)",
-    "vam":    "VAM engine — Insight Fusion Analytics",
+    "vam":    "VAM engine - Insight Fusion Analytics",
 }
 
 
@@ -157,7 +157,7 @@ def get_backtest_benchmark(
     """Synthetic benchmark curves aligned to a backtest's date range.
 
     Frontend overlays these on the equity chart. Section 10 asked for
-    'Real benchmark data (dummy)' — we ship a deterministic-synthetic
+    'Real benchmark data (dummy)' - we ship a deterministic-synthetic
     generator (see services/benchmark.py) so demos look real without
     external network calls or a yfinance dependency.
 
@@ -216,7 +216,7 @@ def download_backtest_report(
     if not result_file:
         raise HTTPException(
             status_code=404,
-            detail="Result JSON not attached to this backtest — cannot render report.",
+            detail="Result JSON not attached to this backtest - cannot render report.",
         )
 
     try:
@@ -240,7 +240,7 @@ def download_backtest_report(
     client = db.query(Client).filter(Client.id == client_id).first()
     client_name = client.name if client else "Unknown client"
 
-    tnc_version_str = "—"
+    tnc_version_str = "-"
     tnc_accepted_at: str | None = None
     if client and client.current_tnc_version_id:
         tv = db.query(TermsVersion).filter(TermsVersion.id == client.current_tnc_version_id).first()

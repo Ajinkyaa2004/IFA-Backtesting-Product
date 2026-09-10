@@ -98,10 +98,10 @@ export default function AdminPulsePage() {
         <StatTile label="Backtests" value={String(stats.n_backtests)} icon={<BarChart3 size={14}/>} delta="all-time" />
         <StatTile label="Completed" value={String(stats.n_backtests_completed)} icon={<CheckCircle2 size={14}/>} tone="pos" />
         <StatTile label="Open requests" value={String(stats.n_requests_open)} icon={<Inbox size={14}/>} delta="awaiting reply" />
-        <StatTile label="Tiers" value={Object.entries(stats.tier_distribution).map(([k, v]) => `${k.replace("tier", "T")}:${v}`).join(" ") || "—"} icon={<Activity size={14}/>} />
+        <StatTile label="Tiers" value={Object.entries(stats.tier_distribution).map(([k, v]) => `${k.replace("tier", "T")}:${v}`).join(" ") || "-"} icon={<Activity size={14}/>} />
       </div>
 
-      {/* Needs-attention panel — surfaces things the admin should act on */}
+      {/* Needs-attention panel - surfaces things the admin should act on */}
       {inbox && inbox.items.length > 0 && (
         <Card>
           <SectionTitle
@@ -143,7 +143,7 @@ export default function AdminPulsePage() {
           </ul>
           {inbox.items.length > 10 && (
             <div className="mt-3 pt-3 border-t border-ink-100 dark:border-ink-800 text-xs text-ink-500 text-center">
-              +{inbox.items.length - 10} more — open the bell to see all
+              +{inbox.items.length - 10} more - open the bell to see all
             </div>
           )}
         </Card>
@@ -157,7 +157,7 @@ export default function AdminPulsePage() {
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{c.name}</div>
                 <div className="text-xs text-ink-500 tabular">
-                  {c.primary_contact ?? "—"} · joined {new Date(c.created_at).toLocaleDateString()}
+                  {c.primary_contact ?? "-"} · joined {new Date(c.created_at).toLocaleDateString()}
                 </div>
               </div>
               <div className="flex items-center gap-3">

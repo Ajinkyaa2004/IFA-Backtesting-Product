@@ -122,7 +122,7 @@ async def data_info(_admin: User = Depends(require_role("main_admin", "sub_admin
 
 @router.get("/profile")
 async def vam_profile(_admin: User = Depends(require_role("main_admin", "sub_admin"))):
-    """Debug/health probe — confirms our cached token works.
+    """Debug/health probe - confirms our cached token works.
 
     Returns 200 + VAM's profile body if we can hit VAM; the failure path
     above (503/502) tells the admin exactly what's wrong.
@@ -137,7 +137,7 @@ async def vam_profile(_admin: User = Depends(require_role("main_admin", "sub_adm
 async def vam_health(_admin: User = Depends(require_role("main_admin", "sub_admin"))):
     """Non-throwing health check used by the AdminPulsePage health card.
 
-    Never raises — always returns a structured status so the frontend can
+    Never raises - always returns a structured status so the frontend can
     render a green/red pill + last-error message without try/catch juggling.
     Measures round-trip latency to /api/auth/profile as the canary call.
     """
@@ -176,7 +176,7 @@ async def admin_run_via_vam(
     Flow:
         1. Resolve target client (404 if not found / soft-deleted).
         2. Call VAM /api/backtest/run with {step, **params}. The step key inside
-           params will be overwritten — the canonical source is payload.step.
+           params will be overwritten - the canonical source is payload.step.
         3. Persist via vam_run.persist_vam_run (validates against vam schema,
            uploads to Storage, inserts backtests + backtest_files rows, audits).
         4. Return the backtest code so the admin can link the client to it.

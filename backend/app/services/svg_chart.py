@@ -86,7 +86,7 @@ def line_chart(values: list[float], style: ChartStyle | None = None, unit: str =
 
 def area_chart(values: list[float], style: ChartStyle | None = None, negative: bool = True) -> str:
     """Filled area under (or over) a baseline. `negative=True` means the
-    chart floor is 0 and the fill extends downward — used for drawdown."""
+    chart floor is 0 and the fill extends downward - used for drawdown."""
     if not values:
         return line_chart(values, style)
     style = style or ChartStyle(stroke="#dc2626", fill="rgba(220,38,38,0.14)")

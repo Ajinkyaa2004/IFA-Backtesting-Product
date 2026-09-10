@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Cpu, Plus, Save, X } from "lucide-react";
+import { AlertCircle, Cpu, Layers, MessageSquare, Plus, Save, X } from "lucide-react";
 import { Button } from "../../components/ui";
 import {
   type Engagement,
@@ -28,9 +28,9 @@ import { toast } from "../../store/toast";
  */
 
 const ENGINE_LABEL: Record<Engagement["engine_assignment"], string> = {
-  existing: "Existing — engine ready today",
-  bespoke:  "Bespoke — engineer will build",
-  manual:   "Manual — no engine, hand-uploaded deliveries",
+  existing: "Existing - engine ready today",
+  bespoke:  "Bespoke - engineer will build",
+  manual:   "Manual - no engine, hand-uploaded deliveries",
 };
 
 export default function EngagementEditor({ clientId }: { clientId: string }) {
@@ -112,7 +112,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
       toast.success(
         "Engagement saved",
         scopeChanged
-          ? `Scope now at v${updated.scope_version} — all users will re-ack on next login.`
+          ? `Scope now at v${updated.scope_version} - all users will re-ack on next login.`
           : undefined
       );
     } catch (e: any) {
@@ -145,13 +145,13 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         </select>
       </FormRow>
 
-      <FormRow label={<span className="inline-flex items-center gap-1">🎯 Service</span>}>
+      <FormRow label={<span className="inline-flex items-center gap-1.5"><Layers size={12}/> Service</span>}>
         <select
           value={serviceId ?? ""}
           onChange={(e) => setServiceId(e.target.value || null)}
           className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
         >
-          <option value="">— pick a service —</option>
+          <option value="">- pick a service -</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
           ))}
@@ -171,7 +171,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
         />
       </FormRow>
 
-      <FormRow label={<span className="inline-flex items-center gap-1">💬 WhatsApp group link</span>}>
+      <FormRow label={<span className="inline-flex items-center gap-1.5"><MessageSquare size={12}/> WhatsApp group link</span>}>
         <input
           type="url"
           value={whatsappLink}
@@ -203,7 +203,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
             onChange={(e) => setEngineId(e.target.value || null)}
             className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
           >
-            <option value="">— pick an engine —</option>
+            <option value="">- pick an engine -</option>
             {engines.map((en) => (
               <option key={en.id} value={en.id}>
                 {en.code} · {en.name} · {en.status}
@@ -236,7 +236,7 @@ export default function EngagementEditor({ clientId }: { clientId: string }) {
       {scopeChanged && (
         <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-[11px] text-amber-800 dark:text-amber-200 inline-flex items-start gap-1.5">
           <AlertCircle size={12} className="mt-0.5 shrink-0"/>
-          Scope edited — saving will bump v{eng.scope_version} → v{eng.scope_version + 1} and force every user to re-acknowledge.
+          Scope edited - saving will bump v{eng.scope_version} → v{eng.scope_version + 1} and force every user to re-acknowledge.
         </div>
       )}
 

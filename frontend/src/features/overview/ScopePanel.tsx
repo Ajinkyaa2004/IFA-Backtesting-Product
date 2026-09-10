@@ -54,7 +54,7 @@ export default function ScopePanel({
 
   return (
     <>
-      {/* Re-ack modal — blocks the dashboard until acknowledged. Only fires
+      {/* Re-ack modal - blocks the dashboard until acknowledged. Only fires
           once per scope_version bump per user. */}
       <AnimatePresence>
         {reackOpen && (
@@ -158,7 +158,7 @@ export default function ScopePanel({
                     Join our project WhatsApp
                   </a>
                   <div className="mt-1 text-[10px] text-ink-500 dark:text-ink-400">
-                    Delivery + updates happen on WhatsApp — this is our primary channel.
+                    Delivery + updates happen on WhatsApp - this is our primary channel.
                   </div>
                 </div>
               )}

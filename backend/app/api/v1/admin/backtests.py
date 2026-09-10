@@ -59,7 +59,7 @@ def list_client_backtests(
     db: Session = Depends(get_db),
 ):
     """Admin per-client backtest listing. Powers the status-change dropdown
-    in the admin client drawer — admins need to see every backtest at a
+    in the admin client drawer - admins need to see every backtest at a
     glance and flip its status without hunting through the general list.
     """
     rows = (

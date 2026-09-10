@@ -78,7 +78,7 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
       });
       if (thenSend) {
         await sendQuote(q.id);
-        toast.success("Quote sent", `${q.code} — visible to client now.`);
+        toast.success("Quote sent", `${q.code} - visible to client now.`);
       } else {
         toast.success("Draft saved", `${q.code}`);
       }
@@ -123,7 +123,7 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title — e.g. EMA/RSI backtest + 2 tuning rounds"
+            placeholder="Title - e.g. EMA/RSI backtest + 2 tuning rounds"
             className="w-full h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
           />
           <div className="grid grid-cols-2 gap-2">
@@ -132,7 +132,7 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
               onChange={(e) => setServiceId(e.target.value)}
               className="h-8 px-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
             >
-              <option value="">— service (optional) —</option>
+              <option value="">- service (optional) -</option>
               {services.map((s) => (
                 <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
               ))}
@@ -152,7 +152,7 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            placeholder="Description — scope, deliverables, timeline (visible to client)"
+            placeholder="Description - scope, deliverables, timeline (visible to client)"
             className="w-full px-2 py-1.5 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 resize-y"
           />
           <textarea

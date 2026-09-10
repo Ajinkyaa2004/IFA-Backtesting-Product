@@ -86,12 +86,12 @@ def _cors_headers_for(request: Request) -> dict[str, str]:
     """Compute the CORS response headers manually for a given request.
 
     FastAPI's CORSMiddleware does not always wrap responses from the
-    @app.exception_handler(Exception) catch-all — depending on where in the
+    @app.exception_handler(Exception) catch-all - depending on where in the
     stack the exception is raised (e.g. inside a dependency or database driver
     via SQLAlchemy), the 500 response can bypass the middleware entirely. When
     that happens, the browser sees a 500 with no Access-Control-Allow-Origin
     header and reports it as a misleading "CORS policy" error instead of the
-    real underlying problem. That cost us hours of debugging once — never again.
+    real underlying problem. That cost us hours of debugging once - never again.
     """
     origin = request.headers.get("origin")
     if origin and origin in settings.allowed_origins_list:

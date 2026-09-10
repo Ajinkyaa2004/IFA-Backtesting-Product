@@ -58,7 +58,7 @@ export default function BacktestDetailPage() {
     // envelopes) since /benchmark would return an empty series anyway.
     fetchBacktestBenchmark(id)
       .then((b) => { if (!cancelled) setBenchmark(b); })
-      .catch(() => { /* silent — benchmark is a nice-to-have overlay */ });
+      .catch(() => { /* silent - benchmark is a nice-to-have overlay */ });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -140,7 +140,7 @@ export default function BacktestDetailPage() {
           </span>
           <div className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
             <span className="font-semibold">This is a demo backtest.</span>{" "}
-            It's here so you can see exactly how a real result will render —
+            It's here so you can see exactly how a real result will render -
             KPIs, equity curve, drawdown, trades, everything. It's not tied
             to your strategy. Your first real backtest will appear separately
             and won't carry this badge.
@@ -169,7 +169,7 @@ export default function BacktestDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Gate the export button on result presence — not just status.
+          {/* Gate the export button on result presence - not just status.
               A completed backtest whose bytes are missing must not offer
               a broken "Download PDF" that always 502s. (Audit PF1.) */}
           {result && bt.result_status === "ok" && (
@@ -198,7 +198,7 @@ export default function BacktestDetailPage() {
           </SectionTitle>
           <p className="text-sm text-ink-500 mt-1">
             The result file exists but we couldn't fetch it right now.
-            Refresh the page in a few minutes — this is usually transient.
+            Refresh the page in a few minutes - this is usually transient.
           </p>
         </Card>
       )}
@@ -207,8 +207,8 @@ export default function BacktestDetailPage() {
         <Card>
           <SectionTitle sub="No completed result yet for this backtest.">Awaiting delivery</SectionTitle>
           <p className="text-sm text-ink-500 mt-1">
-            Once IFA marks this backtest completed, the full results — equity curve, drawdown, trade log,
-            and metrics — will appear here.
+            Once IFA marks this backtest completed, the full results - equity curve, drawdown, trade log,
+            and metrics - will appear here.
           </p>
         </Card>
       )}
@@ -226,14 +226,14 @@ export default function BacktestDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 px-5 pb-5 pt-1">
               <KV k="Date range" v={`${result.assumptions.date_range.from} → ${result.assumptions.date_range.to}`} mono />
               <KV k="Initial capital" v={`${result.assumptions.initial_capital.currency} ${result.assumptions.initial_capital.amount.toLocaleString()}`} mono />
-              <KV k="Universe" v={String(result.universe?.name ?? "—")} />
+              <KV k="Universe" v={String(result.universe?.name ?? "-")} />
               <KV k="Timeframe" v={String(result.assumptions.timeframe)} mono />
-              <KV k="Execution" v={String(result.assumptions.execution ?? "—")} />
-              <KV k="Leverage" v={String(result.assumptions.leverage ?? "—")} mono />
-              <KV k="Data source" v={String(result.assumptions.data_source ?? "—")} />
-              <KV k="Market data provider" v={String(result.universe?.market_data_provider?.name ?? "—")} />
-              <KV k="Brokerage (firm)" v={String(result.universe?.brokerage?.name ?? "—")} />
-              <KV k="Currency" v={String(result.assumptions.currency ?? "—")} mono />
+              <KV k="Execution" v={String(result.assumptions.execution ?? "-")} />
+              <KV k="Leverage" v={String(result.assumptions.leverage ?? "-")} mono />
+              <KV k="Data source" v={String(result.assumptions.data_source ?? "-")} />
+              <KV k="Market data provider" v={String(result.universe?.market_data_provider?.name ?? "-")} />
+              <KV k="Brokerage (firm)" v={String(result.universe?.brokerage?.name ?? "-")} />
+              <KV k="Currency" v={String(result.assumptions.currency ?? "-")} mono />
             </div>
           </Card>
 
@@ -247,14 +247,14 @@ export default function BacktestDetailPage() {
               <KpiCard label="Max Drawdown" value={fmtPct(summary.max_drawdown_pct)} tone="neg" />
               <KpiCard label="Win Rate" value={`${summary.win_rate_pct?.toFixed(1)}%`} />
               <KpiCard label="Profit Factor" value={summary.profit_factor?.toFixed(2)} />
-              <KpiCard label="# Trades" value={String(summary.n_trades ?? "—")} />
+              <KpiCard label="# Trades" value={String(summary.n_trades ?? "-")} />
             </div>
           )}
 
           {/* Equity curve with multi-benchmark overlay */}
           {result.time_series.equity_curve.length > 1 && (
             <Card>
-              <SectionTitle sub="Strategy NAV vs benchmarks — normalised to 100">Equity curve</SectionTitle>
+              <SectionTitle sub="Strategy NAV vs benchmarks - normalised to 100">Equity curve</SectionTitle>
               <div className="h-72 -ml-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={mergeBenchmark(result, benchmark)} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -287,7 +287,7 @@ export default function BacktestDetailPage() {
               </div>
               {benchmark && benchmark.source && (
                 <p className="mt-2 text-[10px] text-ink-400 dark:text-ink-500 italic">
-                  Benchmark series are indicative (synthetic curves matching real-world drift/volatility for each asset). Real Yahoo Finance data lands in a later release — see roadmap.
+                  Benchmark series are indicative (synthetic curves matching real-world drift/volatility for each asset). Real Yahoo Finance data lands in a later release - see roadmap.
                 </p>
               )}
             </Card>
@@ -470,7 +470,7 @@ function ExportReportButton({ backtestId, status }: { backtestId: string; status
 }
 
 function fmtPct(v?: number) {
-  if (v === undefined || v === null || Number.isNaN(v)) return "—";
+  if (v === undefined || v === null || Number.isNaN(v)) return "-";
   return `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
 }
 
@@ -479,7 +479,7 @@ function KpiCard({ label, value, tone = "neutral" }: { label: string; value?: st
   return (
     <Card padding="p-4">
       <div className="text-[11px] uppercase tracking-wider font-medium text-ink-500 dark:text-ink-400">{label}</div>
-      <div className={`mt-2 text-2xl font-semibold tabular tracking-tight ${color}`}>{value ?? "—"}</div>
+      <div className={`mt-2 text-2xl font-semibold tabular tracking-tight ${color}`}>{value ?? "-"}</div>
     </Card>
   );
 }
@@ -492,7 +492,7 @@ function mergeBenchmark(
   benchmark: BacktestBenchmark | null,
 ) {
   if (!result) return [];
-  if ("engine_response" in result) return []; // VAM envelope — not applicable
+  if ("engine_response" in result) return []; // VAM envelope - not applicable
   const v1 = result as BacktestResult;
   const legacyBench = v1.time_series.benchmark_curves?.[0];
   const legacyMap = new Map((legacyBench?.series ?? []).map((p) => [p.date, p.value]));

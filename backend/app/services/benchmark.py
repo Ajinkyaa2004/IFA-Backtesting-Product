@@ -1,6 +1,6 @@
 """Deterministic-synthetic benchmark curves.
 
-Section 10 of the Todoist explicitly wants 'Real benchmark data (dummy)' —
+Section 10 of the Todoist explicitly wants 'Real benchmark data (dummy)' -
 the word 'dummy' is in the ask, so we don't need real yfinance data for
 MVP. We generate reproducible curves for SPY, NIFTY 50, and BTC that:
 

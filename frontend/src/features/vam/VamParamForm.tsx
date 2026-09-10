@@ -92,7 +92,7 @@ export interface VamParamFormProps {
   schema: VamStepSchema;
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
-  /** SPY date range (from /vam/symbols) — used to constrain start_date / end_date inputs. */
+  /** SPY date range (from /vam/symbols) - used to constrain start_date / end_date inputs. */
   dataRange?: { start: string; end: string } | null;
   /** Show "Reset to defaults" button. Default true. */
   resettable?: boolean;

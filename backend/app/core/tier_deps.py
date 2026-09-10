@@ -13,7 +13,7 @@ Usage:
         ...
 
 The deps look up the caller's client_id via client_scope, then read the
-Client's tier from the DB. Admin impersonation is honored — an admin
+Client's tier from the DB. Admin impersonation is honored - an admin
 impersonating a Growth-tier client sees Growth-tier limits.
 """
 
@@ -69,7 +69,7 @@ def enforce_backtest_limit(
 
     'Backtest' here means any row in `backtests` with created_at in the
     current calendar month, regardless of engine or status. This is the
-    conservative reading — a client can't create-then-cancel to bypass.
+    conservative reading - a client can't create-then-cancel to bypass.
     """
     tier = _get_client_tier(client_id, db)
     cfg = tier_config.get_tier_config(tier)

@@ -58,7 +58,7 @@ export default function AdminAuditPage() {
     <div className="space-y-6">
       <Card padding="p-0">
         <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3 flex-wrap">
-          <SectionTitle sub="Append-only — every sensitive action is recorded with actor, target, IP, and timestamp.">
+          <SectionTitle sub="Append-only - every sensitive action is recorded with actor, target, IP, and timestamp.">
             Audit log
           </SectionTitle>
           <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export default function AdminAuditPage() {
           </div>
         </div>
 
-        {/* Quick-filter chips — one click into common categories. */}
+        {/* Quick-filter chips - one click into common categories. */}
         <div className="px-5 pb-3 flex flex-wrap gap-1.5">
           {CHIPS.map((c) => {
             const active = filter === c.prefix;
@@ -117,9 +117,9 @@ export default function AdminAuditPage() {
                   <td className="px-5 py-2 text-xs">{r.actor_email ?? <span className="text-ink-400">system</span>}</td>
                   <td className="px-5 py-2"><span className="font-mono text-xs text-accent-700 dark:text-accent-300">{r.action}</span></td>
                   <td className="px-5 py-2 text-xs text-ink-600">
-                    {r.target_type ? `${r.target_type} · ${r.target_id?.slice(0, 8)}…` : "—"}
+                    {r.target_type ? `${r.target_type} · ${r.target_id?.slice(0, 8)}…` : "-"}
                   </td>
-                  <td className="px-5 py-2 text-xs text-ink-500 font-mono">{r.ip ?? "—"}</td>
+                  <td className="px-5 py-2 text-xs text-ink-500 font-mono">{r.ip ?? "-"}</td>
                 </tr>
               ))}
               {rows.length === 0 && !loading && (

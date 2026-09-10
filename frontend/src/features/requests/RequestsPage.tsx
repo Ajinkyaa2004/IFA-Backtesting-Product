@@ -149,7 +149,7 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
           </Field>
           <Field label="Asset class">
             <select className={`h-9 ${fieldCls}`} value={payload.asset_class ?? ""} onChange={(e) => set("asset_class", e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               <option>Equity (Cash)</option>
               <option>Equity (F&O)</option>
               <option>Currency</option>
@@ -172,7 +172,7 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
           </Field>
           <Field label="Change type">
             <select className={`h-9 ${fieldCls}`} value={payload.change_type ?? ""} onChange={(e) => set("change_type", e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               <option>Parameter tweak</option>
               <option>Exit rule</option>
               <option>Universe change</option>
@@ -192,7 +192,7 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
           </Field>
           <Field label="Engagement type">
             <select className={`h-9 ${fieldCls}`} value={payload.engagement ?? ""} onChange={(e) => set("engagement", e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               <option>Single backtest</option>
               <option>Walk-forward (12m)</option>
               <option>Paper trading</option>
@@ -200,15 +200,15 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
           </Field>
           <Field label="Turnaround">
             <select className={`h-9 ${fieldCls}`} value={payload.turnaround ?? ""} onChange={(e) => set("turnaround", e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               <option>Standard (5 biz days)</option>
               <option>Rush (2 biz days · +40%)</option>
             </select>
           </Field>
-          <Field label="Date range — from">
+          <Field label="Date range - from">
             <input type="date" className={`h-9 ${fieldCls}`} value={payload.from ?? ""} onChange={(e) => set("from", e.target.value)} />
           </Field>
-          <Field label="Date range — to">
+          <Field label="Date range - to">
             <input type="date" className={`h-9 ${fieldCls}`} value={payload.to ?? ""} onChange={(e) => set("to", e.target.value)} />
           </Field>
           <Field label="Additional notes" className="md:col-span-2">
@@ -221,7 +221,7 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
         <>
           <Field label="Topic">
             <select className={`h-9 ${fieldCls}`} value={payload.topic ?? ""} onChange={(e) => set("topic", e.target.value)}>
-              <option value="">—</option>
+              <option value="">-</option>
               <option>Trade-level question</option>
               <option>Assumption / methodology</option>
               <option>Data quality</option>

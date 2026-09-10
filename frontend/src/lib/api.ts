@@ -14,7 +14,7 @@ function resolveBaseURL(): string {
   if (v) return v;
   if (import.meta.env.DEV) return "http://localhost:8000/api/v1";
   throw new Error(
-    "VITE_API_BASE_URL is not set. This is a production build — refusing " +
+    "VITE_API_BASE_URL is not set. This is a production build - refusing " +
       "to silently fall back to localhost. Set the env var at build time " +
       "(Vercel project / docker-compose build args) and rebuild.",
   );
@@ -875,7 +875,7 @@ export async function fetchAdminInbox(): Promise<AdminInbox> {
 // We'll route via a new admin endpoint added below.
 export type ClientRequestStatus = "open" | "in_review" | "quoted" | "resolved" | "rejected";
 
-/** Admin PATCH — moves a request through its lifecycle. Fires a client
+/** Admin PATCH - moves a request through its lifecycle. Fires a client
  *  notification server-side. */
 export async function adminUpdateRequestStatus(
   requestId: string,
@@ -1128,7 +1128,7 @@ export type VamChartData = {
 
 export type VamTradeAction = {
   execution_date: string;
-  action: string;            // contains BUY / SELL — VAM may compose ("BUY UPRO")
+  action: string;            // contains BUY / SELL - VAM may compose ("BUY UPRO")
   instrument: string;
   state_from?: string | null;
   state_to?: string | null;

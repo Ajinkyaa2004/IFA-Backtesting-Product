@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
 import { backdropFade, modalScale } from "../lib/motion";
 
 export function Card({
@@ -215,7 +216,7 @@ export function Modal({
                 className="size-7 -mr-1 rounded-md text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 flex items-center justify-center"
                 aria-label="Close"
               >
-                ✕
+                <X size={14}/>
               </button>
             </div>
             <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1 min-h-0">{children}</div>

@@ -9,12 +9,12 @@ Why this script exists:
   The default provisioning password `ChangeMeOnFirstLogin!` has been sitting
   in chat transcripts, LIVE_CREDENTIALS.local.txt, and (briefly) commit
   messages long enough that we can't treat it as private anymore. Rotating
-  is a 30-second job — do it before the first paying client onboards.
+  is a 30-second job - do it before the first paying client onboards.
 
 It:
   1. Looks up the admin Firebase user by ADMIN_EMAIL.
   2. Calls fb_auth.update_user with the new password.
-  3. Revokes all outstanding refresh tokens (belt and suspenders — old
+  3. Revokes all outstanding refresh tokens (belt and suspenders - old
      sessions must re-authenticate immediately).
   4. Prints the new credentials so you can paste them into
      LIVE_CREDENTIALS.local.txt manually (NOT auto-written; that file is

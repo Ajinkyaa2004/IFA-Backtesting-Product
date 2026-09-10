@@ -1,4 +1,4 @@
-"""Storage façade — dispatches between Supabase and local-filesystem backends.
+"""Storage façade - dispatches between Supabase and local-filesystem backends.
 
 Selected at runtime by Settings.STORAGE_BACKEND:
   - "supabase" (default): talks to the real Supabase Storage REST API
@@ -92,10 +92,10 @@ def download_bytes(path: str) -> bytes:
     """Fetch the bytes stored at `path`.
 
     Raises:
-      StorageObjectMissing — the object does not exist. Callers render this
+      StorageObjectMissing - the object does not exist. Callers render this
                              as a clear "file was never written / has been
                              deleted" state rather than a generic 500.
-      Exception            — any other failure (network, auth, corruption)
+      Exception            - any other failure (network, auth, corruption)
                              so callers can still 502.
     """
     if _is_local():

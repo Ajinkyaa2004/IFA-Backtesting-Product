@@ -1,4 +1,4 @@
-"""End-to-end Selenium test — exercises every clickable element on the client portal.
+"""End-to-end Selenium test - exercises every clickable element on the client portal.
 
 Run with both dev servers up (uvicorn on :8000, vite on :5173).
 
@@ -111,7 +111,7 @@ def goto(driver, path: str, expect_text: str) -> bool:
 
 
 def test_login_bad_password(driver, run: TestRun) -> None:
-    print("\n— Login: bad password —")
+    print("\n- Login: bad password -")
     driver.get(f"{FRONTEND}/login")
     try:
         email = wait_for(driver, "input[type='email']")
@@ -132,7 +132,7 @@ def test_login_bad_password(driver, run: TestRun) -> None:
 
 
 def test_login_good_password(driver, run: TestRun) -> None:
-    print("\n— Login: good password —")
+    print("\n- Login: good password -")
     driver.get(f"{FRONTEND}/login")
     try:
         wait_for(driver, "input[type='email']")
@@ -151,7 +151,7 @@ def test_login_good_password(driver, run: TestRun) -> None:
 
 
 def test_tnc_wizard(driver, run: TestRun) -> None:
-    print("\n— T&C multi-step wizard —")
+    print("\n- T&C multi-step wizard -")
     try:
         # Should be at /terms now
         WebDriverWait(driver, 10).until(lambda d: "/terms" in d.current_url)
@@ -196,7 +196,7 @@ def test_tnc_wizard(driver, run: TestRun) -> None:
 
 
 def test_overview_page(driver, run: TestRun) -> None:
-    print("\n— Overview page —")
+    print("\n- Overview page -")
     try:
         ok = goto(driver, "/", "sterling capital advisors")
         run.record("overview page renders (Loading gone)", ok)
@@ -240,7 +240,7 @@ def test_overview_page(driver, run: TestRun) -> None:
 
 
 def test_sidebar_nav(driver, run: TestRun) -> None:
-    print("\n— Sidebar navigation —")
+    print("\n- Sidebar navigation -")
     for label, expect in [
         ("Strategies", "/strategies"),
         ("Requests", "/requests"),
@@ -265,7 +265,7 @@ def test_sidebar_nav(driver, run: TestRun) -> None:
 
 
 def test_strategies_page(driver, run: TestRun) -> None:
-    print("\n— Strategies page —")
+    print("\n- Strategies page -")
     try:
         ok = goto(driver, "/strategies", "strategy library")
         run.record("strategies page renders", ok)
@@ -307,7 +307,7 @@ def test_strategies_page(driver, run: TestRun) -> None:
 
 
 def test_requests_page(driver, run: TestRun) -> None:
-    print("\n— Requests page —")
+    print("\n- Requests page -")
     try:
         ok = goto(driver, "/requests", "submit a request")
         run.record("requests page renders", ok)
@@ -354,7 +354,7 @@ def test_requests_page(driver, run: TestRun) -> None:
 
 
 def test_backtests_list(driver, run: TestRun) -> None:
-    print("\n— Backtests list page —")
+    print("\n- Backtests list page -")
     try:
         ok = goto(driver, "/backtests", "BT-2026-0001")
         run.record("backtests list page renders", ok)
@@ -386,7 +386,7 @@ def test_backtests_list(driver, run: TestRun) -> None:
                 still_has = "BT-2026-0001" in body
                 no_in_prog = "BT-2026-0002" not in body
                 run.record("'completed' filter shows only completed", False,
-                           f"timed out — has 0001: {still_has}, missing 0002: {no_in_prog}")
+                           f"timed out - has 0001: {still_has}, missing 0002: {no_in_prog}")
 
         # Reset to 'all' for next test
         all_chip = next((c for c in chips if c.text.strip().lower() == "all"), None)
@@ -414,7 +414,7 @@ def test_backtests_list(driver, run: TestRun) -> None:
 
 
 def test_backtest_detail(driver, run: TestRun) -> None:
-    print("\n— Backtest detail page —")
+    print("\n- Backtest detail page -")
     try:
         # Should be on detail page from previous step
         body = driver.find_element(By.TAG_NAME, "body").text
@@ -456,7 +456,7 @@ def test_backtest_detail(driver, run: TestRun) -> None:
 
 
 def test_dark_mode(driver, run: TestRun) -> None:
-    print("\n— Dark mode toggle —")
+    print("\n- Dark mode toggle -")
     try:
         # Theme toggle in topbar — first button after main content has Moon/Sun icon
         # Find by aria-less position: typically third button from right (theme/bell/avatar)
@@ -482,7 +482,7 @@ def test_dark_mode(driver, run: TestRun) -> None:
 
 
 def test_avatar_logout(driver, run: TestRun) -> None:
-    print("\n— Avatar dropdown + logout —")
+    print("\n- Avatar dropdown + logout -")
     try:
         header = driver.find_element(By.TAG_NAME, "header")
         # Avatar button is the last button in the header
@@ -562,7 +562,7 @@ def login_as(driver, email: str, password: str, *, as_admin: bool = False) -> bo
 
 
 def test_admin_login(driver, run: TestRun) -> None:
-    print("\n— Admin login at /admin/login routes to /admin —")
+    print("\n- Admin login at /admin/login routes to /admin -")
     try:
         ok = login_as(driver, ADMIN_EMAIL, ADMIN_PASSWORD, as_admin=True)
         run.record("admin login at /admin/login succeeds", ok)
@@ -573,7 +573,7 @@ def test_admin_login(driver, run: TestRun) -> None:
 
 
 def test_admin_pulse(driver, run: TestRun) -> None:
-    print("\n— Admin Pulse page —")
+    print("\n- Admin Pulse page -")
     try:
         ok = goto(driver, "/admin", "operations dashboard")
         run.record("admin pulse renders", ok)
@@ -593,7 +593,7 @@ def test_admin_pulse(driver, run: TestRun) -> None:
 
 
 def test_admin_sidebar_nav(driver, run: TestRun) -> None:
-    print("\n— Admin sidebar nav —")
+    print("\n- Admin sidebar nav -")
     for label, expect in [
         ("Clients", "/admin/clients"),
         ("Upload backtest", "/admin/backtests/upload"),
@@ -616,7 +616,7 @@ def test_admin_sidebar_nav(driver, run: TestRun) -> None:
 
 
 def test_admin_clients_drawer(driver, run: TestRun) -> None:
-    print("\n— Admin Clients page —")
+    print("\n- Admin Clients page -")
     try:
         ok = goto(driver, "/admin/clients", "sterling capital advisors")
         run.record("admin clients renders", ok)
@@ -652,7 +652,7 @@ def test_admin_clients_drawer(driver, run: TestRun) -> None:
 
 
 def test_admin_backtest_upload(driver, run: TestRun) -> None:
-    print("\n— Admin Backtest Upload —")
+    print("\n- Admin Backtest Upload -")
     try:
         ok = goto(driver, "/admin/backtests/upload", "upload backtest result")
         run.record("admin backtest upload renders", ok)
@@ -742,7 +742,7 @@ def test_admin_backtest_upload(driver, run: TestRun) -> None:
 
 
 def test_admin_audit(driver, run: TestRun) -> None:
-    print("\n— Admin Audit Log —")
+    print("\n- Admin Audit Log -")
     try:
         ok = goto(driver, "/admin/audit", "audit log")
         run.record("audit log renders", ok)
@@ -773,7 +773,7 @@ def test_admin_audit(driver, run: TestRun) -> None:
 
 
 def test_admin_notifications(driver, run: TestRun) -> None:
-    print("\n— Admin Notifications —")
+    print("\n- Admin Notifications -")
     try:
         ok = goto(driver, "/admin/notifications", "compose notification")
         run.record("notifications page renders", ok)
@@ -793,7 +793,7 @@ def test_admin_notifications(driver, run: TestRun) -> None:
 
 
 def test_client_blocked_from_admin(driver, run: TestRun) -> None:
-    print("\n— Cross-role isolation —")
+    print("\n- Cross-role isolation -")
     try:
         # Log out, then log in as client
         header = driver.find_element(By.TAG_NAME, "header")

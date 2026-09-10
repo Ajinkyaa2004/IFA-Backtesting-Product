@@ -2,7 +2,7 @@
 
 Reads the user's API token from ../../.todoist-token.local (gitignored). Posts
 to Todoist's unified /api/v1/ endpoints. Designed to be safe to re-run if the
-first attempt half-fails — it prints task IDs as it goes so you can manually
+first attempt half-fails - it prints task IDs as it goes so you can manually
 delete duplicates in the UI rather than risk a destructive auto-rollback.
 
 Created tasks:
@@ -33,7 +33,7 @@ def load_token() -> str:
     """Read TODOIST_TOKEN from the gitignored local file."""
     env_file = Path(__file__).resolve().parents[2] / ".todoist-token.local"
     if not env_file.exists():
-        sys.exit(f"missing {env_file} — token file not found")
+        sys.exit(f"missing {env_file} - token file not found")
     for line in env_file.read_text().splitlines():
         line = line.strip()
         if line.startswith("TODOIST_TOKEN="):
@@ -62,8 +62,8 @@ def create_task(token: str, **fields) -> dict:
 
 ANMOL_BLOCKS = [
     (
-        "Tier 1 / Tier 2 commercial model — pricing, billing, refunds",
-        "Decisions needed before any client can be onboarded onto a paid tier. Each sub-task is one product choice — reply on the sub-task in Todoist with your answer and Ajinkya will codify it.",
+        "Tier 1 / Tier 2 commercial model - pricing, billing, refunds",
+        "Decisions needed before any client can be onboarded onto a paid tier. Each sub-task is one product choice - reply on the sub-task in Todoist with your answer and Ajinkya will codify it.",
         [
             "Set Tier 1 monthly price + billing cycle (monthly / annual)",
             "Set Tier 2 monthly price + billing cycle (monthly / annual)",
@@ -80,7 +80,7 @@ ANMOL_BLOCKS = [
         [
             "Tier 1: backtests/month + manual-only or any self-serve?",
             "Tier 2: backtests/month + strategy iteration rounds included?",
-            "Turnaround SLA matrix (Tier 1 / Tier 2 / Tier 3 — days each)",
+            "Turnaround SLA matrix (Tier 1 / Tier 2 / Tier 3 - days each)",
             "Rush surcharge % per tier (current default in code: +40%)",
             "Strategy doc count + max file size per tier (current cap: 25 MB)",
             "Allowed request types per tier (full RFQ vs clarifications only)",
@@ -89,12 +89,12 @@ ANMOL_BLOCKS = [
     ),
     (
         "VAM engine (Ravi's backtester) gating model",
-        "Today VAM access is a per-client flag — only Ravi has it. Decision: does it become tier-based, stay per-client, or both?",
+        "Today VAM access is a per-client flag - only Ravi has it. Decision: does it become tier-based, stay per-client, or both?",
         [
             "Which tiers get VAM access at all? (T3-only / T2+ / T1 with cap / per-client override)",
             "Monthly run cap per tier if gated (e.g. T1: 10, T2: 100, T3: unlimited)",
             "Which VAM steps each tier can use (e.g. T1 = step1 only, T2 = step1+step2, T3 = all five)",
-            "Parameter caps per tier — restrict T1 to safe ranges (prevent runaway leverage), or unrestricted?",
+            "Parameter caps per tier - restrict T1 to safe ranges (prevent runaway leverage), or unrestricted?",
         ],
     ),
     (
@@ -104,7 +104,7 @@ ANMOL_BLOCKS = [
             "Self-service signup allowed, or admin-provisioned only? (today: admin-only)",
             "Per-tier T&C differences (e.g. Enterprise-only liability clauses)?",
             "End-of-subscription policy (data retention period, read-only window, hard cutoff)",
-            "Downgrade flow — when T2 → T1, what happens to backtests/strategies over T1 quota?",
+            "Downgrade flow - when T2 → T1, what happens to backtests/strategies over T1 quota?",
         ],
     ),
 ]

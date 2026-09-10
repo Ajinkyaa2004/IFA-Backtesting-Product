@@ -8,8 +8,8 @@ Both the admin endpoint (POST /admin/vam/run) and the client endpoint
   * whether a rate limit applies (clients yes, admins no)
 
 The persistence pipeline itself is identical to the manual upload flow in
-admin/backtests.py — same Supabase Storage layout, same backtests table
-row, same audit log shape — except:
+admin/backtests.py - same Supabase Storage layout, same backtests table
+row, same audit log shape - except:
 
   * `engine` column is set to "vam"
   * payload is validated against schemas/backtest.vam.schema.json (NOT v1.0)
@@ -142,7 +142,7 @@ def persist_vam_run(
     """Validate the VAM payload, persist it, and return (Backtest row, storage_key).
 
     Raises HTTPException on validation failure (422) or missing references (404/400).
-    The caller is responsible for handling VAM-side failures BEFORE calling this —
+    The caller is responsible for handling VAM-side failures BEFORE calling this -
     by the time we're here, we expect a successful VAM response.
     """
     if step not in _STEP_LABELS:

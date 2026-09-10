@@ -197,7 +197,7 @@ export default function TermsAcceptPage() {
           )}
         </div>
 
-        {/* Error banner — always rendered (was only inside review step before),
+        {/* Error banner - always rendered (was only inside review step before),
             so a submit failure followed by a back-navigation still tells the
             user what's wrong. Sweep finding #13. */}
         {submitError && (

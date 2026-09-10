@@ -76,7 +76,7 @@ export default function RejectedPage() {
         </div>
 
         <p className="mt-4 text-center text-[11px] text-ink-400">
-          Signed in as {me?.email ?? "—"}
+          Signed in as {me?.email ?? "-"}
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-"""Quote — per-request pricing (meeting 2026-07-09).
+"""Quote - per-request pricing (meeting 2026-07-09).
 
 Anmol's process: discovery call → admin issues a quote in the portal →
 client sees the quote in their dashboard → accept / reject. Payment
@@ -51,7 +51,7 @@ class Quote(UUIDPKMixin, TimestampMixin, Base):
     """Short label. e.g. 'EMA/RSI strategy backtest + 3 tuning rounds'."""
 
     description: Mapped[str | None] = mapped_column(Text)
-    """What the client is buying — scope, deliverables, timeline."""
+    """What the client is buying - scope, deliverables, timeline."""
 
     amount_inr: Mapped[int] = mapped_column(Integer, nullable=False)
     """Amount in PAISE (₹ × 100). Store as int to avoid float rounding.

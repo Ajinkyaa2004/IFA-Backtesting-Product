@@ -65,7 +65,7 @@ export default function VamHealthCard() {
             Latency
           </div>
           <div className="text-lg font-semibold text-ink-900 dark:text-ink-50 mt-1 tabular">
-            {health ? `${Math.round(health.latency_ms)} ms` : "—"}
+            {health ? `${Math.round(health.latency_ms)} ms` : "-"}
           </div>
         </div>
         <div className="p-3 rounded-lg border border-ink-100 dark:border-ink-800">
@@ -73,7 +73,7 @@ export default function VamHealthCard() {
             Last check
           </div>
           <div className="text-sm font-medium text-ink-900 dark:text-ink-50 mt-1 tabular">
-            {lastChecked ? lastChecked.toLocaleTimeString() : "—"}
+            {lastChecked ? lastChecked.toLocaleTimeString() : "-"}
           </div>
         </div>
       </div>

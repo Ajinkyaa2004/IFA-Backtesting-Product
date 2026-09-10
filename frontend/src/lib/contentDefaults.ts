@@ -113,8 +113,8 @@ export const CONTENT_DEFAULTS: ContentDoc = {
     steps: [
       { key: "tnc",      title: "Accept the Terms & Conditions",              hint_todo: "Read + accept the engagement terms so we can start work.",   hint_done: "Signed and stored." },
       { key: "demo",     title: "Explore the demo backtest",                  hint_todo: "See the exact report format your strategies will land in.",  hint_done: "Explored." },
-      { key: "strategy", title: "Upload your first strategy document",        hint_todo: "PDF / DOCX / TXT. Up to 25 MB. Versioned for you.",          hint_done: "Nice — locked in as source of truth." },
-      { key: "request",  title: "Open your first request",                    hint_todo: "New strategy / change request / RFQ / clarification — any of the four.", hint_done: "In our queue — we'll reach out." },
+      { key: "strategy", title: "Upload your first strategy document",        hint_todo: "PDF / DOCX / TXT. Up to 25 MB. Versioned for you.",          hint_done: "Nice - locked in as source of truth." },
+      { key: "request",  title: "Open your first request",                    hint_todo: "New strategy / change request / RFQ / clarification - any of the four.", hint_done: "In our queue - we'll reach out." },
       { key: "backtest", title: "Review your first delivered backtest",       hint_todo: "We'll email you when it's ready. Turnaround per your plan's SLA.",  hint_done: "Read the metrics, export the PDF." },
     ],
   },

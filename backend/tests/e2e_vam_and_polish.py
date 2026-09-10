@@ -5,7 +5,7 @@
   - The sidebar-morph on a VAM result page + the toggle button
   - The new skeleton/empty-state distinction added by sweep findings #6, #7
   - The 401 response interceptor + auth-error screens (#2, #3)
-  - The hardened login flow (signOut on failure — sweep #16)
+  - The hardened login flow (signOut on failure - sweep #16)
   - Trade-log pagination on a VAM result (Prev/Next buttons + page counter)
 
 Run with both dev servers up (uvicorn :8000, vite :5173).
@@ -166,9 +166,9 @@ def accept_tnc_if_needed(driver) -> bool:
 
 
 def test_sterling_no_new_backtest_button(driver, run: TestRun) -> None:
-    """Sweep finding #36 — clients without vam_enabled must NOT see the
+    """Sweep finding #36 - clients without vam_enabled must NOT see the
     '+ New backtest' CTA."""
-    print("\n— Sterling (non-VAM) does not see '+ New backtest' —")
+    print("\n- Sterling (non-VAM) does not see '+ New backtest' -")
     try:
         ok = login(driver, DEMO_EMAIL, DEMO_PASSWORD)
         run.record("Sterling login", ok)
@@ -198,8 +198,8 @@ def test_sterling_no_new_backtest_button(driver, run: TestRun) -> None:
 
 
 def test_ravi_sees_new_backtest_button(driver, run: TestRun) -> None:
-    """Sweep finding #36 inverse — Ravi (vam_enabled=true) MUST see the CTA."""
-    print("\n— Ravi (VAM client) sees '+ New backtest' —")
+    """Sweep finding #36 inverse - Ravi (vam_enabled=true) MUST see the CTA."""
+    print("\n- Ravi (VAM client) sees '+ New backtest' -")
     try:
         # Log out the previous user first
         logout_via_avatar(driver)
@@ -228,8 +228,8 @@ def test_ravi_sees_new_backtest_button(driver, run: TestRun) -> None:
 def test_ravi_configurator_loads(driver, run: TestRun) -> None:
     """The /backtests/new page must render the step picker + parameter form
     without errors. It may show an 'Engine offline' card if VAM is unreachable
-    — that's a graceful failure mode we explicitly test for."""
-    print("\n— Ravi /backtests/new configurator loads —")
+    - that's a graceful failure mode we explicitly test for."""
+    print("\n- Ravi /backtests/new configurator loads -")
     try:
         driver.get(f"{FRONTEND}/backtests/new")
         time.sleep(2)  # let the step list / schema fetch complete
@@ -253,10 +253,10 @@ def test_ravi_configurator_loads(driver, run: TestRun) -> None:
 
 
 def test_loading_skeleton_then_empty_state(driver, run: TestRun) -> None:
-    """Sweep finding #6 — Ravi's Backtests list should NOT flash 'No backtests
+    """Sweep finding #6 - Ravi's Backtests list should NOT flash 'No backtests
     match this filter' before the first fetch resolves. On Ravi's empty list
     we should see the empty state only after the request completes."""
-    print("\n— Loading skeleton hides flash-of-empty-state —")
+    print("\n- Loading skeleton hides flash-of-empty-state -")
     try:
         driver.get(f"{FRONTEND}/backtests")
         # Immediately after navigation, body should NOT yet contain the empty
@@ -281,7 +281,7 @@ def test_loading_skeleton_then_empty_state(driver, run: TestRun) -> None:
 
 def test_sidebar_workspace_nav(driver, run: TestRun) -> None:
     """Confirm the regular sidebar nav links still work for Ravi."""
-    print("\n— Sidebar Workspace nav for Ravi —")
+    print("\n- Sidebar Workspace nav for Ravi -")
     try:
         for label, expected in [
             ("Strategies", "/strategies"),
@@ -306,7 +306,7 @@ def test_sidebar_workspace_nav(driver, run: TestRun) -> None:
 
 def test_strategies_page_buttons(driver, run: TestRun) -> None:
     """Upload Strategy button opens modal, Cancel closes it."""
-    print("\n— Ravi: Strategies page Upload modal —")
+    print("\n- Ravi: Strategies page Upload modal -")
     try:
         driver.get(f"{FRONTEND}/strategies")
         WebDriverWait(driver, 10).until(
@@ -342,7 +342,7 @@ def test_strategies_page_buttons(driver, run: TestRun) -> None:
 
 def test_requests_page_tabs_and_submit(driver, run: TestRun) -> None:
     """Tab switching + form submission on Requests page."""
-    print("\n— Ravi: Requests page —")
+    print("\n- Ravi: Requests page -")
     try:
         driver.get(f"{FRONTEND}/requests")
         WebDriverWait(driver, 10).until(
@@ -390,7 +390,7 @@ def test_requests_page_tabs_and_submit(driver, run: TestRun) -> None:
 
 def test_dark_mode_toggle(driver, run: TestRun) -> None:
     """The Moon/Sun button in the topbar toggles the `dark` class on <html>."""
-    print("\n— Dark mode toggle —")
+    print("\n- Dark mode toggle -")
     try:
         # Navigate somewhere with the topbar
         driver.get(f"{FRONTEND}/backtests")
@@ -414,10 +414,10 @@ def test_dark_mode_toggle(driver, run: TestRun) -> None:
 
 
 def test_logout_revokes_session(driver, run: TestRun) -> None:
-    """Sweep finding #18 — logout calls POST /auth/logout. We verify the
+    """Sweep finding #18 - logout calls POST /auth/logout. We verify the
     navigation behaviour; the actual token revocation is covered by a
     server-side test (out of scope for Selenium)."""
-    print("\n— Logout returns to /login —")
+    print("\n- Logout returns to /login -")
     try:
         ok = logout_via_avatar(driver)
         run.record("Logout from avatar dropdown lands on /login", ok, driver.current_url)
@@ -427,10 +427,10 @@ def test_logout_revokes_session(driver, run: TestRun) -> None:
 
 
 def test_login_bad_password_signs_out_firebase(driver, run: TestRun) -> None:
-    """Sweep finding #16 — after a failed login, the Firebase session must be
+    """Sweep finding #16 - after a failed login, the Firebase session must be
     cleared so a subsequent good login works cleanly. We verify the
     user-visible behaviour: error appears, then a good login still works."""
-    print("\n— Bad password + recovery —")
+    print("\n- Bad password + recovery -")
     try:
         driver.get(f"{FRONTEND}/login")
         wait_for(driver, "input[type='email']")
@@ -480,7 +480,7 @@ def test_admin_run_via_vam_tab(driver, run: TestRun) -> None:
     We stop short of actually clicking Run because that would trigger a
     real VAM engine call (10-30s + external dependency). The admin-side
     end-to-end VAM run is covered by the admin_run_via_vam backend test."""
-    print("\n— Admin: 'Run via VAM engine' tab (Phase 2 admin work) —")
+    print("\n- Admin: 'Run via VAM engine' tab (Phase 2 admin work) -")
     try:
         # Fresh login as admin
         logout_via_avatar(driver)

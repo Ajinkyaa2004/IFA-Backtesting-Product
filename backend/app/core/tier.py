@@ -1,7 +1,7 @@
 """Tier feature matrix + monthly limits.
 
 Single source of truth for what a client on each tier can do. The frontend
-mirrors this at frontend/src/lib/tier.ts — both must be updated together
+mirrors this at frontend/src/lib/tier.ts - both must be updated together
 when Anmol's final numbers land (see DECISIONS_BY_AJINKYA.md § 'Still
 needs Anmol').
 

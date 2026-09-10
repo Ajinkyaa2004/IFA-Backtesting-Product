@@ -1,4 +1,4 @@
-"""Admin inbox — surfaces 'things that need admin attention'.
+"""Admin inbox - surfaces 'things that need admin attention'.
 
 Currently feeds two streams:
   1. Strategy uploads with no completed backtest yet for that client + strategy
@@ -80,7 +80,7 @@ def admin_inbox(
                 client_id=str(c.id),
                 client_name=c.name,
                 title=f"{c.name} uploaded a strategy",
-                subtitle=f"{s.name} (v{s.version}) — needs a backtest",
+                subtitle=f"{s.name} (v{s.version}) - needs a backtest",
                 occurred_at=s.created_at,
                 href=f"/admin/clients",
             )

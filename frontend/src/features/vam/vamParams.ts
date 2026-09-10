@@ -6,7 +6,7 @@
  */
 import type { VamParamSchemaField, VamStepSchema } from "../../lib/api";
 
-/** Build a fresh params dict from a schema's defaults — used on mount + reset. */
+/** Build a fresh params dict from a schema's defaults - used on mount + reset. */
 export function defaultsFromSchema(schema: VamStepSchema): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const p of schema.parameters) {

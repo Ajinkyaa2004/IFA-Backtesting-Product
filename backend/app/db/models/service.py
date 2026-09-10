@@ -1,12 +1,12 @@
 """Service catalog (meeting 2026-07-09).
 
 The portal used to assume every client onboards to backtesting. Anmol
-wants any client — sports predictions, video editing, crypto/Binance
-ops, custom dev — to onboard through the same funnel. The Service
+wants any client - sports predictions, video editing, crypto/Binance
+ops, custom dev - to onboard through the same funnel. The Service
 catalog is the switch that adapts the client dashboard to what the
 client actually bought.
 
-A Service also carries a `lifecycle_template` — the steps shown in the
+A Service also carries a `lifecycle_template` - the steps shown in the
 client's LifecycleStepper. Backtesting has 6 steps (Set up → Terms →
 Strategy → Engine → First backtest → Tuning). Crypto ops has a shorter
 5-step flow. Every service defines its own.

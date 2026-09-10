@@ -118,7 +118,7 @@ export default function AdminContentPage() {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_620px] gap-6">
-      {/* Left column — form */}
+      {/* Left column - form */}
       <div className="space-y-4">
         <Card>
           <SectionTitle sub="Everything you edit here reflects on the live client dashboard once you Save. Changes are audit-logged.">
@@ -187,15 +187,15 @@ export default function AdminContentPage() {
             Things to know
           </div>
           <ul className="text-[11px] text-ink-500 dark:text-ink-400 space-y-1 list-disc pl-4">
-            <li>Same content is served to every client — this MVP has no per-client overrides.</li>
-            <li>Saving is instant — every client sees the change on their next page load.</li>
+            <li>Same content is served to every client - this MVP has no per-client overrides.</li>
+            <li>Saving is instant - every client sees the change on their next page load.</li>
             <li>Every save is audit-logged with the before/after diff.</li>
             <li>Section visibility toggles hide the entire card; useful for temporary announcements or A/B tests.</li>
           </ul>
         </Card>
       </div>
 
-      {/* Right column — live preview iframe. Hidden on mobile/tablet unless
+      {/* Right column - live preview iframe. Hidden on mobile/tablet unless
           toggled on; always visible on xl+ where it fits alongside the form. */}
       <div className="xl:sticky xl:top-4 space-y-2">
         <div className="flex items-center justify-between gap-2">

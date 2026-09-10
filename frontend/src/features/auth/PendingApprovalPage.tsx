@@ -44,7 +44,7 @@ export default function PendingApprovalPage() {
       setCheckedRecently(true);
       setTimeout(() => setCheckedRecently(false), 3000);
     } catch {
-      /* swallow — the retry button is right there */
+      /* swallow - the retry button is right there */
     } finally {
       setChecking(false);
     }
@@ -98,7 +98,7 @@ export default function PendingApprovalPage() {
             className="w-full h-10 bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mb-3"
           >
             <RefreshCw size={14} className={checking ? "animate-spin" : ""} />
-            {checking ? "Checking…" : checkedRecently ? "Still pending — hang tight" : "Check my status"}
+            {checking ? "Checking…" : checkedRecently ? "Still pending - hang tight" : "Check my status"}
           </button>
 
           <button
@@ -110,7 +110,7 @@ export default function PendingApprovalPage() {
         </div>
 
         <p className="mt-4 text-center text-[11px] text-ink-400">
-          Signed in as {me?.email ?? "—"}
+          Signed in as {me?.email ?? "-"}
         </p>
       </div>
     </div>

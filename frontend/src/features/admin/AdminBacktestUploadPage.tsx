@@ -263,7 +263,7 @@ export default function AdminBacktestUploadPage() {
       } else if (status === 502) {
         setViolations([{ path: "(engine)", message: "VAM engine returned an error." }]);
       } else if (status === 429) {
-        setViolations([{ path: "(rate-limit)", message: "Too many runs — wait and retry." }]);
+        setViolations([{ path: "(rate-limit)", message: "Too many runs - wait and retry." }]);
       } else {
         const msg = typeof detail === "string"
           ? detail
@@ -340,10 +340,10 @@ export default function AdminBacktestUploadPage() {
               onChange={(e) => setClientId(e.target.value)}
               className="mt-1 w-full h-9 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
             >
-              <option value="">— pick a client —</option>
+              <option value="">- pick a client -</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.tier}
+                  {c.name} - {c.tier}
                 </option>
               ))}
             </select>
@@ -354,11 +354,11 @@ export default function AdminBacktestUploadPage() {
             )}
           </div>
 
-          {/* 2. Strategies submitted by this client — admin reads these to know what to backtest */}
+          {/* 2. Strategies submitted by this client - admin reads these to know what to backtest */}
           {clientId && (
             <div>
               <label className="text-xs font-medium text-ink-600 dark:text-ink-300">
-                2. Strategy this backtest is for {strategies.length > 0 && <span className="text-ink-400">(optional but recommended — links the backtest back to the doc the client submitted)</span>}
+                2. Strategy this backtest is for {strategies.length > 0 && <span className="text-ink-400">(optional but recommended - links the backtest back to the doc the client submitted)</span>}
               </label>
               {strategies.length === 0 ? (
                 <div className="mt-1 text-xs text-ink-500 italic p-3 rounded-lg bg-ink-50 dark:bg-ink-950/40 border border-ink-100 dark:border-ink-800">
@@ -372,7 +372,7 @@ export default function AdminBacktestUploadPage() {
                     onChange={(e) => setStrategyId(e.target.value)}
                     className="w-full h-9 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
                   >
-                    <option value="">— don't link to a specific strategy —</option>
+                    <option value="">- don't link to a specific strategy -</option>
                     {strategies.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} (v{s.version}) {s.is_source_of_truth ? "· SoT" : ""}
@@ -393,7 +393,7 @@ export default function AdminBacktestUploadPage() {
                         <FileText size={12} className="text-ink-400 shrink-0" />
                         <span className="font-medium truncate flex-1">{s.name}</span>
                         <span className="text-ink-500 tabular shrink-0">
-                          v{s.version} · {s.size_bytes ? `${(s.size_bytes / 1024).toFixed(0)} KB` : "—"}
+                          v{s.version} · {s.size_bytes ? `${(s.size_bytes / 1024).toFixed(0)} KB` : "-"}
                         </span>
                         <a
                           href={`/admin/clients`}
@@ -430,7 +430,7 @@ export default function AdminBacktestUploadPage() {
                   <FileText size={13}/> Paste JSON
                 </div>
                 <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
-                  Manual delivery — paste or upload the v1.0 result JSON for any strategy shape.
+                  Manual delivery - paste or upload the v1.0 result JSON for any strategy shape.
                 </div>
               </button>
               <button
@@ -447,7 +447,7 @@ export default function AdminBacktestUploadPage() {
                   <Cpu size={13}/> Run via VAM engine
                 </div>
                 <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
-                  Trigger Ravi's engine — only for VAM-compatible RSI/VIX strategies.
+                  Trigger Ravi's engine - only for VAM-compatible RSI/VIX strategies.
                 </div>
               </button>
             </div>
@@ -486,7 +486,7 @@ export default function AdminBacktestUploadPage() {
                 <div className="text-xs text-ink-500">{json.length.toLocaleString()} chars</div>
                 {preview && !preview.ok && (
                   <div className="text-xs text-amber-700 dark:text-amber-400">
-                    Not valid JSON yet — {preview.error.slice(0, 80)}
+                    Not valid JSON yet - {preview.error.slice(0, 80)}
                   </div>
                 )}
               </div>
@@ -560,7 +560,7 @@ export default function AdminBacktestUploadPage() {
             </div>
           )}
 
-          {/* 5. Live preview — surfaces key fields so admin can sanity-check before upload.
+          {/* 5. Live preview - surfaces key fields so admin can sanity-check before upload.
               Chirag Item #7: fixed step numbering from 1 → 3 → 5 → 6 to 1-2-3-4-5-6. */}
           {sourceMode === "json" && preview && preview.ok && (
             <Card padding="p-4" className="bg-ink-50/60 dark:bg-ink-950/40 !border-dashed">
@@ -571,19 +571,20 @@ export default function AdminBacktestUploadPage() {
                 <KVrow k="Strategy" v={`${preview.strategy_name}${preview.strategy_version ? " " + preview.strategy_version : ""}`} />
                 <KVrow k="Type / instrument" v={`${preview.strategy_type} · ${preview.instrument_type}`} />
                 <KVrow k="Date range" v={`${preview.from} → ${preview.to}`} />
-                <KVrow k="Initial capital" v={preview.capital ? `${preview.capital.currency ?? ""} ${preview.capital.amount?.toLocaleString() ?? "?"}` : "—"} />
+                <KVrow k="Initial capital" v={preview.capital ? `${preview.capital.currency ?? ""} ${preview.capital.amount?.toLocaleString() ?? "?"}` : "-"} />
                 <KVrow k="Timeframe" v={preview.timeframe} mono />
                 <KVrow k="Trades (array length)" v={String(preview.n_trades_actual)} />
-                <KVrow k="summary.n_trades" v={String(preview.summary?.n_trades ?? "—")} warn={preview.summary?.n_trades !== undefined && preview.summary.n_trades !== preview.n_trades_actual} />
+                <KVrow k="summary.n_trades" v={String(preview.summary?.n_trades ?? "-")} warn={preview.summary?.n_trades !== undefined && preview.summary.n_trades !== preview.n_trades_actual} />
                 <KVrow k="Total return" v={pct(preview.summary?.total_return_pct)} />
                 <KVrow k="CAGR" v={pct(preview.summary?.cagr_pct)} />
-                <KVrow k="Sharpe" v={preview.summary?.sharpe?.toFixed(2) ?? "—"} />
+                <KVrow k="Sharpe" v={preview.summary?.sharpe?.toFixed(2) ?? "-"} />
                 <KVrow k="Max drawdown" v={pct(preview.summary?.max_drawdown_pct)} />
-                <KVrow k="Win rate" v={preview.summary?.win_rate_pct !== undefined ? `${preview.summary.win_rate_pct.toFixed(1)}%` : "—"} />
+                <KVrow k="Win rate" v={preview.summary?.win_rate_pct !== undefined ? `${preview.summary.win_rate_pct.toFixed(1)}%` : "-"} />
               </div>
               {preview.summary?.n_trades !== undefined && preview.summary.n_trades !== preview.n_trades_actual && (
-                <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
-                  ⚠ summary.n_trades ({preview.summary.n_trades}) doesn't match trades array length ({preview.n_trades_actual}) — server will reject this.
+                <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-400 inline-flex items-start gap-1.5">
+                  <AlertCircle size={12} className="mt-0.5 shrink-0"/>
+                  <span>summary.n_trades ({preview.summary.n_trades}) doesn't match trades array length ({preview.n_trades_actual}) - server will reject this.</span>
                 </div>
               )}
             </Card>
@@ -617,10 +618,10 @@ export default function AdminBacktestUploadPage() {
                   {!clientId
                     ? "Select a client to continue."
                     : vamBootError
-                    ? "Engine is unreachable — try Paste JSON, or retry later."
+                    ? "Engine is unreachable - try Paste JSON, or retry later."
                     : !vamSchema
                     ? "Waiting on VAM schema…"
-                    : "Ready — engine runs typically take 10–30 seconds."}
+                    : "Ready - engine runs typically take 10–30 seconds."}
                 </div>
                 <Button
                   variant="accent"
@@ -652,7 +653,7 @@ export default function AdminBacktestUploadPage() {
       {/* Violations card */}
       {violations && (
         <Card>
-          <SectionTitle sub={`${violations.length} schema violation(s) — payload was rejected before storage`}>
+          <SectionTitle sub={`${violations.length} schema violation(s) - payload was rejected before storage`}>
             <span className="inline-flex items-center gap-2 text-red-600 dark:text-red-400">
               <AlertCircle size={18}/> Validation failed
             </span>
@@ -680,14 +681,14 @@ function KVrow({ k, v, mono = false, warn = false }: { k: string; v: string; mon
           mono ? "font-mono" : ""
         } ${warn ? "text-amber-700 dark:text-amber-400" : ""}`}
       >
-        {v || "—"}
+        {v || "-"}
       </span>
     </div>
   );
 }
 
 function pct(v?: number): string {
-  if (v === undefined || v === null || Number.isNaN(v)) return "—";
+  if (v === undefined || v === null || Number.isNaN(v)) return "-";
   return `${v > 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, RefreshCw, Sparkles, X } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, Rocket, RefreshCw, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
 import { fetchBacktests, fetchMe, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
@@ -106,7 +106,7 @@ export default function OverviewPage() {
         <Card padding="p-0">
           <div className="px-6 py-4 flex items-start gap-4 bg-accent-50 dark:bg-accent-500/10 border-l-4 border-accent-500 rounded-2xl">
             <span className="mt-0.5 size-8 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0">
-              <Sparkles size={16}/>
+              <Rocket size={16}/>
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
@@ -211,7 +211,7 @@ export default function OverviewPage() {
         </Reveal>
       )}
 
-      {/* Section 10 mocked items — copy comes from the admin content editor
+      {/* Section 10 mocked items - copy comes from the admin content editor
           so Anmol can flip 'Growth' → 'Pro' or retitle 'AI Analyst' without
           a code change. */}
       {content.sections.placeholder_tiles && (

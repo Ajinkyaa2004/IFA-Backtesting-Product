@@ -4,8 +4,8 @@ Goal: document Firebase's request/response schemas empirically AND verify our
 backend handles every failure mode with the correct HTTP code + body.
 
 Coverage:
-  PART A: Firebase REST signInWithPassword — every documented error code
-  PART B: Backend verify_id_token paths — valid, expired, tampered, wrong project, etc.
+  PART A: Firebase REST signInWithPassword - every documented error code
+  PART B: Backend verify_id_token paths - valid, expired, tampered, wrong project, etc.
   PART C: HTTP Authorization header edge cases
   PART D: User-state edge cases (suspended, soft-deleted, not provisioned)
   PART E: Full round-trip (signin → /me → /auth/login)
@@ -98,7 +98,7 @@ def part_a_firebase_rest(run: Run) -> dict:
     schemas: dict[str, dict] = {}
 
     # A.1 SUCCESS
-    print("A.1 — SUCCESS (valid credentials)")
+    print("A.1 - SUCCESS (valid credentials)")
     code, body = fb_signin(DEMO_EMAIL, DEMO_PASS)
     run.ok if code == 200 else run.fail
     if code == 200:
@@ -109,7 +109,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail(f"success → {code}", str(body)[:120])
 
     # A.2 EMAIL_NOT_FOUND (legacy) / INVALID_LOGIN_CREDENTIALS (current)
-    print("\nA.2 — EMAIL_NOT_FOUND (nonexistent email)")
+    print("\nA.2 - EMAIL_NOT_FOUND (nonexistent email)")
     code, body = fb_signin("definitely-no-such-user@example.invalid", DEMO_PASS)
     schemas["BAD_EMAIL"] = body
     print(f"     status: {code}, body: {json.dumps(body, indent=6)[:400]}")
@@ -120,7 +120,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail(f"non-existent email", f"{code} {msg}")
 
     # A.3 INVALID_PASSWORD (legacy) / INVALID_LOGIN_CREDENTIALS (current)
-    print("\nA.3 — INVALID_PASSWORD (wrong password)")
+    print("\nA.3 - INVALID_PASSWORD (wrong password)")
     code, body = fb_signin(DEMO_EMAIL, "definitelyWrongPassword!9999")
     schemas["BAD_PASSWORD"] = body
     print(f"     status: {code}, body: {json.dumps(body, indent=6)[:400]}")
@@ -131,7 +131,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail(f"wrong password", f"{code} {msg}")
 
     # A.4 INVALID_EMAIL (malformed)
-    print("\nA.4 — INVALID_EMAIL (malformed)")
+    print("\nA.4 - INVALID_EMAIL (malformed)")
     code, body = fb_signin("not-an-email", DEMO_PASS)
     schemas["MALFORMED_EMAIL"] = body
     print(f"     status: {code}, body: {json.dumps(body, indent=6)[:400]}")
@@ -142,7 +142,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail("malformed email", f"{code} {msg}")
 
     # A.5 MISSING_PASSWORD
-    print("\nA.5 — MISSING_PASSWORD")
+    print("\nA.5 - MISSING_PASSWORD")
     r = requests.post(FIREBASE_SIGNIN_URL, json={"email": DEMO_EMAIL, "returnSecureToken": True}, timeout=15)
     try:
         body = r.json()
@@ -157,7 +157,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail("missing password", f"{r.status_code} {msg}")
 
     # A.6 MISSING_EMAIL  (Firebase usually says INVALID_EMAIL for empty email)
-    print("\nA.6 — empty email")
+    print("\nA.6 - empty email")
     code, body = fb_signin("", DEMO_PASS)
     schemas["EMPTY_EMAIL"] = body
     print(f"     status: {code}, body: {json.dumps(body, indent=6)[:400]}")
@@ -168,7 +168,7 @@ def part_a_firebase_rest(run: Run) -> dict:
         run.fail("empty email", f"{code}")
 
     # A.7 — TOO_MANY_ATTEMPTS_TRY_LATER (would require many failures; skip — documenting expectation)
-    print("\nA.7 — TOO_MANY_ATTEMPTS (skipped — would trigger rate limit on shared key)")
+    print("\nA.7 - TOO_MANY_ATTEMPTS (skipped - would trigger rate limit on shared key)")
     run.ok("TOO_MANY_ATTEMPTS scenario documented (not triggered)", "expected: 400 / TOO_MANY_ATTEMPTS_TRY_LATER")
 
     return schemas
@@ -178,7 +178,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
     print("\n══════ PART B: Backend verify_id_token via /me ══════\n")
 
     # B.1 valid token + provisioned user → 200
-    print("B.1 — valid token, provisioned user")
+    print("B.1 - valid token, provisioned user")
     code, body = be("/me", token=valid_token)
     if code == 200 and body.get("email") == DEMO_EMAIL:
         run.ok("valid token → 200, payload has email")
@@ -186,7 +186,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("valid token → 200", f"{code} {body}")
 
     # B.2 token with last char chopped (signature break)
-    print("\nB.2 — tampered token (chop signature)")
+    print("\nB.2 - tampered token (chop signature)")
     bad_token = valid_token[:-3] + "AAA"
     code, body = be("/me", token=bad_token)
     detail = body.get("detail", "")
@@ -199,7 +199,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("tampered token", f"{code} {body}")
 
     # B.3 wholly malformed token
-    print("\nB.3 — non-JWT string")
+    print("\nB.3 - non-JWT string")
     code, body = be("/me", token="this.is.not-a-jwt")
     detail = body.get("detail", "")
     if code == 401 and detail == "Invalid token":
@@ -210,7 +210,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("garbage token", f"{code} {body}")
 
     # B.4 empty token
-    print("\nB.4 — empty token (Bearer with no value)")
+    print("\nB.4 - empty token (Bearer with no value)")
     code, body = be_raw("/me", headers={"Authorization": "Bearer "})
     detail = body.get("detail", "")
     if code == 401 and ("missing" in detail.lower() or "invalid" in detail.lower()):
@@ -219,7 +219,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("empty bearer", f"{code} {body}")
 
     # B.5 missing header
-    print("\nB.5 — no Authorization header")
+    print("\nB.5 - no Authorization header")
     code, body = be_raw("/me", headers={})
     if code == 401:
         run.ok("missing header → 401", body.get("detail", "")[:80])
@@ -227,7 +227,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("missing header", f"{code} {body}")
 
     # B.6 wrong scheme
-    print("\nB.6 — Basic instead of Bearer")
+    print("\nB.6 - Basic instead of Bearer")
     code, body = be_raw("/me", headers={"Authorization": f"Basic {valid_token}"})
     if code == 401:
         run.ok("Basic scheme → 401", body.get("detail", "")[:80])
@@ -235,7 +235,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("Basic scheme", f"{code} {body}")
 
     # B.7 lowercase Bearer (RFC says case-insensitive)
-    print("\nB.7 — lowercase 'bearer' scheme")
+    print("\nB.7 - lowercase 'bearer' scheme")
     code, body = be_raw("/me", headers={"Authorization": f"bearer {valid_token}"})
     if code == 200:
         run.ok("lowercase bearer → 200 (RFC-compliant)")
@@ -243,18 +243,18 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("lowercase bearer", f"{code} {body}")
 
     # B.8 leading/trailing spaces
-    print("\nB.8 — trailing whitespace in token")
+    print("\nB.8 - trailing whitespace in token")
     code, body = be_raw("/me", headers={"Authorization": f"Bearer {valid_token}   "})
     # Acceptable behaviour: either 200 (lenient) or 401 (strict). Document.
     run.ok(f"trailing whitespace → {code} (documented behaviour)", body.get("detail", "")[:80] if code != 200 else "")
 
     # B.9 multi-space between Bearer and token
-    print("\nB.9 — multiple spaces between scheme and token")
+    print("\nB.9 - multiple spaces between scheme and token")
     code, body = be_raw("/me", headers={"Authorization": f"Bearer    {valid_token}"})
     run.ok(f"multi-space → {code} (documented)", body.get("detail", "")[:80] if code != 200 else "")
 
     # B.10 very long token (DoS attempt)
-    print("\nB.10 — extremely long token (10K bytes)")
+    print("\nB.10 - extremely long token (10K bytes)")
     long_token = "A" * 10000
     code, body = be("/me", token=long_token)
     if code == 401:
@@ -263,7 +263,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("long token DoS", f"{code} {body}")
 
     # B.11 SQL injection in token
-    print("\nB.11 — SQL injection in token field")
+    print("\nB.11 - SQL injection in token field")
     code, body = be("/me", token="'; DROP TABLE users; --")
     if code == 401:
         run.ok("SQL-injection token → 401 (safe)")
@@ -271,7 +271,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("SQL-injection token", f"{code} {body}")
 
     # B.12 None / null token via raw POST to /auth/login
-    print("\nB.12 — POST /auth/login with null id_token")
+    print("\nB.12 - POST /auth/login with null id_token")
     code, body = be("/auth/login", method="POST", json_body={"id_token": None})
     # FastAPI/pydantic validation should reject → 422
     if code in (401, 422):
@@ -280,7 +280,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("null id_token", f"{code} {body}")
 
     # B.13 POST /auth/login with missing id_token field
-    print("\nB.13 — POST /auth/login with no id_token")
+    print("\nB.13 - POST /auth/login with no id_token")
     code, body = be("/auth/login", method="POST", json_body={})
     if code == 422:
         run.ok("missing id_token → 422 (validation)")
@@ -288,7 +288,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("missing id_token", f"{code} {body}")
 
     # B.14 POST /auth/login with too-short id_token (DoS guard)
-    print("\nB.14 — POST /auth/login with short id_token (under 20 chars)")
+    print("\nB.14 - POST /auth/login with short id_token (under 20 chars)")
     code, body = be("/auth/login", method="POST", json_body={"id_token": "short"})
     if code == 422:
         run.ok("short id_token → 422 (length guard)")
@@ -296,7 +296,7 @@ def part_b_backend_verify(run: Run, valid_token: str) -> None:
         run.fail("short id_token", f"{code} {body}")
 
     # B.15 POST /auth/login with 10 KB id_token (over 8192 limit)
-    print("\nB.15 — POST /auth/login with oversized id_token (>8192 chars)")
+    print("\nB.15 - POST /auth/login with oversized id_token (>8192 chars)")
     code, body = be("/auth/login", method="POST", json_body={"id_token": "x" * 10000})
     if code == 422:
         run.ok("oversized id_token → 422 (length guard)")
@@ -308,7 +308,7 @@ def part_c_token_lifecycle(run: Run, valid_token: str) -> None:
     print("\n══════ PART C: Token lifecycle (expiry, revocation) ══════\n")
 
     # C.1 — token can be used multiple times within validity
-    print("C.1 — replay attack (token reused 3 times in a row)")
+    print("C.1 - replay attack (token reused 3 times in a row)")
     statuses = []
     for _ in range(3):
         code, _ = be("/me", token=valid_token)
@@ -321,7 +321,7 @@ def part_c_token_lifecycle(run: Run, valid_token: str) -> None:
     # C.2 — synthetic "expired" token (claims iat/exp far in the past)
     # We can't actually expire a real Firebase token quickly, but we can craft one
     # with a manipulated payload (which Firebase will reject for signature anyway).
-    print("\nC.2 — token with manipulated 'exp' claim (signature also broken)")
+    print("\nC.2 - token with manipulated 'exp' claim (signature also broken)")
     # Split a real token, decode payload, change exp, re-base64 (signature won't match)
     parts = valid_token.split(".")
     if len(parts) == 3:
@@ -345,7 +345,7 @@ def part_d_user_state(run: Run) -> None:
     print("\n══════ PART D: User-state edge cases ══════\n")
 
     # D.1 — make a NEW Firebase user that doesn't exist in our DB. /me should 401.
-    print("D.1 — Firebase user with NO DB row → 401 'User not provisioned'")
+    print("D.1 - Firebase user with NO DB row → 401 'User not provisioned'")
     init_firebase()
     ephemeral_email = f"ephemeral-{uuid.uuid4().hex[:8]}@isolation.test"
     ephemeral_pass = "Ephemeral!2026"
@@ -370,7 +370,7 @@ def part_d_user_state(run: Run) -> None:
             pass
 
     # D.2 — Suspended user in DB (status='suspended') → /me should 403
-    print("\nD.2 — Suspended user → 403 'User suspended'")
+    print("\nD.2 - Suspended user → 403 'User suspended'")
     db = SessionLocal()
     try:
         demo = db.query(User).filter(User.email == DEMO_EMAIL).first()
@@ -393,7 +393,7 @@ def part_d_user_state(run: Run) -> None:
         db.close()
 
     # D.3 — Soft-deleted user (deleted_at IS NOT NULL) → 401 not provisioned
-    print("\nD.3 — Soft-deleted user → 401 (treated as not provisioned)")
+    print("\nD.3 - Soft-deleted user → 401 (treated as not provisioned)")
     db = SessionLocal()
     try:
         demo = db.query(User).filter(User.email == DEMO_EMAIL).first()
@@ -419,7 +419,7 @@ def part_e_full_roundtrip(run: Run, valid_token: str) -> None:
     print("\n══════ PART E: Full sign-in round-trip ══════\n")
 
     # E.1 sign in → GET /me → POST /auth/login should all agree
-    print("E.1 — sign in, GET /me, POST /auth/login → all return consistent identity")
+    print("E.1 - sign in, GET /me, POST /auth/login → all return consistent identity")
     code1, me = be("/me", token=valid_token)
     code2, login = be("/auth/login", method="POST", json_body={"id_token": valid_token})
 
@@ -434,16 +434,16 @@ def part_e_full_roundtrip(run: Run, valid_token: str) -> None:
     # E.2 — frontend error mapping (what the user sees)
     # We can't run the React component without a browser, but we can document
     # what Firebase JS SDK throws given the error codes from Part A.
-    print("\nE.2 — Frontend error-message mapping documentation")
+    print("\nE.2 - Frontend error-message mapping documentation")
     fb_to_friendly = {
-        "EMAIL_NOT_FOUND": "auth/user-not-found — 'No account found with this email'",
-        "INVALID_PASSWORD": "auth/wrong-password — 'Incorrect password'",
-        "INVALID_LOGIN_CREDENTIALS": "auth/invalid-credential — 'Invalid email or password'",
-        "USER_DISABLED": "auth/user-disabled — 'Account suspended'",
-        "INVALID_EMAIL": "auth/invalid-email — 'Email format invalid'",
-        "MISSING_PASSWORD": "auth/missing-password — 'Password required'",
-        "TOO_MANY_ATTEMPTS_TRY_LATER": "auth/too-many-requests — 'Try again later'",
-        "NETWORK_REQUEST_FAILED": "auth/network-request-failed — 'Connection problem'",
+        "EMAIL_NOT_FOUND": "auth/user-not-found - 'No account found with this email'",
+        "INVALID_PASSWORD": "auth/wrong-password - 'Incorrect password'",
+        "INVALID_LOGIN_CREDENTIALS": "auth/invalid-credential - 'Invalid email or password'",
+        "USER_DISABLED": "auth/user-disabled - 'Account suspended'",
+        "INVALID_EMAIL": "auth/invalid-email - 'Email format invalid'",
+        "MISSING_PASSWORD": "auth/missing-password - 'Password required'",
+        "TOO_MANY_ATTEMPTS_TRY_LATER": "auth/too-many-requests - 'Try again later'",
+        "NETWORK_REQUEST_FAILED": "auth/network-request-failed - 'Connection problem'",
     }
     print("     Documented Firebase REST → Firebase JS SDK error.code → friendly UI message mapping:")
     for fb_code, msg in fb_to_friendly.items():

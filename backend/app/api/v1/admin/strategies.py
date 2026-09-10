@@ -79,7 +79,7 @@ def get_strategy_download_url(
 
     Audit-logged. Both admin roles legitimately have cross-tenant access
     to strategy documents (that's the ops role), but every download is
-    recorded so we can answer "who saw what and when" after the fact —
+    recorded so we can answer "who saw what and when" after the fact -
     the classic BREACH-DETECTION-OVER-BREACH-PREVENTION control for
     small-team ops access.
     """

@@ -176,7 +176,7 @@ function FieldInput({
         onChange={(e) => onChange(e.target.value)}
         className={cls}
       >
-        <option value="">— pick —</option>
+        <option value="">- pick -</option>
         {(spec.options ?? []).map((o) => (
           <option key={o} value={o}>{o}</option>
         ))}

@@ -17,7 +17,7 @@
 
 import { FirebaseError } from "firebase/app";
 import { createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
-import { Building2, CheckCircle2, Loader2, Mail, Phone, Sparkles, User as UserIcon } from "lucide-react";
+import { Building2, CheckCircle2, HelpCircle, Loader2, Mail, Phone, User as UserIcon } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { submitSignup } from "../../lib/api";
@@ -120,7 +120,7 @@ export default function SignupPage() {
       try {
         await signOut(auth);
       } catch {
-        /* ignore — worst case the App.tsx listener routes them via /pending */
+        /* ignore - worst case the App.tsx listener routes them via /pending */
       }
       setMe(null);
 
@@ -237,7 +237,7 @@ export default function SignupPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
-                <Sparkles size={12} /> What are you looking for? (optional)
+                <HelpCircle size={12} /> What are you looking for? (optional)
               </label>
               <textarea
                 value={purpose}

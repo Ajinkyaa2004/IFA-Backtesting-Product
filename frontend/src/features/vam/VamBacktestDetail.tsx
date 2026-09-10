@@ -18,15 +18,15 @@ import type { VamPersistedBacktest, VamTradeAction } from "../../lib/api";
 // ── Formatters (lifted from VAM's app.js, ported to TS) ────────────────────
 
 function fmtMoney(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return "$" + Math.round(v).toLocaleString();
 }
 function fmtPct(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
 }
 function fmtNum(v: number | null | undefined, decimals = 2): string {
-  if (v == null || Number.isNaN(v)) return "—";
+  if (v == null || Number.isNaN(v)) return "-";
   return v.toFixed(decimals);
 }
 
@@ -57,7 +57,7 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
     { label: "Calmar", value: fmtNum(calmar, 3) },
     { label: "Max DD", value: fmtPct(m.max_drawdown_pct), tone: "neg", sub: (m as any).max_drawdown_date },
     { label: "Trades", value: String(m.total_trades ?? er.trades?.length ?? 0) },
-    { label: "Period", value: `${m.years ? Math.round(m.years) + "y" : "—"}`, sub: `${(m as any).start_date ?? ""} → ${(m as any).end_date ?? ""}` },
+    { label: "Period", value: `${m.years ? Math.round(m.years) + "y" : "-"}`, sub: `${(m as any).start_date ?? ""} → ${(m as any).end_date ?? ""}` },
   ];
   if (m.alpha_vs_spy_pct !== undefined && m.alpha_vs_spy_pct !== null) {
     cards.push({ label: "Alpha vs SPY", value: fmtPct(m.alpha_vs_spy_pct), tone: alphaPos ? "pos" : "neg" });
@@ -72,7 +72,7 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
         </span>
         {er.cached && (
           <span className="text-xs text-ink-500">
-            (cached on engine side — instant rerun)
+            (cached on engine side - instant rerun)
           </span>
         )}
       </div>
@@ -439,7 +439,7 @@ function Pager({
 }
 
 function formatCell(col: string, v: unknown): string {
-  if (v === null || v === undefined || v === "") return "—";
+  if (v === null || v === undefined || v === "") return "-";
   if (typeof v === "number") {
     if (col.includes("price") || col.includes("dollars") || col.includes("value")) {
       return v.toLocaleString(undefined, { maximumFractionDigits: 2 });

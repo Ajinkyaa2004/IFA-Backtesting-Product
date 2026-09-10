@@ -1,4 +1,4 @@
-"""Admin — pending signup queue.
+"""Admin - pending signup queue.
 
 Sits alongside admin/clients.py. Signups are a separate lifecycle stage:
 a User row exists (created by /auth/signup) with signup_status='pending_approval'
@@ -8,7 +8,7 @@ firing an email.
 
 The approve payload asks for the fields the admin has to decide anyway when
 manually provisioning a client (tier, engagement type). Keeping the picker
-in the approve modal forces intentionality — the admin can't accidentally
+in the approve modal forces intentionality - the admin can't accidentally
 leave a client half-configured.
 """
 

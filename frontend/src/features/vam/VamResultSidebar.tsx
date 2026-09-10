@@ -25,7 +25,7 @@ import {
 import { VamParamForm } from "./VamParamForm";
 
 export interface VamResultSidebarProps {
-  /** The step this result was generated with — used to fetch the right schema. */
+  /** The step this result was generated with - used to fetch the right schema. */
   step: VamStepId | string;
   /** Params from the persisted envelope (engine_response is too big to redo from). */
   initialParams: Record<string, unknown>;
@@ -84,11 +84,11 @@ export default function VamResultSidebar({ step, initialParams }: VamResultSideb
       const ax = (e as { response?: { status?: number; data?: { detail?: unknown } } }).response;
       const status = ax?.status;
       const detail = ax?.data?.detail;
-      if (status === 429) setErr("Rate limit hit — wait a moment before rerunning.");
+      if (status === 429) setErr("Rate limit hit - wait a moment before rerunning.");
       else if (status === 422 && typeof detail === "object" && detail !== null && "violations" in detail) {
         setErr("Engine rejected the parameters. Check ranges.");
       } else if (status === 503) setErr("Engine offline.");
-      else if (status === 502) setErr("Engine error — please retry.");
+      else if (status === 502) setErr("Engine error - please retry.");
       else setErr("Run failed. Try again.");
     } finally {
       setSubmitting(false);

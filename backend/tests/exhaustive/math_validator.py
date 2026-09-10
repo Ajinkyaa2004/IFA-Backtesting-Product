@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = ROOT / "schemas" / "backtest.schema.json"
 STRATEGIES_DIR = Path(__file__).parent / "strategies"
 
-TOLERANCE = 0.05  # 5% relative tolerance — synthetic data isn't perfect floats
+TOLERANCE = 0.05  # 5% relative tolerance - synthetic data isn't perfect floats
 
 
 @dataclass

@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-ink-50 dark:bg-ink-950">
       <div className="w-full max-w-sm bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 overflow-hidden">
-        {/* Admin accent bar — visually distinct from client login */}
+        {/* Admin accent bar - visually distinct from client login */}
         <div className="h-1.5 bg-accent-600" />
 
         <div className="p-8">

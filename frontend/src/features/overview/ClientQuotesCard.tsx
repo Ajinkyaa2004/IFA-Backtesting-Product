@@ -39,7 +39,7 @@ export default function ClientQuotesCard() {
     try {
       if (action === "accept") {
         await acceptQuote(q.id);
-        toast.success("Quote accepted", `${q.code} — IFA will invoice you on Upwork.`);
+        toast.success("Quote accepted", `${q.code} - IFA will invoice you on Upwork.`);
       } else {
         await rejectQuote(q.id);
         toast.success("Quote declined", `${q.code}`);

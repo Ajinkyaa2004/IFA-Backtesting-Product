@@ -1,7 +1,7 @@
 """Selenium smoke test for the LIVE deployment at
 https://backtestingengine.insightfusionanalytics.com.
 
-Designed to be useful even while the upstream Supabase project is paused —
+Designed to be useful even while the upstream Supabase project is paused -
 i.e. when anything DB-dependent (login, /me, list pages, etc.) will return
 500. We test what we CAN verify in that state:
 
@@ -11,7 +11,7 @@ i.e. when anything DB-dependent (login, /me, list pages, etc.) will return
     * a bad-password attempt surfaces a friendly error
     * a good-password attempt hits the backend and surfaces our AuthErrorScreen
       (the "backend unavailable" branch, sweep finding #3) rather than spinning
-      "Loading…" forever — proving the post-fix code is deployed and the 500
+      "Loading…" forever - proving the post-fix code is deployed and the 500
       CORS headers are present (sweep CORS-on-500 fix)
     * https → HTTPS redirect / TLS cert validity
     * Open Graph / SEO meta is present in the served HTML

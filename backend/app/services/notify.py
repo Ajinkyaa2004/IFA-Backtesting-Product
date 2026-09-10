@@ -11,7 +11,7 @@ raises to the caller. Notifications are a nice-to-have signal on top of
 the primary state change, not a hard prerequisite for it.
 
 Callers pass the db.Session so notifications commit inside the same
-transaction as the underlying state change — either both stick or
+transaction as the underlying state change - either both stick or
 neither does. We do NOT commit here.
 """
 
@@ -53,7 +53,7 @@ def fire_for_client(
     """Insert one Notification row per active user of the client.
 
     Returns the number of rows queued. Silently returns 0 on any error.
-    The caller owns the transaction — commit yourself.
+    The caller owns the transaction - commit yourself.
     """
     try:
         users = _client_users(db, client_id)
@@ -114,7 +114,7 @@ def backtest_status_changed(
         db,
         client_id=client_id,
         kind="backtest",
-        title=f"Backtest {code} — now {label}",
+        title=f"Backtest {code} - now {label}",
         body=f"Status moved from '{from_status}' to '{to_status}'.",
         payload={"backtest_id": str(backtest_id), "code": code, "status": to_status},
     )
@@ -127,7 +127,7 @@ def quote_sent(
         db,
         client_id=client_id,
         kind="quote",
-        title=f"Quote {code} — {title_str}",
+        title=f"Quote {code} - {title_str}",
         body=(
             "A new quote is ready for your review. Accept or reject it from "
             "your dashboard's Quotes card."
@@ -150,7 +150,7 @@ def request_status_changed(
         db,
         client_id=client_id,
         kind="request",
-        title=f"Request — {label}",
+        title=f"Request - {label}",
         body=(
             f"Your {request_type.replace('_', ' ')} request moved from "
             f"'{from_status}' to '{to_status}'."

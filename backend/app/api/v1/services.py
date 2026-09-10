@@ -5,7 +5,7 @@ Read-only. Returns the list of active services in sort_order. Consumed by:
   * The admin engagement editor's service dropdown
   * The client dashboard (to render service-appropriate copy)
 
-Kept unauthenticated because it's just a static catalog — no client data.
+Kept unauthenticated because it's just a static catalog - no client data.
 """
 
 from __future__ import annotations

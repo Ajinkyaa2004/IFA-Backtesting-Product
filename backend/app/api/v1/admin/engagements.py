@@ -1,7 +1,7 @@
-"""Admin engagement endpoints — Chirag Item #1.
+"""Admin engagement endpoints - Chirag Item #1.
 
-    GET   /admin/clients/{client_id}/engagement    — read
-    PATCH /admin/clients/{client_id}/engagement    — edit scope + engine +
+    GET   /admin/clients/{client_id}/engagement    - read
+    PATCH /admin/clients/{client_id}/engagement    - edit scope + engine +
                                                     tier + deliverable +
                                                     canonical_strategy_id.
                                                     Scope edit bumps

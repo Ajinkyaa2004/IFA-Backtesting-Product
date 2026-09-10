@@ -27,7 +27,6 @@ import {
   Mail,
   Rocket,
   ShieldCheck,
-  Sparkles,
   Users,
   Zap,
 } from "lucide-react";
@@ -85,23 +84,23 @@ const TIERS = [
 const FEATURES = [
   {
     icon: <Cpu size={22}/>,
-    title: "One contract, many engines",
-    body: "Every engagement declares scope, tier and deliverable up front. The engine your strategy runs on is a first-class object — you always know what version tested what.",
+    title: "Clear scope up front",
+    body: "Every engagement records the tier, the deliverable and the engine your strategy runs on. You always know what version of the code produced which result.",
   },
   {
     icon: <LineChart size={22}/>,
-    title: "Rich, honest reports",
-    body: "Equity curve, drawdown, Sharpe, Sortino, hit-rate, trade log — every result page carries the full picture. PDF export included.",
+    title: "Full reports, not just numbers",
+    body: "Equity curve, drawdown, Sharpe, Sortino, hit rate, per-trade log. Every result page carries the full picture. PDF export included.",
   },
   {
     icon: <ShieldCheck size={22}/>,
-    title: "Holdout enforced",
-    body: "You cannot tune on data reserved for out-of-sample validation. The system trims your date range if you try. That's the guardrail against overfitting.",
+    title: "Holdout is enforced",
+    body: "You cannot tune on data set aside for out-of-sample validation. If your date range overlaps, we trim it. Simple rule against overfitting.",
   },
   {
     icon: <FileCheck2 size={22}/>,
     title: "Every result is auditable",
-    body: "Backtests are versioned, immutable, and tied to a strategy version and engine version. Rerun-with-same-params is one click.",
+    body: "Backtests are versioned and immutable. Each one is linked to a strategy version and engine version. Rerunning with the same params is one click.",
   },
 ];
 
@@ -109,7 +108,7 @@ const STEPS = [
   {
     n: 1,
     title: "Sign the terms",
-    body: "Read and accept IFA's engagement terms — click-signed, timestamped, versioned. If terms are ever updated, you'll be prompted to re-acknowledge.",
+    body: "Read and accept IFA's engagement terms - click-signed, timestamped, versioned. If terms are ever updated, you'll be prompted to re-acknowledge.",
   },
   {
     n: 2,
@@ -164,7 +163,7 @@ const PORTFOLIO: {
     body: "The very platform you're on. Serviced client portal + backtest engine, tier-gated with immutable results, an admin console with audit trail, and a per-engagement quote system.",
     deliverables: [
       "Self-serve signup + admin approval flow",
-      "Locked v1.0 result schema — every backtest reproducible",
+      "Locked v1.0 result schema - every backtest reproducible",
       "Tiered engagements + WhatsApp delivery workflow",
     ],
     tags: ["FastAPI", "React 19", "PostgreSQL", "Firebase Auth"],
@@ -174,7 +173,7 @@ const PORTFOLIO: {
     kind: "vam-engine",
     accent: "from-emerald-500 to-teal-600",
     category: "Live engine",
-    title: "VAM — Volatility Adjusted Momentum",
+    title: "VAM - Volatility Adjusted Momentum",
     body: "Live systematic momentum engine that trades Indian equities. Runs a proprietary volatility-adjusted score and executes with position sizing that scales inversely to realised risk.",
     deliverables: [
       "Real-time signal generation + broker routing",
@@ -189,7 +188,7 @@ const PORTFOLIO: {
     accent: "from-sky-500 to-blue-600",
     category: "Strategy research",
     title: "Swing-trading strategy library",
-    body: "Ready-to-backtest rulebooks — Alligator + Central Pivot Range, Supertrend + Heikin-Ashi + Fractals, RSI mean-reversion — with clear entries, stops, R-multiples, and holding rules for pullback and breakout setups.",
+    body: "Ready-to-backtest rulebooks - Alligator + Central Pivot Range, Supertrend + Heikin-Ashi + Fractals, RSI mean-reversion - with clear entries, stops, R-multiples, and holding rules for pullback and breakout setups.",
     deliverables: [
       "Rulebooks in plain English + code",
       "Three entry-timing models per strategy",
@@ -202,7 +201,7 @@ const PORTFOLIO: {
     accent: "from-amber-500 to-orange-600",
     category: "Analytics",
     title: "Market Pulse dashboard",
-    body: "Live market-breadth and macro dashboard for internal desk use — advance/decline, sector rotation, volatility regime, and open-interest heatmaps rolled up into one view.",
+    body: "Live market-breadth and macro dashboard for internal desk use - advance/decline, sector rotation, volatility regime, and open-interest heatmaps rolled up into one view.",
     deliverables: [
       "Real-time NSE breadth ingestion",
       "Sector rotation + heatmap widgets",
@@ -215,7 +214,7 @@ const PORTFOLIO: {
     accent: "from-fuchsia-500 to-pink-600",
     category: "Custom engagement",
     title: "Bespoke Phase-A universe scanner",
-    body: "Company selection module for a swing-trading engagement — ranks a ₹1k-20k crore universe on 3/6/9-month trends, smoothness, higher-highs consistency and quarterly fundamentals, with every setting exposed for admin tuning.",
+    body: "Company selection module for a swing-trading engagement - ranks a ₹1k-20k crore universe on 3/6/9-month trends, smoothness, higher-highs consistency and quarterly fundamentals, with every setting exposed for admin tuning.",
     deliverables: [
       "Reproducible ranked shortlist per selection date",
       "Adjustable trend + fundamentals filters",
@@ -306,7 +305,7 @@ function PortfolioThumbnail({ kind }: { kind: PortfolioKind }) {
             </linearGradient>
           </defs>
           <rect width="320" height="128" fill="url(#vam-bg)" />
-          {/* Candlesticks — 20 of them, mostly green with a couple red */}
+          {/* Candlesticks - 20 of them, mostly green with a couple red */}
           {(() => {
             const candles = [
               { x: 14,  o: 82, c: 74 }, { x: 24, o: 78, c: 68 }, { x: 34, o: 72, c: 78 },
@@ -435,7 +434,7 @@ function PortfolioThumbnail({ kind }: { kind: PortfolioKind }) {
             </linearGradient>
           </defs>
           <rect width="320" height="128" fill="url(#mp-bg)" />
-          {/* Sector heatmap grid — 8 columns × 4 rows */}
+          {/* Sector heatmap grid - 8 columns × 4 rows */}
           {(() => {
             const cells: { r: number; c: number; a: number }[] = [];
             // deterministic pseudo-random alphas so it always looks the same
@@ -579,7 +578,7 @@ function PortfolioThumbnail({ kind }: { kind: PortfolioKind }) {
 const FAQ = [
   {
     q: "Is this a self-serve SaaS?",
-    a: "No — it's a serviced portal. You give us your strategy, we run backtests for you against an engine our team maintains. The dashboard is where you see results, request changes and manage your engagement.",
+    a: "No - it's a serviced portal. You give us your strategy, we run backtests for you against an engine our team maintains. The dashboard is where you see results, request changes and manage your engagement.",
   },
   {
     q: "What markets and instruments?",
@@ -591,7 +590,7 @@ const FAQ = [
   },
   {
     q: "Do backtests include realistic costs?",
-    a: "Yes — brokerage, STT, exchange fees, slippage model per instrument liquidity band. All disclosed in the report footer.",
+    a: "Yes - brokerage, STT, exchange fees, slippage model per instrument liquidity band. All disclosed in the report footer.",
   },
   {
     q: "Can I run my own params?",
@@ -629,7 +628,7 @@ export default function LandingPage() {
     description: "Client portal for systematic strategy research, backtests, and engine delivery.",
     offers: TIERS.map((t) => ({
       "@type": "Offer",
-      name: `${t.name} — ${t.price}`,
+      name: `${t.name} - ${t.price}`,
       description: t.tagline,
       category: t.code,
     })),
@@ -649,7 +648,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-ink-950 text-ink-900 dark:text-ink-50">
       <SEOHead
-        title="IFA Backtest Engine — Systematic strategy backtests for Indian markets"
+        title="IFA Backtest Engine - Systematic strategy backtests for Indian markets"
         description="Insight Fusion Analytics builds and backtests systematic trading strategies for Indian markets. Client portal for strategy submission, backtest results, and engine delivery."
         path="/"
         robots="index, follow"
@@ -719,14 +718,16 @@ function Hero() {
       />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 md:py-28 text-center">
         <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-medium bg-accent-600/10 text-accent-700 dark:text-accent-300 border border-accent-600/20 mb-6">
-          <Sparkles size={11}/> Systematic strategies · Indian markets
+          <LineChart size={11}/> Custom backtests for Indian equities and derivatives
         </span>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight leading-tight">
-          Backtests that earn a serious operator&rsquo;s trust.
+          Your strategy, backtested by our team.
         </h1>
         <p className="mt-5 text-base sm:text-lg text-ink-600 dark:text-ink-300 max-w-2xl mx-auto leading-relaxed">
-          Insight Fusion Analytics runs a hands-on portal for systematic strategy research and delivery.
-          You bring the idea; we backtest it on a versioned engine, deliver honest reports, and iterate with you.
+          You send us the rulebook. We backtest it on NSE and NFO data,
+          hand back the trade log, equity curve, drawdown, and a PDF
+          report. Every result is versioned so you can compare runs
+          side by side.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
           <a
@@ -757,9 +758,11 @@ function FeatureGrid() {
     <section id="features" className="py-16 sm:py-20 border-t border-ink-100 dark:border-ink-900">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Built like production infrastructure</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">What you get on the platform</h2>
           <p className="mt-3 text-ink-600 dark:text-ink-300">
-            Every part of the workflow — from engagement to engine to results — is versioned, auditable, and honest about its guardrails.
+            Backtest results, strategy history, quotes and delivered
+            reports, in one place. Every result is versioned and tied to
+            the strategy version and engine that produced it.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -783,9 +786,11 @@ function HowItWorks() {
     <section id="how" className="py-16 sm:py-20 bg-ink-50/60 dark:bg-ink-900/40 border-y border-ink-100 dark:border-ink-900">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">How the engagement flows</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">How it works</h2>
           <p className="mt-3 text-ink-600 dark:text-ink-300">
-            Four steps from signature to results. Everything after step 4 is iteration — new backtests, new params, or a new engine altogether.
+            Four steps from sign-up to first result. Everything after
+            that is iteration: new params, a fresh backtest, or a new
+            strategy altogether.
           </p>
         </div>
         <ol className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -961,7 +966,7 @@ function TierSection() {
           ))}
         </div>
         <p className="mt-8 text-center text-xs text-ink-500 dark:text-ink-400">
-          Pricing shared per engagement — Anmol at IFA sends a scope + fee proposal after the discovery call.
+          Pricing shared per engagement - Anmol at IFA sends a scope + fee proposal after the discovery call.
         </p>
       </div>
     </section>
@@ -1066,7 +1071,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8 pt-6 border-t border-ink-100 dark:border-ink-900 flex items-center justify-between text-xs text-ink-500 flex-wrap gap-2">
         <span>© {new Date().getFullYear()} Insight Fusion Analytics. All rights reserved.</span>
         <span className="inline-flex items-center gap-3">
-          <span>Not investment advice — for research purposes only.</span>
+          <span>Not investment advice - for research purposes only.</span>
         </span>
       </div>
     </footer>

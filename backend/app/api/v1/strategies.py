@@ -34,7 +34,7 @@ def _sanitize_filename(raw: str) -> str:
     """Extension-allowlist + character-allowlist filename sanitizer.
 
     Rejects with 400 if the input is untrustworthy. The previous
-    "replace('/','_').replace('..','_')" was too loose — it let through
+    "replace('/','_').replace('..','_')" was too loose - it let through
     null bytes, backslashes on Windows uploads, unicode homoglyphs, and
     dotfiles like ".htaccess". Trust nothing from the client.
     """
@@ -220,7 +220,7 @@ def get_own_strategy_download_url(
 
     Cross-tenant safe: the query filters by client_id from client_scope,
     so a user can only download rows their client owns. Audit-logged so
-    we track who downloaded what and when — matches the discipline of
+    we track who downloaded what and when - matches the discipline of
     the admin download endpoint added in Phase 4.
     """
     row = (

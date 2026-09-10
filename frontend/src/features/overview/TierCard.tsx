@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Sparkles, X, Zap } from "lucide-react";
+import { ArrowRight, Check, Rocket, X, Zap } from "lucide-react";
 import { Card, SectionTitle } from "../../components/ui";
 import type { TierFeatureKey, TierUsage } from "../../lib/api";
 import { useContent } from "../../store/content";
@@ -57,7 +57,7 @@ export default function TierCard({ usage }: { usage: TierUsage }) {
       >
         <span className="inline-flex items-center gap-2">
           <span className="size-6 rounded-md bg-accent-600 text-white flex items-center justify-center">
-            <Sparkles size={12} />
+            <Rocket size={12} />
           </span>
           Your plan · {usage.tier_label}
         </span>

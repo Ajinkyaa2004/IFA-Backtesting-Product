@@ -149,7 +149,7 @@ export default function AdminClientsPage() {
               {rows.map((c) => (
                 <tr key={c.id} className="hover:bg-ink-50/70 dark:hover:bg-ink-800/30 cursor-pointer" onClick={() => setSelected(c)}>
                   <td className="px-5 py-3 font-medium">{c.name}</td>
-                  <td className="px-5 py-3 text-ink-600">{c.primary_contact ?? "—"}</td>
+                  <td className="px-5 py-3 text-ink-600">{c.primary_contact ?? "-"}</td>
                   <td className="px-5 py-3 uppercase tracking-wider text-xs text-ink-500">{c.tier}</td>
                   <td className="px-5 py-3"><Badge status={c.status} dot>{c.status}</Badge></td>
                   <td className="px-5 py-3 text-ink-500 tabular">{new Date(c.created_at).toLocaleDateString()}</td>
@@ -275,7 +275,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
     loadBacktests();
     toast.success(
       `Updated ${succeeded} of ${ids.length}`,
-      failed > 0 ? `${failed} failed — refresh to see current state.` : undefined,
+      failed > 0 ? `${failed} failed - refresh to see current state.` : undefined,
     );
   };
 
@@ -351,11 +351,11 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
         </div>
 
         <div className="p-4 sm:p-6 space-y-5">
-          {/* Engagement editor — Chirag's central primitive. Sits at the
+          {/* Engagement editor - Chirag's central primitive. Sits at the
               top of the drawer because everything else is derived from it. */}
           <EngagementEditor clientId={client.id} />
 
-          {/* Quote composer (meeting 2026-07-09) — per-request pricing.
+          {/* Quote composer (meeting 2026-07-09) - per-request pricing.
               Admin issues; client accepts / rejects on their dashboard. */}
           <QuoteComposer clientId={client.id} />
 
@@ -366,9 +366,9 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
               onChange={(e) => setTier(e.target.value as AdminClient["tier"])}
               className="mt-1 w-full h-9 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
             >
-              <option value="tier1">Tier 1 — Starter</option>
-              <option value="tier2">Tier 2 — Growth</option>
-              <option value="tier3">Tier 3 — Enterprise</option>
+              <option value="tier1">Tier 1 - Starter</option>
+              <option value="tier2">Tier 2 - Growth</option>
+              <option value="tier3">Tier 3 - Enterprise</option>
             </select>
           </div>
 
@@ -384,7 +384,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
             </select>
           </div>
 
-          {/* VAM engine access — separate from tier so we can hand Enterprise
+          {/* VAM engine access - separate from tier so we can hand Enterprise
               features to a Starter client for a demo, or hold VAM back for a
               Growth client whose contract doesn't include it yet. */}
           <div>
@@ -456,7 +456,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
                             value={r.status}
                             onChange={(e) => changeStatus(e.target.value as ClientRequestStatus)}
                             className="ml-auto h-6 px-1.5 text-[11px] rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
-                            title="Change status — client is notified automatically"
+                            title="Change status - client is notified automatically"
                           >
                             <option value="open">Open</option>
                             <option value="in_review">In review</option>
@@ -501,7 +501,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
                         )}
                       </div>
                       <div className="text-[11px] text-ink-500 tabular">
-                        v{s.version} · {s.size_bytes ? `${(s.size_bytes / 1024).toFixed(0)} KB` : "—"} · {new Date(s.uploaded_at).toLocaleDateString()}
+                        v{s.version} · {s.size_bytes ? `${(s.size_bytes / 1024).toFixed(0)} KB` : "-"} · {new Date(s.uploaded_at).toLocaleDateString()}
                       </div>
                       <div className="text-[10px] text-ink-400 font-mono truncate" title={s.checksum ?? ""}>
                         {s.checksum ? `sha256:${s.checksum.slice(0, 16)}…` : "checksum pending"}
@@ -610,7 +610,7 @@ function ClientDrawer({ client, onClose }: { client: AdminClient; onClose: () =>
             )}
           </div>
 
-          {/* Activity timeline — chronological event stream so support can see
+          {/* Activity timeline - chronological event stream so support can see
               exactly what this client + admin have done, sourced from audit_log */}
           <div className="pt-2 border-t border-ink-100 dark:border-ink-800">
             <div className="text-xs font-medium text-ink-600 dark:text-ink-300 mb-2 flex items-center gap-1.5">
@@ -699,7 +699,7 @@ function ImpersonateCta({ client, onDone }: { client: AdminClient; onDone: () =>
             </div>
             <div className="text-[11px] text-ink-500 dark:text-ink-400 mt-0.5">
               Loads their dashboard so you can reproduce what they're seeing.
-              Read-only — every write is blocked. Audit-logged.
+              Read-only - every write is blocked. Audit-logged.
             </div>
           </div>
           <button
@@ -769,9 +769,9 @@ function CreateClientModal({ onClose }: { onClose: () => void }) {
         </Field>
         <Field label="Tier">
           <select value={tier} onChange={(e) => setTier(e.target.value as AdminClient["tier"])} className="h-9 w-full px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950">
-            <option value="tier1">Tier 1 — Starter</option>
-            <option value="tier2">Tier 2 — Growth</option>
-            <option value="tier3">Tier 3 — Enterprise</option>
+            <option value="tier1">Tier 1 - Starter</option>
+            <option value="tier2">Tier 2 - Growth</option>
+            <option value="tier3">Tier 3 - Enterprise</option>
           </select>
         </Field>
         <Field label="User email" full>

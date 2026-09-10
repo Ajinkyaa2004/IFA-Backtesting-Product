@@ -127,7 +127,7 @@ export default function LoginPage() {
               />
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                  Signup received — you're on the list
+                  Signup received - you're on the list
                 </div>
                 <div className="mt-1 text-xs text-emerald-800/90 dark:text-emerald-200/80 leading-relaxed">
                   Our team is reviewing your request and will get back to you
@@ -141,7 +141,7 @@ export default function LoginPage() {
                       for the approval email.
                     </>
                   ) : (
-                    " Check your inbox — we'll email you the moment access is unlocked."
+                    " Check your inbox - we'll email you the moment access is unlocked."
                   )}
                   {" "}Come back and sign in below once you receive it.
                 </div>

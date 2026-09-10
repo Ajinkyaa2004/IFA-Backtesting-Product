@@ -8,7 +8,7 @@ A signed-in client can:
 
 Authorisation: all routes use the existing client_scope dependency, which
 returns the caller's client_id (UUID) and rejects admins / unscoped users.
-The endpoint server-side pins the client to that ID — clients CAN'T target
+The endpoint server-side pins the client to that ID - clients CAN'T target
 another client's account even by forging the body.
 
 Rate limiting: per-client in-memory sliding window. Defaults to 5 runs/min/client.

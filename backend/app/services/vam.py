@@ -6,7 +6,7 @@ in-process and refreshed lazily.
 
 Threading model: a single `asyncio.Lock` guards the login flow so concurrent
 requests can't trigger multiple parallel logins. Reads of the cached token
-itself are atomic Python dict assignments — no lock needed on the hot path.
+itself are atomic Python dict assignments - no lock needed on the hot path.
 
 Failure modes (all surfaced as VAMError subclasses):
   * VAMConfigError   — VAM_ADMIN_EMAIL / VAM_ADMIN_PASSWORD not set
@@ -16,7 +16,7 @@ Failure modes (all surfaced as VAMError subclasses):
 
 The client retries ONCE on a 401 (assumes our cached token expired) by forcing
 a re-login. A second 401 raises VAMAuthError so the caller can surface "engine
-auth failed — check VAM_ADMIN_PASSWORD".
+auth failed - check VAM_ADMIN_PASSWORD".
 """
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def _should_retry(status_code: int | None, attempt: int, max_attempts: int) -> b
     if attempt + 1 >= max_attempts:
         return False
     if status_code is None:
-        return True  # transport error / connection reset — always retry
+        return True  # transport error / connection reset - always retry
     if 500 <= status_code < 600 and status_code not in (501, 505):
         return True
     return False
@@ -189,7 +189,7 @@ class VAMClient:
             body_preview = resp.text[:200]
             logger.warning("VAM login returned {}: {}", resp.status_code, body_preview)
             raise VAMAuthError(
-                f"VAM login failed: HTTP {resp.status_code} — check VAM_ADMIN_EMAIL/PASSWORD"
+                f"VAM login failed: HTTP {resp.status_code} - check VAM_ADMIN_EMAIL/PASSWORD"
             )
 
         data = resp.json()
@@ -266,7 +266,7 @@ class VAMClient:
                     if _should_retry(None, attempt, self._MAX_ATTEMPTS):
                         wait = _backoff_seconds(attempt)
                         logger.warning(
-                            "VAM transport error on {} {} attempt {}/{} — retrying in {:.2f}s: {}",
+                            "VAM transport error on {} {} attempt {}/{} - retrying in {:.2f}s: {}",
                             method, path, attempt + 1, self._MAX_ATTEMPTS, wait, e,
                         )
                         await asyncio.sleep(wait)
@@ -277,13 +277,13 @@ class VAMClient:
 
                 # 401 → force re-login and retry ONCE (breaker doesn't count this).
                 if resp.status_code == 401 and not _is_retry:
-                    logger.info("VAM returned 401 on {} {} — forcing re-login + retry", method, path)
+                    logger.info("VAM returned 401 on {} {} - forcing re-login + retry", method, path)
                     self._token = None
                     self._token_expires_at = 0.0
                     return await self._request(method, path, json=json, timeout=timeout, _is_retry=True)
 
                 if resp.status_code == 401:
-                    _cb.record_success()  # 401 isn't an upstream fault — engine responded
+                    _cb.record_success()  # 401 isn't an upstream fault - engine responded
                     raise VAMAuthError("VAM rejected our token even after re-login")
 
                 if resp.status_code == 422:
@@ -345,30 +345,30 @@ class VAMClient:
     # ---- Public API ----
 
     async def list_strategies(self) -> list[dict]:
-        """GET /api/strategies — list of {id, name, implemented}."""
+        """GET /api/strategies - list of {id, name, implemented}."""
         return await self._request("GET", "/api/strategies")
 
     async def get_step_schema(self, step_id: str) -> dict:
-        """GET /api/strategies/{step_id}/schema — parameter schema for one step."""
+        """GET /api/strategies/{step_id}/schema - parameter schema for one step."""
         return await self._request("GET", f"/api/strategies/{step_id}/schema")
 
     async def list_symbols(self) -> list[dict]:
-        """GET /api/data/symbols — minimal {symbol, start, end} per available symbol."""
+        """GET /api/data/symbols - minimal {symbol, start, end} per available symbol."""
         return await self._request("GET", "/api/data/symbols")
 
     async def get_data_info(self) -> dict:
-        """GET /api/data/info — full per-symbol lineage for the Data Sources modal."""
+        """GET /api/data/info - full per-symbol lineage for the Data Sources modal."""
         return await self._request("GET", "/api/data/info")
 
     async def get_profile(self) -> dict:
-        """GET /api/auth/profile — VAM-side profile (the IFA admin account).
+        """GET /api/auth/profile - VAM-side profile (the IFA admin account).
 
         Useful as a debug probe / health badge: 200 here means our token works.
         """
         return await self._request("GET", "/api/auth/profile")
 
     async def run_backtest(self, params: dict) -> dict:
-        """POST /api/backtest/run — the engine. params must include `step`.
+        """POST /api/backtest/run - the engine. params must include `step`.
 
         Returns the full VAM response: {cached, metrics, trades, chart_data}.
         Use the longer backtest timeout because runs can take 10-30s.

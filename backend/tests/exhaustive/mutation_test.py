@@ -157,10 +157,10 @@ def main() -> int:
         elif (not m.should_fail) and (not rejected):
             print(f"  ✅ correctly ACCEPTED  : {m.name}")
         elif m.should_fail and not rejected:
-            print(f"  ❌ FALSE NEGATIVE     : {m.name}  (schema is too permissive — should have rejected)")
+            print(f"  ❌ FALSE NEGATIVE     : {m.name}  (schema is too permissive - should have rejected)")
             bugs += 1
         else:
-            print(f"  ❌ FALSE POSITIVE     : {m.name}  (schema is too strict — should have accepted)")
+            print(f"  ❌ FALSE POSITIVE     : {m.name}  (schema is too strict - should have accepted)")
             print(f"      first error: {errors[0].message}")
             bugs += 1
 

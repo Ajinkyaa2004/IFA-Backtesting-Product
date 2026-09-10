@@ -3,7 +3,7 @@
 - 0 trades (empty)
 - all-winners (30 trades)
 - all-losers (30 trades)
-- large (1000 trades) — verify perf
+- large (1000 trades) - verify perf
 - payload size approaching 25MB cap
 
 Plus: verify each renders without divide-by-zero or NaN in the dashboard.
@@ -110,7 +110,7 @@ def main() -> int:
     bt = json.loads((STRATEGIES_DIR / "BT-SYN-EDGE-allwins.json").read_text())
     bt["backtest_id"] = f"BT-EDGE-allwins-{int(time.time())}"
     n_losers_in_data = sum(1 for t in bt["trades"] if t["pnl"]["net"] < 0)
-    print(f"  source had {n_losers_in_data} losers (synthetic gen may bleed) — upload anyway")
+    print(f"  source had {n_losers_in_data} losers (synthetic gen may bleed) - upload anyway")
     code, info = upload(admin_t, client_id, bt)
     print(f"  status={code} t={info['elapsed']}s")
     (passes if code == 201 else fails).append(f"all-wins upload (status={code})")
@@ -119,7 +119,7 @@ def main() -> int:
     bt = json.loads((STRATEGIES_DIR / "BT-SYN-EDGE-alllosses.json").read_text())
     bt["backtest_id"] = f"BT-EDGE-alllosses-{int(time.time())}"
     n_winners = sum(1 for t in bt["trades"] if t["pnl"]["net"] > 0)
-    print(f"  source had {n_winners} winners (synthetic gen) — upload anyway")
+    print(f"  source had {n_winners} winners (synthetic gen) - upload anyway")
     code, info = upload(admin_t, client_id, bt)
     print(f"  status={code} t={info['elapsed']}s")
     (passes if code == 201 else fails).append(f"all-losses upload (status={code})")
@@ -178,13 +178,13 @@ def main() -> int:
             passes.append("422 rejection")
         elif r.status_code == 500:
             print(f"  ❌ Server 500 on big upload (bad!) t={elapsed}s")
-            fails.append("500 on oversized upload — should be 413")
+            fails.append("500 on oversized upload - should be 413")
         else:
             print(f"  ?? Unexpected status {r.status_code} t={elapsed}s")
             passes.append(f"oversized upload status={r.status_code}")
     except Exception as e:
         print(f"  ⚠ Connection error on big upload (likely Nginx/uvicorn body limit): {type(e).__name__}")
-        passes.append("oversized upload — connection-level rejection")
+        passes.append("oversized upload - connection-level rejection")
 
     print("\n─── EDGE CASE: duplicate code ───")
     bt = json.loads((STRATEGIES_DIR / "BT-SYN-EDGE-1trade.json").read_text())

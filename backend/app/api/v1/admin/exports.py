@@ -1,9 +1,9 @@
-"""Admin CSV export endpoints — Phase 4.6 Day 9.
+"""Admin CSV export endpoints - Phase 4.6 Day 9.
 
 Three endpoints that stream CSV downloads for common ops needs:
-  GET /admin/exports/clients.csv    — all clients + tier + created + status
-  GET /admin/exports/audit.csv      — full audit log (filterable)
-  GET /admin/exports/backtests.csv  — all backtests across clients
+  GET /admin/exports/clients.csv    - all clients + tier + created + status
+  GET /admin/exports/audit.csv      - full audit log (filterable)
+  GET /admin/exports/backtests.csv  - all backtests across clients
 
 Each endpoint audit-logs the export itself (with a row count) so we can
 see 'who took what data off the platform when' after the fact.
@@ -34,7 +34,7 @@ router = APIRouter()
 def _csv_response(filename: str, rows_iter):
     """Wrap an iterator of dict rows into a streaming CSV response.
 
-    First-row keys become the header. Everything is str()'d — cells with
+    First-row keys become the header. Everything is str()'d - cells with
     comma/quote/newline are escaped by csv.writer per RFC 4180.
     """
     def _generate():

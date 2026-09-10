@@ -1,10 +1,10 @@
 """Client-facing engagement endpoints.
 
-    POST /engagement/re-ack   — record the caller acknowledging the current
+    POST /engagement/re-ack   - record the caller acknowledging the current
                                 scope_version. együtt clears the re-ack banner
                                 on their next /me call.
 
-Client-facing GET is folded into /me — see me.py for the summary shape.
+Client-facing GET is folded into /me - see me.py for the summary shape.
 """
 
 from __future__ import annotations

@@ -51,7 +51,7 @@ def verify_id_token(id_token: str) -> dict:
 
     Returns the decoded claims dict on success. On failure raises ``TokenError``
     with a short, opaque ``reason`` code. Internal exception details are logged
-    server-side only — never propagated to the client.
+    server-side only - never propagated to the client.
     """
     if not _initialised:
         init_firebase()

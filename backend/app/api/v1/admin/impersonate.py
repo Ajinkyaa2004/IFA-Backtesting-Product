@@ -1,4 +1,4 @@
-"""Admin impersonation endpoints — Phase 4.5 Day 4.
+"""Admin impersonation endpoints - Phase 4.5 Day 4.
 
 Two thin endpoints that bracket a support session. The actual impersonation
 happens client-side (the admin's frontend sends an X-Impersonate-Client-Id
@@ -92,7 +92,7 @@ def exit_impersonation(
 ):
     """Audit-log the end of an impersonation session.
 
-    Deliberately not 404 if the client no longer exists — we still want a
+    Deliberately not 404 if the client no longer exists - we still want a
     clean stop record, even if the client was hard-deleted between start
     and end (unlikely but possible during a soft-delete-then-purge flow).
     """

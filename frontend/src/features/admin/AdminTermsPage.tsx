@@ -9,7 +9,7 @@ type TermsRow = { id: string; version: string; body: string; clauses: Clause[]; 
 export default function AdminTermsPage() {
   const [history, setHistory] = useState<TermsRow[]>([]);
   const [version, setVersion] = useState("");
-  const [body, setBody] = useState("IFA Backtest Engine — Engagement Terms");
+  const [body, setBody] = useState("IFA Backtest Engine - Engagement Terms");
   const [clauses, setClauses] = useState<Clause[]>([
     { id: "c1", title: "", body: "", required: true },
   ]);
