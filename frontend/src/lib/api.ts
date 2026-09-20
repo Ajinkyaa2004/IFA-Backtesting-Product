@@ -225,12 +225,40 @@ export async function fetchServices(): Promise<Service[]> {
 // ── Quotes (meeting 2026-07-09) ────────────────────────────────
 export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
 
+/** One revision of the proposal document on a quote (what the client sees). */
+export type QuoteFile = {
+  id: string;
+  revision: number;        // 1-based, per quote, newest = highest
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  checksum: string;        // sha256 hex
+  note: string | null;     // "what changed" message from IFA
+  sent_at: string;
+};
+
+/** Admin view: also includes the unsent working copy (revision null). */
+export type QuoteFileAdmin = Omit<QuoteFile, "revision" | "sent_at"> & {
+  revision: number | null;
+  is_working_copy: boolean;
+  uploaded_by_email: string | null;
+  sent_at: string | null;
+  created_at: string;
+};
+
+/** New quotes default to USD; INR stays selectable. Old quotes are INR. */
+export type QuoteCurrency = "USD" | "INR";
+export const DEFAULT_QUOTE_CURRENCY: QuoteCurrency = "USD";
+
 export type Quote = {
   id: string;
   code: string;
   title: string;
   description: string | null;
-  amount_inr: number;      // in PAISE, divide by 100 for display
+  // Minor units (cents / paise) of `currency`; divide by 100 for display, or
+  // use formatMoney(). The "_inr" is a legacy name from when quotes were
+  // INR-only, kept so the API contract did not change.
+  amount_inr: number;
   currency: string;
   status: QuoteStatus;
   service_code: string | null;
@@ -239,10 +267,12 @@ export type Quote = {
   valid_until: string | null;
   accepted_at: string | null;
   rejected_at: string | null;
+  files: QuoteFile[];      // newest revision first; sent revisions only
   created_at: string;
 };
 
-export type QuoteAdmin = Quote & {
+export type QuoteAdmin = Omit<Quote, "files"> & {
+  files: QuoteFileAdmin[]; // working copy first (if any), then newest revision first
   client_id: string;
   client_name: string | null;
   service_id: string | null;
@@ -255,9 +285,21 @@ export async function fetchMyQuotes(): Promise<Quote[]> {
   return r.data;
 }
 
-export async function acceptQuote(id: string): Promise<Quote> {
-  const r = await api.post<Quote>(`/quotes/${id}/accept`);
+/**
+ * `revision` is the proposal revision the client is looking at (0 when no
+ * file is shown). The server refuses with 409 if a newer one has been sent,
+ * so nobody accepts a proposal they haven't seen.
+ */
+export async function acceptQuote(id: string, revision?: number): Promise<Quote> {
+  const r = await api.post<Quote>(`/quotes/${id}/accept`, revision === undefined ? undefined : { revision });
   return r.data;
+}
+
+export async function getQuoteFileDownloadUrl(quoteId: string, fileId: string): Promise<string> {
+  const r = await api.get<{ signed_url: string; expires_in: number }>(
+    `/quotes/${quoteId}/files/${fileId}/download-url`
+  );
+  return r.data.signed_url;
 }
 
 export async function rejectQuote(id: string, reason?: string): Promise<Quote> {
@@ -274,7 +316,8 @@ export async function createQuoteForClient(clientId: string, payload: {
   service_id?: string | null;
   title: string;
   description?: string | null;
-  amount_inr: number;
+  amount_inr: number;      // minor units of `currency`
+  currency?: QuoteCurrency; // omit for the server default (USD)
   valid_until?: string | null;
   notes?: string | null;
 }): Promise<QuoteAdmin> {
@@ -285,6 +328,26 @@ export async function createQuoteForClient(clientId: string, payload: {
 export async function sendQuote(quoteId: string): Promise<QuoteAdmin> {
   const r = await api.post<QuoteAdmin>(`/admin/quotes/${quoteId}/send`);
   return r.data;
+}
+
+/**
+ * Attach a proposal file. On a draft quote it becomes the internal working
+ * copy; on a sent quote it becomes the next revision and the client is
+ * notified. Frozen (409) once the quote is accepted / rejected / expired.
+ */
+export async function uploadQuoteFile(quoteId: string, file: File, note?: string): Promise<QuoteFileAdmin> {
+  const form = new FormData();
+  form.append("file", file);
+  if (note && note.trim()) form.append("note", note.trim());
+  const r = await api.post<QuoteFileAdmin>(`/admin/quotes/${quoteId}/files`, form);
+  return r.data;
+}
+
+export async function getAdminQuoteFileDownloadUrl(fileId: string): Promise<string> {
+  const r = await api.get<{ signed_url: string; expires_in: number }>(
+    `/admin/quote-files/${fileId}/download-url`
+  );
+  return r.data.signed_url;
 }
 
 export async function patchQuote(quoteId: string, patch: Partial<QuoteAdmin>): Promise<QuoteAdmin> {
@@ -354,6 +417,12 @@ export async function markEngineIsolationPassed(id: string, notes: string): Prom
 export async function transitionEngineStatus(id: string, new_status: EngineStatus): Promise<Engine> {
   const r = await api.post<Engine>(`/admin/engines/${id}/status`, { new_status });
   return r.data;
+}
+
+/** The FastAPI `detail` string from a failed request, or `fallback`. */
+export function errorDetail(err: unknown, fallback: string): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  return typeof detail === "string" && detail ? detail : fallback;
 }
 
 // Tier-gate error shape returned by the backend as HTTPException detail.

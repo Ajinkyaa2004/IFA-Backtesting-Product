@@ -19,7 +19,9 @@ from sqlalchemy.orm import Session
 from app.core.deps import require_role
 from app.db.models import Client, Quote, Service, User
 from app.db.session import get_db
-from app.services import audit, notify
+from app.db.models.quote import DEFAULT_QUOTE_CURRENCY, QuoteCurrency
+from app.services import audit, notify, quote_files
+from app.services.quote_files import QuoteFileAdminOut
 
 router = APIRouter()
 
@@ -42,6 +44,7 @@ class QuoteAdminOut(BaseModel):
     accepted_at: datetime | None
     rejected_at: datetime | None
     notes: str | None
+    files: list[QuoteFileAdminOut]
     created_at: datetime
     updated_at: datetime
 
@@ -51,6 +54,8 @@ class QuoteCreateIn(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     description: str | None = None
     amount_inr: int = Field(..., ge=0)
+    """Minor units of `currency` (paise / cents)."""
+    currency: QuoteCurrency = DEFAULT_QUOTE_CURRENCY
     valid_until: datetime | None = None
     notes: str | None = None
 
@@ -65,7 +70,12 @@ class QuotePatchIn(BaseModel):
     notes: str | None = None
 
 
-def _to_out(q: Quote, client: Client | None, service: Service | None) -> QuoteAdminOut:
+def _to_out(
+    q: Quote,
+    client: Client | None,
+    service: Service | None,
+    files: list[QuoteFileAdminOut],
+) -> QuoteAdminOut:
     return QuoteAdminOut(
         id=str(q.id),
         code=q.code,
@@ -84,6 +94,7 @@ def _to_out(q: Quote, client: Client | None, service: Service | None) -> QuoteAd
         accepted_at=q.accepted_at,
         rejected_at=q.rejected_at,
         notes=q.notes,
+        files=files,
         created_at=q.created_at,
         updated_at=q.updated_at,
     )
@@ -95,6 +106,10 @@ def _next_quote_code(db: Session) -> str:
         func.extract("year", Quote.created_at) == year
     ).scalar() or 0
     return f"QT-{year}-{count + 1:04d}"
+
+
+def _files_for(db: Session, q: Quote) -> list[QuoteFileAdminOut]:
+    return quote_files.admin_files(db, [q.id])[q.id]
 
 
 @router.get("/clients/{client_id}/quotes", response_model=list[QuoteAdminOut])
@@ -111,7 +126,8 @@ def list_quotes_for_client(
         .order_by(Quote.created_at.desc())
         .all()
     )
-    return [_to_out(q, c, s) for q, c, s in rows]
+    files = quote_files.admin_files(db, [q.id for q, _, _ in rows])
+    return [_to_out(q, c, s, files[q.id]) for q, c, s in rows]
 
 
 @router.post("/clients/{client_id}/quotes", response_model=QuoteAdminOut, status_code=201)
@@ -138,7 +154,7 @@ def create_quote(
         title=payload.title,
         description=payload.description,
         amount_inr=payload.amount_inr,
-        currency="INR",
+        currency=payload.currency,
         status="draft",
         valid_until=payload.valid_until,
         notes=payload.notes,
@@ -148,12 +164,12 @@ def create_quote(
     audit.record(
         db, actor_user_id=admin.id, action="quote.create",
         target_type="quote", target_id=q.id,
-        payload={"client_id": str(client_id), "code": q.code, "amount_inr": q.amount_inr, "service_id": payload.service_id},
+        payload={"client_id": str(client_id), "code": q.code, "amount_inr": q.amount_inr, "currency": q.currency, "service_id": payload.service_id},
         ip=request.client.host if request.client else None,
     )
     db.commit()
     db.refresh(q)
-    return _to_out(q, client, service)
+    return _to_out(q, client, service, [])
 
 
 @router.patch("/quotes/{quote_id}", response_model=QuoteAdminOut)
@@ -164,16 +180,17 @@ def patch_quote(
     admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Quote).filter(Quote.id == quote_id).first()
+    # Row lock: serialises against a concurrent proposal upload / client accept.
+    q = db.query(Quote).filter(Quote.id == quote_id).with_for_update().first()
     if not q:
         raise HTTPException(status_code=404, detail="Quote not found")
     changes = payload.model_dump(exclude_none=True)
     if not changes:
         client = db.query(Client).filter(Client.id == q.client_id).first()
         service = db.query(Service).filter(Service.id == q.service_id).first() if q.service_id else None
-        return _to_out(q, client, service)
+        return _to_out(q, client, service, _files_for(db, q))
 
-    before = {"status": q.status, "amount_inr": q.amount_inr, "title": q.title}
+    before = {"status": q.status, "amount_inr": q.amount_inr, "currency": q.currency, "title": q.title}
 
     for k, v in changes.items():
         if k == "service_id":
@@ -181,6 +198,7 @@ def patch_quote(
         elif k == "status" and v == "sent" and q.status == "draft":
             q.status = "sent"
             q.sent_at = datetime.utcnow()
+            quote_files.publish_working_copy(db, q)
         else:
             setattr(q, k, v)
 
@@ -194,7 +212,7 @@ def patch_quote(
     db.refresh(q)
     client = db.query(Client).filter(Client.id == q.client_id).first()
     service = db.query(Service).filter(Service.id == q.service_id).first() if q.service_id else None
-    return _to_out(q, client, service)
+    return _to_out(q, client, service, _files_for(db, q))
 
 
 @router.post("/quotes/{quote_id}/send", response_model=QuoteAdminOut)
@@ -204,17 +222,25 @@ def send_quote(
     admin: User = Depends(require_role("main_admin")),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Quote).filter(Quote.id == quote_id).first()
+    q = db.query(Quote).filter(Quote.id == quote_id).with_for_update().first()
     if not q:
         raise HTTPException(status_code=404, detail="Quote not found")
     if q.status != "draft":
         raise HTTPException(status_code=409, detail=f"Only drafts can be sent (this is '{q.status}')")
     q.status = "sent"
     q.sent_at = datetime.utcnow()
+    # The draft's working copy (if any) goes out as the next revision.
+    sent_file = quote_files.publish_working_copy(db, q)
     audit.record(
         db, actor_user_id=admin.id, action="quote.send",
         target_type="quote", target_id=q.id,
-        payload={"code": q.code, "amount_inr": q.amount_inr},
+        payload={
+            "code": q.code,
+            "amount_inr": q.amount_inr,
+            "currency": q.currency,
+            "revision": sent_file.revision if sent_file else None,
+            "filename": sent_file.filename if sent_file else None,
+        },
         ip=request.client.host if request.client else None,
     )
     # Notify the client — same transaction so the state flip and the
@@ -226,4 +252,4 @@ def send_quote(
     db.refresh(q)
     client = db.query(Client).filter(Client.id == q.client_id).first()
     service = db.query(Service).filter(Service.id == q.service_id).first() if q.service_id else None
-    return _to_out(q, client, service)
+    return _to_out(q, client, service, _files_for(db, q))

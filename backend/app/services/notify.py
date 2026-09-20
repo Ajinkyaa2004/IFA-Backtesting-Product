@@ -136,6 +136,32 @@ def quote_sent(
     )
 
 
+def quote_revised(
+    db: Session,
+    *,
+    client_id: uuid.UUID,
+    quote_id: uuid.UUID,
+    code: str,
+    title_str: str,
+    revision: int,
+    note: str | None,
+) -> None:
+    body = (
+        f"IFA uploaded revision {revision} of the proposal for \"{title_str}\". "
+        "Open the Quotes card on your dashboard to review it before accepting."
+    )
+    if note:
+        body += f" What changed: {note}"
+    fire_for_client(
+        db,
+        client_id=client_id,
+        kind="quote",
+        title=f"Quote {code} - proposal updated (revision {revision})",
+        body=body,
+        payload={"quote_id": str(quote_id), "code": code, "revision": revision},
+    )
+
+
 def request_status_changed(
     db: Session,
     *,

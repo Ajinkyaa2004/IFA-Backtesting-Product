@@ -11,20 +11,28 @@ Status lifecycle:
     accepted / rejected → terminal states
     expired → auto-flipped when valid_until passes without decision
 
-Amount is stored in PAISE (₹ × 100) as an integer to avoid float drift
-on money values. Frontend divides by 100 for display.
+Amount is stored in MINOR units of the quote's `currency` (paise for INR,
+cents for USD) as an integer to avoid float drift on money values. Frontend
+divides by 100 for display. New quotes default to USD; INR stays selectable.
+Both currencies have 100 minor units per major unit, which is why the set is
+restricted (a currency like JPY or KWD would need different maths).
 """
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal, get_args
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPKMixin
+
+QuoteCurrency = Literal["USD", "INR"]
+QUOTE_CURRENCIES: tuple[str, ...] = get_args(QuoteCurrency)
+DEFAULT_QUOTE_CURRENCY: QuoteCurrency = "USD"
 
 
 class Quote(UUIDPKMixin, TimestampMixin, Base):
@@ -54,10 +62,16 @@ class Quote(UUIDPKMixin, TimestampMixin, Base):
     """What the client is buying - scope, deliverables, timeline."""
 
     amount_inr: Mapped[int] = mapped_column(Integer, nullable=False)
-    """Amount in PAISE (₹ × 100). Store as int to avoid float rounding.
-    Frontend divides by 100 for display. e.g. 5000000 = ₹50,000."""
+    """Amount in MINOR units of `currency` (paise / cents), stored as an int to
+    avoid float rounding. Frontend divides by 100 for display. The column name
+    is a leftover from when quotes were INR-only; it was kept so the API field
+    did not change under deployed clients. e.g. 5000000 = ₹50,000 when
+    currency is INR, $50,000 when USD."""
 
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
+    currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, default=DEFAULT_QUOTE_CURRENCY
+    )
+    """USD or INR. Rows created before USD became the default stay INR."""
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
     """draft | sent | accepted | rejected | expired."""
@@ -80,5 +94,9 @@ class Quote(UUIDPKMixin, TimestampMixin, Base):
         CheckConstraint(
             "amount_inr >= 0",
             name="quote_amount_nonnegative",
+        ),
+        CheckConstraint(
+            "currency IN (" + ",".join(f"'{c}'" for c in QUOTE_CURRENCIES) + ")",
+            name="quote_currency_valid",
         ),
     )
