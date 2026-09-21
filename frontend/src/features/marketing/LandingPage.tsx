@@ -282,7 +282,7 @@ function Hero() {
           Your strategy, backtested by our team.
         </h1>
         <p className="mt-5 text-base sm:text-lg text-ink-600 dark:text-ink-300 max-w-2xl mx-auto leading-relaxed">
-          You send us the rulebook. We backtest it on NSE and NFO data,
+          You send us the rulebook. We backtest it on the market data,
           hand back the trade log, equity curve, drawdown, and a PDF
           report. Every result is versioned so you can compare runs
           side by side.
