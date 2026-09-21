@@ -17,7 +17,7 @@ from app.core.security import init_firebase
 
 settings = get_settings()
 
-# Sentry — only initialises when SENTRY_DSN_BACKEND is set. Absence is a
+# Sentry - only initialises when SENTRY_DSN_BACKEND is set. Absence is a
 # no-op so local dev / self-hosted deploys without an observability plan
 # don't pay a cost. sample rates deliberately low; upstream traffic on this
 # service is currently small enough that 100% would just be noise.
@@ -67,7 +67,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiter wiring — limiter itself lives in app.core.rate_limit so
+# Rate limiter wiring - limiter itself lives in app.core.rate_limit so
 # routers can @limiter.limit(...) without importing app.main (circular).
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -107,8 +107,36 @@ def _cors_headers_for(request: Request) -> dict[str, str]:
 async def _unhandled_exception(request: Request, exc: Exception):
     """Catch-all so a server bug never leaks a stack trace to the client.
     The traceback is still logged. CORS headers are added manually so the
-    browser surfaces the actual 500, not a confusing CORS error."""
+    browser surfaces the actual 500, not a confusing CORS error.
+
+    Also fires an ops alert email so we notice bugs users hit before they
+    ping us on WhatsApp. Alerts.send_exception_alert dedupes on
+    (exception_class, endpoint) for 15 min so a hot loop doesn't spam.
+    """
     logger.exception("Unhandled exception on {} {}", request.method, request.url.path)
+
+    # Best-effort alert. The alerter catches its own errors internally
+    # so a broken SMTP path cannot break the request path.
+    try:
+        from app.services.alerts import send_exception_alert
+        # Try to identify the requester (best-effort; state may not be set).
+        user_email = None
+        client_id = None
+        state_user = getattr(request.state, "user", None)
+        if state_user is not None:
+            user_email = getattr(state_user, "email", None)
+            client_id = str(getattr(state_user, "client_id", "") or "") or None
+        send_exception_alert(
+            exc,
+            request_path=str(request.url.path),
+            request_method=request.method,
+            user_email=user_email,
+            client_id=client_id,
+        )
+    except Exception:
+        # NEVER let the alerter's failure change the response.
+        logger.exception("Alert emission failed (non-fatal)")
+
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

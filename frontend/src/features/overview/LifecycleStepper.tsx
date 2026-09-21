@@ -5,16 +5,16 @@ import { Card } from "../../components/ui";
 import type { EngagementSummary, TierFeatureKey } from "../../lib/api";
 
 /**
- * Client lifecycle stepper — Chirag Section 6. Derived view, not a stored
+ * Client lifecycle stepper - Chirag Section 6. Derived view, not a stored
  * field. Pinned at the top of the client Overview, above the scope panel.
  *
  * 6 steps (4 for manual engagements):
- *   1. Set up               — engagement exists
- *   2. Terms signed         — accepted_tnc_version_id set
- *   3. Strategy received    — canonical_strategy_id set
- *   4. Engine ready         — engine_status = 'live'   (hidden for manual)
- *   5. First backtest       — has_completed_backtest
- *   6. Tuning unlocked      — engine live AND tier has 'vam_engine' feature
+ *   1. Set up               - engagement exists
+ *   2. Terms signed         - accepted_tnc_version_id set
+ *   3. Strategy received    - canonical_strategy_id set
+ *   4. Engine ready         - engine_status = 'live'   (hidden for manual)
+ *   5. First backtest       - has_completed_backtest
+ *   6. Tuning unlocked      - engine live AND tier has 'vam_engine' feature
  *                            (hidden for manual)
  *
  * Account state overrides:
@@ -22,7 +22,7 @@ import type { EngagementSummary, TierFeatureKey } from "../../lib/api";
  *   - closed    → return null
  *
  * We use lifecycle features from the tier config to gate step 6 rather
- * than a hardcoded tier lookup — matches whatever Anmol decides at the
+ * than a hardcoded tier lookup - matches whatever Anmol decides at the
  * meeting.
  */
 
@@ -48,6 +48,9 @@ export default function LifecycleStepper({
 
   // 'closed' engagements hide the stepper entirely per Chirag Section 6.
   if (engagement.status === "closed") return null;
+  // Defensive: an engagement whose service ships a truly empty lifecycle
+  // template gives us zero steps. Bail rather than divide by zero below.
+  if (steps.length === 0) return null;
 
   const isPaused = engagement.status === "suspended";
   const doneCount = steps.filter((s) => s.state === "done").length;
@@ -197,7 +200,7 @@ function buildGenericSteps(e: EngagementSummary): Step[] {
     let state: StepState = "upcoming";
     let hint: string = step.description;
     if (idx === 0) {
-      // Every service starts with 'setup' — always done once engagement exists.
+      // Every service starts with 'setup' - always done once engagement exists.
       state = "done";
       hint = e.code;
     } else if (step.key === "terms_signed") {
@@ -205,7 +208,7 @@ function buildGenericSteps(e: EngagementSummary): Step[] {
       hint = tncDone ? "Accepted" : "Awaiting client";
     } else {
       // First non-done step becomes 'current'; the rest 'upcoming'.
-      // We don't derive further state for non-backtesting services yet —
+      // We don't derive further state for non-backtesting services yet -
       // admin will drive progression in a follow-up.
       const priorSteps = tpl.slice(0, idx);
       const allPriorDone = priorSteps.every((p, i) => i === 0 || p.key === "terms_signed" ? tncDone : true);
@@ -223,15 +226,28 @@ function buildGenericSteps(e: EngagementSummary): Step[] {
 
 function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[]): Step[] {
   const isManual = e.engine_assignment === "manual";
+  // "existing" = client is on a pre-built engine (VAM). No strategy upload
+  // required - IFA's built-in strategy library is the input.
+  const isExisting = e.engine_assignment === "existing";
 
+  // Raw facts from the engagement.
   const tncDone = e.accepted_tnc_version_id !== null;
   const strategyDone = e.canonical_strategy_id !== null;
-  const engineDone = e.engine_status === "live";
+  const engineDoneRaw = e.engine_status === "live";
   const engineBuilding = e.engine_status === "dev" || e.engine_status === "isolation_pending";
-  const backtestDone = e.has_completed_backtest;
-  const tuningUnlocked = engineDone && features.includes("vam_engine");
+  const backtestDoneRaw = e.has_completed_backtest;
 
-  // The very first step is always done — an engagement exists.
+  // Chained truth - a downstream step can only be "done" once its upstream
+  // gates are met. Without this chaining, an existing-engine client with a
+  // pre-provisioned "live" engine flag flips Engine ready / First backtest /
+  // Tuning unlocked green before signing T&C or having any real interaction.
+  // See audit finding P0 "4 of 6 complete" bug.
+  const strategyGate = isExisting ? true : strategyDone;  // VAM skips the upload gate
+  const engineTrulyDone = engineDoneRaw && tncDone && (isManual || strategyGate);
+  const backtestTrulyDone = backtestDoneRaw && tncDone && (isManual || engineTrulyDone);
+  const tuningTrulyDone =
+    backtestTrulyDone && engineTrulyDone && features.includes("vam_engine");
+
   const steps: Step[] = [
     {
       key: "setup",
@@ -247,7 +263,13 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
       state: tncDone ? "done" : "current",
       hint: tncDone ? "Accepted" : "Awaiting client",
     },
-    {
+  ];
+
+  // "Strategy received" doesn't apply to VAM/existing clients - they use
+  // IFA's built-in strategy library, no upload flow. Only bespoke + manual
+  // engagements see this step.
+  if (!isExisting) {
+    steps.push({
       key: "strategy",
       label: "Strategy received",
       icon: <FileText size={14}/>,
@@ -257,8 +279,8 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
           ? "current"
           : "upcoming",
       hint: strategyDone ? "Marked source of truth" : "Upload + engineer confirms",
-    },
-  ];
+    });
+  }
 
   // Engine ready + Tuning unlocked steps are hidden for manual engagements
   // per Chirag Section 6.
@@ -267,19 +289,19 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
       key: "engine",
       label: "Engine ready",
       icon: <Cpu size={14}/>,
-      state: engineDone
+      state: engineTrulyDone
         ? "done"
         : engineBuilding
           ? "building"
-          : strategyDone
+          : (tncDone && strategyGate)
             ? "current"
             : "upcoming",
       hint:
-        engineDone
+        engineTrulyDone
           ? "Live"
           : engineBuilding
             ? "Engineer working"
-            : e.engine_assignment === "existing"
+            : isExisting
               ? "Existing engine"
               : "Bespoke",
     });
@@ -289,12 +311,12 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
     key: "backtest",
     label: "First backtest",
     icon: <PlayCircle size={14}/>,
-    state: backtestDone
+    state: backtestTrulyDone
       ? "done"
-      : ((isManual && strategyDone) || (!isManual && engineDone))
+      : ((isManual && strategyDone && tncDone) || (!isManual && engineTrulyDone))
         ? "current"
         : "upcoming",
-    hint: backtestDone ? "Delivered" : "IFA delivers next",
+    hint: backtestTrulyDone ? "Delivered" : isExisting ? "Ready when you are" : "IFA delivers next",
   });
 
   if (!isManual) {
@@ -302,15 +324,15 @@ function buildBacktestingSteps(e: EngagementSummary, features: TierFeatureKey[])
       key: "tuning",
       label: "Tuning unlocked",
       icon: <Cpu size={14}/>,
-      state: tuningUnlocked
+      state: tuningTrulyDone
         ? "done"
-        : engineDone
+        : (engineTrulyDone && backtestTrulyDone)
           ? "current"
           : "upcoming",
-      hint: tuningUnlocked
+      hint: tuningTrulyDone
         ? "Self-serve VAM"
-        : engineDone
-          ? "Upgrade tier"
+        : engineTrulyDone
+          ? features.includes("vam_engine") ? "After first backtest" : "Upgrade tier"
           : "After engine live",
     });
   }

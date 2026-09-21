@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, FileText, Inbox, LineChart, Rocket, RefreshCw, X } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Bot, Calculator, CheckCircle2, CreditCard, ExternalLink, FileText, Inbox, LineChart, Rocket, RefreshCw, X } from "lucide-react";
 import { Badge, Button, Card, SectionTitle, StatTile } from "../../components/ui";
 import { fetchBacktests, fetchMe, fetchRequests, fetchStrategies, type BacktestListItem } from "../../lib/api";
 import { useAuth } from "../../store/auth";
@@ -14,7 +14,7 @@ import TierCard, { ComingSoonTile } from "./TierCard";
 
 const POLL_INTERVAL_MS = 20_000;
 // Per-browser first-visit flag. Cheap, no backend migration. If a client uses
-// two browsers we show the welcome twice — acceptable for a demo-oriented banner.
+// two browsers we show the welcome twice - acceptable for a demo-oriented banner.
 const FIRST_VISIT_KEY = "ifa.welcome_dismissed";
 
 export default function OverviewPage() {
@@ -59,10 +59,14 @@ export default function OverviewPage() {
   }, []);
 
   const content = useContent((s) => s.content);
-  const active = backtests.filter((b) => ["in_progress", "approved"].includes(b.status)).length;
-  const completed = backtests.filter((b) => b.status === "completed").length;
-  const pendingQuote = backtests.filter((b) => ["quote_requested", "quote_sent"].includes(b.status)).length;
-  // Any demo backtest works for the welcome CTA — Sterling's seed row
+  // Stat tiles only count real client-triggered runs. The admin-seeded demo
+  // (BT-2026-0001 legacy + BT-DEMO-*) exists to give the dashboard something
+  // to show on day one but must not inflate the client's lifetime totals.
+  const realBacktests = backtests.filter((b) => !b.is_demo);
+  const active = realBacktests.filter((b) => ["in_progress", "approved"].includes(b.status)).length;
+  const completed = realBacktests.filter((b) => b.status === "completed").length;
+  const pendingQuote = realBacktests.filter((b) => ["quote_requested", "quote_sent"].includes(b.status)).length;
+  // Any demo backtest works for the welcome CTA - Sterling's seed row
   // (BT-2026-0001), any of the extra seeded variants, or the BT-DEMO-*
   // row auto-provisioned on signup approval. We prefer the newest so a
   // freshly-approved client sees their own demo, not Sterling's.
@@ -98,6 +102,15 @@ export default function OverviewPage() {
             engagement={me.client.engagement}
             features={me.client.tier_usage?.features ?? []}
           />
+          {/* Optional link out to a client's own external product. Rendered
+              when admin sets engagement.product_url. Coexists with the native
+              VAM UI - both are available. */}
+          {me.client.engagement.product_url && (
+            <ProductLinkCard
+              url={me.client.engagement.product_url}
+              clientName={me.client.name}
+            />
+          )}
           <ScopePanel engagement={me.client.engagement} onScopeReacked={refreshMe} />
           <ClientQuotesCard />
         </>
@@ -286,7 +299,7 @@ function MessageIcon() {
   return <BarChart3 size={15} />;
 }
 
-// Site-wide announcement banner — visibility + copy managed from
+// Site-wide announcement banner - visibility + copy managed from
 // /admin/content. Kinds: info (accent), warning (amber), success (emerald).
 function Announcement({ announcement: a }: { announcement: import("../../lib/contentDefaults").Announcement }) {
   const styles = {
@@ -309,5 +322,41 @@ function Announcement({ announcement: a }: { announcement: import("../../lib/con
         </a>
       )}
     </div>
+  );
+}
+
+// ── ProductLinkCard ───────────────────────────────────────────────────────
+//
+// Renders a prominent "Open your product" card when the client's engagement
+// has a product_url set (admin-configured). Opens in a new tab, marked
+// noreferrer so the target site can't inspect our origin.
+function ProductLinkCard({ url, clientName }: { url: string; clientName: string }) {
+  // Extract just the hostname for the caption (readable, safe if url is malformed).
+  let hostname = url;
+  try {
+    hostname = new URL(url).hostname;
+  } catch { /* keep raw url */ }
+  return (
+    <Card padding="p-0">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block px-5 py-4 flex items-center gap-4 hover:bg-ink-50/60 dark:hover:bg-ink-800/30 transition-colors rounded-2xl"
+      >
+        <span className="size-10 rounded-lg bg-accent-600/15 text-accent-700 dark:text-accent-300 flex items-center justify-center shrink-0">
+          <ExternalLink size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
+            Open your product
+          </div>
+          <div className="mt-0.5 text-xs text-ink-500 dark:text-ink-400 truncate">
+            {clientName} · <span className="font-mono">{hostname}</span>
+          </div>
+        </div>
+        <ArrowRight size={16} className="text-ink-400 shrink-0" />
+      </a>
+    </Card>
   );
 }

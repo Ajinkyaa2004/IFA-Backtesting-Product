@@ -134,6 +134,8 @@ export type EngagementSummary = {
   has_completed_backtest: boolean;
   engine_status: "dev" | "isolation_pending" | "live" | "retired" | null;
   whatsapp_group_link?: string | null;
+  /** Optional external product surface (e.g. Ravi's standalone dashboard). */
+  product_url?: string | null;
   service_code?: string | null;
   service_name?: string | null;
   service_icon?: string | null;
@@ -199,6 +201,8 @@ export type Engagement = {
   accepted_tnc_version_id: string | null;
   deliverable: string;
   whatsapp_group_link?: string | null;
+  /** Optional external product surface (e.g. Ravi's standalone dashboard). */
+  product_url?: string | null;
   service_id?: string | null;
   service_code?: string | null;
   service_name?: string | null;
@@ -511,6 +515,8 @@ export type ApproveSignupPayload = {
   deliverable?: string;
   company_name: string;
   whatsapp_group_link?: string | null;
+  /** Optional external product surface (e.g. Ravi's standalone dashboard). */
+  product_url?: string | null;
 };
 
 export async function adminApproveSignup(
