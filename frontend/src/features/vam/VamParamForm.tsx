@@ -23,27 +23,59 @@ import type { VamParamSchemaField, VamStepSchema } from "../../lib/api";
 
 // Mirrors VAM dashboard's PARAM_GROUPS map. Any field not listed here is
 // rendered under "Other" so a new VAM param doesn't disappear from our UI.
+//
+// Each group lists both snake_case names (legacy VAM contract) and Ravi's
+// camelCase names (current ravi_vam engine) so the same UI handles both
+// naming conventions without changes when a new strategy ships.
 const PARAM_GROUPS: { name: string; fields: string[] }[] = [
   {
     name: "Window & Capital",
-    fields: ["start_date", "end_date", "initial_capital", "risk_free_rate", "commission_model"],
+    fields: [
+      "start_date", "end_date", "initial_capital", "risk_free_rate", "commission_model",
+      // Ravi's engine
+      "capital", "commission",
+    ],
   },
   {
     name: "State Machine",
-    fields: ["rsi_period", "rsi_sell", "rsi_rebuy", "defensive_confirm_days",
-             "kill_switch_logic", "vix_kill", "reentry_vix", "reentry_require_50sma"],
+    fields: [
+      "rsi_period", "rsi_sell", "rsi_rebuy", "defensive_confirm_days",
+      "kill_switch_logic", "vix_kill", "reentry_vix", "reentry_require_50sma",
+      // Ravi's camelCase equivalents
+      "vixThreshold", "smaKill", "smaDef", "confirmDays", "confirmDir",
+      "rsiPeriod", "rsiOB", "rsiRe",
+      // v5-family
+      "sma_short", "sma_long", "rsi_aggressive_min",
+    ],
   },
   {
     name: "Blanket / Cooldown",
-    fields: ["blanket_enabled", "blanket_trading_days"],
+    fields: [
+      "blanket_enabled", "blanket_trading_days",
+      // Ravi's engine
+      "cooldown", "crash_protect_cooldown",
+    ],
   },
   {
     name: "Cost Model",
-    fields: ["slippage_bps_normal", "slippage_bps_stress", "stress_vix_threshold"],
+    fields: [
+      "slippage_bps_normal", "slippage_bps_stress", "stress_vix_threshold",
+    ],
   },
   {
-    name: "Step 2 (UPRO)",
-    fields: ["step2_upro_weight"],
+    name: "Position Sizing",
+    fields: [
+      // Ravi step1/step2 - how much UPRO vs cash/TQQQ
+      "uproSplit", "rsiTrim", "defSell",
+      // legacy
+      "step2_upro_weight",
+    ],
+  },
+  {
+    name: "Drawdown Protection (v5)",
+    fields: [
+      "atr_threshold_pct", "dd_trigger_pct", "dd_lookback_days",
+    ],
   },
   {
     name: "SPXU",
@@ -116,7 +148,7 @@ export function VamParamForm({
   compact = false,
 }: VamParamFormProps) {
   // On schema change, fill in any defaults the parent didn't provide.
-  // (We don't overwrite values the parent already set — that would clobber
+  // (We don't overwrite values the parent already set - that would clobber
   // user edits if the schema is refetched.)
   useEffect(() => {
     const defaults = defaultsFromSchema(schema);

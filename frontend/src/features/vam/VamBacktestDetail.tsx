@@ -40,6 +40,19 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
   const er = envelope.engine_response;
   const m = (er.metrics ?? {}) as Record<string, number | undefined>;
 
+  // Threshold values for VIX kill switch + RSI panel + the SMA labels
+  // come from the persisted params. Ravi's engine accepts both camelCase
+  // (dashboard) and snake_case (proposal) keys, so read either. Fall
+  // back to Step-1 defaults.
+  const params = (envelope.params ?? {}) as Record<string, number | undefined>;
+  const vixKill = Number(params.vixThreshold ?? params.vix_kill ?? 30);
+  const rsiOB = Number(params.rsiOB ?? params.rsi_sell ?? 75);
+  const rsiRe = Number(params.rsiRe ?? params.rsi_rebuy ?? 60);
+  // Hardcoding "SMA50"/"SMA200" lied to any user who tuned the periods.
+  // Derive both from the persisted params.
+  const smaDef = Number(params.smaDef ?? params.sma_short ?? 50);
+  const smaKill = Number(params.smaKill ?? params.sma_long ?? 200);
+
   // Mirror VAM dashboard's metric card order
   const sharpe = m.sharpe ?? m.sharpe_ratio;
   const sortino = m.sortino ?? m.sortino_ratio;
@@ -47,6 +60,15 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
   const totalReturnPos = (m.total_return_pct ?? 0) >= 0;
   const cagrPos = (m.cagr_pct ?? 0) >= 0;
   const alphaPos = (m.alpha_vs_spy_pct ?? 0) >= 0;
+
+  // Period card: render months for sub-year runs so a 3-month run doesn't
+  // show as "0y" next to a real return (audit finding).
+  const periodValue =
+    m.years != null && !Number.isNaN(m.years)
+      ? m.years < 1
+        ? `${Math.round(m.years * 12)}mo`
+        : `${m.years.toFixed(1)}y`
+      : "-";
 
   const cards: { label: string; value: string; tone?: "pos" | "neg" | "neutral"; sub?: string }[] = [
     { label: "Final Value", value: fmtMoney(m.final_value), tone: totalReturnPos ? "pos" : "neg" },
@@ -57,7 +79,7 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
     { label: "Calmar", value: fmtNum(calmar, 3) },
     { label: "Max DD", value: fmtPct(m.max_drawdown_pct), tone: "neg", sub: (m as any).max_drawdown_date },
     { label: "Trades", value: String(m.total_trades ?? er.trades?.length ?? 0) },
-    { label: "Period", value: `${m.years ? Math.round(m.years) + "y" : "-"}`, sub: `${(m as any).start_date ?? ""} → ${(m as any).end_date ?? ""}` },
+    { label: "Period", value: periodValue, sub: `${(m as any).start_date ?? ""} → ${(m as any).end_date ?? ""}` },
   ];
   if (m.alpha_vs_spy_pct !== undefined && m.alpha_vs_spy_pct !== null) {
     cards.push({ label: "Alpha vs SPY", value: fmtPct(m.alpha_vs_spy_pct), tone: alphaPos ? "pos" : "neg" });
@@ -98,57 +120,112 @@ export default function VamBacktestDetail({ envelope }: VamBacktestDetailProps) 
         ))}
       </div>
 
-      {/* Charts */}
+      {/* State Machine card — current state + all state allocations. */}
+      {er.chart_data.current_state && (
+        <StateMachineCard
+          currentState={er.chart_data.current_state}
+          step={envelope.step}
+        />
+      )}
+
+      {/* Equity curve with SPY Buy & Hold overlay for benchmark visibility. */}
       <Card padding="p-4">
-        <SectionTitle sub="Portfolio NAV over the run window. Markers on the SPY panel are state-machine transitions (entries/exits, defensive trims).">
-          Equity curve
+        <SectionTitle sub="Strategy NAV vs SPY buy-and-hold. State labels sit on strategy trade points.">
+          Equity curve — Strategy vs Buy &amp; Hold
         </SectionTitle>
         <ChartPanel
-          height={280}
+          height={300}
           areaSeries={er.chart_data.equity}
           areaColor="#22c55e"
-          lineColor="#22c55e"
+          lineSeries={
+            (er.chart_data.spy_bh?.length ?? 0) > 0
+              ? [{ data: er.chart_data.spy_bh!, color: "#94a3b8", title: "SPY B&H" }]
+              : undefined
+          }
+          markers={er.chart_data.markers}
+          markersOnArea
         />
       </Card>
 
-      {(er.chart_data.spy?.length ?? 0) > 0 ? (
+      {/* SPY + SMAs + trade markers - the classic strategy chart. Titles
+          use the actual tuned SMA periods, not hardcoded 50/200. */}
+      {(er.chart_data.spy?.length ?? 0) > 0 && (
         <Card padding="p-4">
-          <SectionTitle sub="SPY price with 50/200-day SMAs and trade markers.">
+          <SectionTitle sub={`SPY price with ${smaDef}/${smaKill}-day SMAs and state-machine trade markers.`}>
             SPY + SMAs + signals
           </SectionTitle>
           <ChartPanel
             height={260}
             lineSeries={[
               { data: er.chart_data.spy!, color: "#4a9eff", title: "SPY" },
-              ...(er.chart_data.sma50 ? [{ data: er.chart_data.sma50, color: "#fbbf24", title: "SMA50" }] : []),
-              ...(er.chart_data.sma200 ? [{ data: er.chart_data.sma200, color: "#f97316", title: "SMA200" }] : []),
+              ...(er.chart_data.sma50 ? [{ data: er.chart_data.sma50, color: "#fbbf24", title: `SMA${smaDef}` }] : []),
+              ...(er.chart_data.sma200 ? [{ data: er.chart_data.sma200, color: "#f97316", title: `SMA${smaKill}` }] : []),
             ]}
             markers={er.chart_data.markers}
           />
         </Card>
-      ) : (er.chart_data.svix?.length ?? 0) > 0 ? (
-        <Card padding="p-4">
-          <SectionTitle sub="SVIX (short-volatility ETF) reference line for this step.">
-            SVIX + signals
-          </SectionTitle>
-          <ChartPanel
-            height={260}
-            lineSeries={[{ data: er.chart_data.svix!, color: "#a855f7", title: "SVIX" }]}
-            markers={er.chart_data.markers}
-          />
-        </Card>
-      ) : null}
+      )}
 
+      {/* VIX with kill-switch threshold line. */}
       {(er.chart_data.vix?.length ?? 0) > 0 && (
         <Card padding="p-4">
-          <SectionTitle sub="CBOE VIX index. Kill-switch + re-entry rules read off this.">
-            VIX
+          <SectionTitle sub={`CBOE VIX. Threshold line shows the kill-switch level (${vixKill}).`}>
+            VIX Kill Switch
           </SectionTitle>
           <ChartPanel
-            height={140}
+            height={160}
             lineSeries={[{ data: er.chart_data.vix!, color: "#f59e0b", title: "VIX" }]}
+            priceLines={[
+              { price: vixKill, color: "#ef4444", title: `Kill ${vixKill}` },
+            ]}
           />
         </Card>
+      )}
+
+      {/* RSI panel with 75 / 60 threshold lines. */}
+      {(er.chart_data.rsi?.length ?? 0) > 0 && (
+        <Card padding="p-4">
+          <SectionTitle sub={`SPY RSI-14. Trim when >${rsiOB}, rebuy when <${rsiRe}.`}>
+            RSI-14
+          </SectionTitle>
+          <ChartPanel
+            height={160}
+            lineSeries={[{ data: er.chart_data.rsi!, color: "#8b5cf6", title: "RSI" }]}
+            priceLines={[
+              { price: rsiOB, color: "#ef4444", title: `Overbought ${rsiOB}` },
+              { price: rsiRe, color: "#22c55e", title: `Rebuy ${rsiRe}` },
+            ]}
+          />
+        </Card>
+      )}
+
+      {/* Portfolio-value drawdown from peak. */}
+      {(er.chart_data.drawdown?.length ?? 0) > 0 && (
+        <Card padding="p-4">
+          <SectionTitle sub="Peak-to-trough drawdown of the strategy portfolio, in percent.">
+            Drawdown from peak (%)
+          </SectionTitle>
+          <ChartPanel
+            height={160}
+            areaSeries={er.chart_data.drawdown}
+            areaColor="#ef4444"
+          />
+        </Card>
+      )}
+
+      {/* State timeline: colored bar showing % of time in each state. */}
+      {(er.chart_data.state_timeline?.length ?? 0) > 0 && (
+        <Card padding="p-4">
+          <SectionTitle sub="Where the strategy spent time. Widths are proportional to days-in-state.">
+            State timeline
+          </SectionTitle>
+          <StateTimelineBar timeline={er.chart_data.state_timeline!} />
+        </Card>
+      )}
+
+      {/* Trade stats card: win rate + best/worst trade + SPY B&H benchmark. */}
+      {er.trade_stats && (
+        <TradeStatsCard stats={er.trade_stats} totalTrades={er.trades.length} />
       )}
 
       {/* Trade log */}
@@ -191,6 +268,12 @@ interface LineSeriesSpec {
   color: string;
   title: string;
 }
+interface PriceLineSpec {
+  price: number;
+  color: string;
+  title: string;
+}
+
 interface ChartPanelProps {
   height: number;
   areaSeries?: TimeValuePoint[];
@@ -198,6 +281,11 @@ interface ChartPanelProps {
   lineColor?: string;
   lineSeries?: LineSeriesSpec[];
   markers?: { time: string; position?: string; color?: string; shape?: string; text?: string }[];
+  /** Horizontal price lines drawn on the first series (RSI thresholds, VIX kill switch, etc.). */
+  priceLines?: PriceLineSpec[];
+  /** When true, markers attach to the areaSeries instead of the first line series
+      (used on the equity curve so state-transition labels stay on the strategy line). */
+  markersOnArea?: boolean;
 }
 
 function ChartPanel({
@@ -206,6 +294,8 @@ function ChartPanel({
   areaColor,
   lineSeries,
   markers,
+  priceLines,
+  markersOnArea,
 }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -225,20 +315,20 @@ function ChartPanel({
     });
     chartRef.current = chart;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let areaApi: ISeriesApi<any> | null = null;
     if (areaSeries && areaSeries.length > 0) {
-      const a = chart.addAreaSeries({
+      areaApi = chart.addAreaSeries({
         lineColor: areaColor ?? "#22c55e",
         topColor: hexA(areaColor ?? "#22c55e", 0.4),
         bottomColor: hexA(areaColor ?? "#22c55e", 0.0),
         lineWidth: 2,
       });
-      a.setData(areaSeries.map((p) => ({ time: p.time as Time, value: p.value })));
+      areaApi.setData(areaSeries.map((p) => ({ time: p.time as Time, value: p.value })));
     }
 
+    let firstLine: ISeriesApi<"Line"> | null = null;
     if (lineSeries && lineSeries.length > 0) {
-      // Build all line series, keep the array — first one is where markers attach.
-      // (Direct array build rather than forEach + closure-assign keeps TS's flow
-      // analysis from narrowing the marker target to `never`.)
       const builtSeries: ISeriesApi<"Line">[] = lineSeries.map((spec, idx) => {
         const ls = chart.addLineSeries({
           color: spec.color,
@@ -248,21 +338,39 @@ function ChartPanel({
         ls.setData(spec.data.map((p) => ({ time: p.time as Time, value: p.value })));
         return ls;
       });
-      const firstLine = builtSeries[0];
-      if (firstLine && markers && markers.length > 0) {
-        firstLine.setMarkers(
-          markers.map((mk) => ({
-            time: mk.time as Time,
-            position: (mk.position as "aboveBar" | "belowBar" | "inBar") ?? "aboveBar",
-            color: mk.color ?? "#4a9eff",
-            shape: (mk.shape as "circle" | "square" | "arrowUp" | "arrowDown") ?? "circle",
-            text: mk.text ?? "",
-          })),
-        );
+      firstLine = builtSeries[0] ?? null;
+    }
+
+    // Attach markers either to the area (equity curve) or the first line (SPY panel).
+    const markerTarget = markersOnArea ? areaApi : firstLine;
+    if (markerTarget && markers && markers.length > 0) {
+      markerTarget.setMarkers(
+        markers.map((mk) => ({
+          time: mk.time as Time,
+          position: (mk.position as "aboveBar" | "belowBar" | "inBar") ?? "aboveBar",
+          color: mk.color ?? "#4a9eff",
+          shape: (mk.shape as "circle" | "square" | "arrowUp" | "arrowDown") ?? "circle",
+          text: mk.text ?? "",
+        })),
+      );
+    }
+
+    // Horizontal threshold lines (RSI 75/60, VIX 30, etc.) — attach to whichever
+    // series exists so they scale with the price axis.
+    const priceLineTarget = firstLine ?? areaApi;
+    if (priceLineTarget && priceLines && priceLines.length > 0) {
+      for (const pl of priceLines) {
+        priceLineTarget.createPriceLine({
+          price: pl.price,
+          color: pl.color,
+          lineWidth: 1,
+          lineStyle: 2, // dashed
+          axisLabelVisible: true,
+          title: pl.title,
+        });
       }
     }
 
-    // Resize on container resize (covers window resize + sidebar collapse)
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         chart.applyOptions({ width: entry.contentRect.width, height });
@@ -276,7 +384,7 @@ function ChartPanel({
       chartRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [areaSeries, lineSeries, markers, height]);
+  }, [areaSeries, lineSeries, markers, priceLines, markersOnArea, height]);
 
   return <div ref={containerRef} style={{ height, width: "100%" }} />;
 }
@@ -318,11 +426,12 @@ const CANONICAL_TRADE_FIELDS = [
 const TRADES_PER_PAGE = 25;
 
 function TradeTable({ trades }: { trades: VamTradeAction[] }) {
-  // Compute which columns to show (set intersection — sample first row).
-  const first = trades[0] ?? {};
+  // Column set = union across ALL trade rows. Sampling only the first row
+  // hid per-instrument price columns for step2 runs whose first trade was
+  // UPRO (TQQQ price columns never showed) - audit finding.
   const cols = useMemo(
-    () => CANONICAL_TRADE_FIELDS.filter((f) => f in first),
-    [first],
+    () => CANONICAL_TRADE_FIELDS.filter((f) => trades.some((t) => f in t)),
+    [trades],
   );
 
   // Reverse once (most recent first), then page.
@@ -330,7 +439,7 @@ function TradeTable({ trades }: { trades: VamTradeAction[] }) {
 
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(ordered.length / TRADES_PER_PAGE));
-  // Clamp current page if trade count changes (defensive — keeps us in range).
+  // Clamp current page if trade count changes (defensive - keeps us in range).
   const safePage = Math.min(page, totalPages - 1);
   const start = safePage * TRADES_PER_PAGE;
   const end = Math.min(start + TRADES_PER_PAGE, ordered.length);
@@ -447,4 +556,210 @@ function formatCell(col: string, v: unknown): string {
     return String(v);
   }
   return String(v);
+}
+
+// ── StateMachineCard ───────────────────────────────────────────────────────
+//
+// Shows the current state and the full state-machine allocation table. Mirrors
+// the "State Machine — Current State & Transitions" section on Ravi's live
+// dashboard. Allocations are step-specific; we handle step1 (UPRO) and step2
+// (UPRO+TQQQ) explicitly and fall through to a generic display for others.
+
+const STATE_ALLOCATIONS: Record<string, { state: string; alloc: string }[]> = {
+  step1_upro_4state: [
+    { state: "BULL_100",     alloc: "100% UPRO" },
+    { state: "BULL_TRIMMED", alloc: "75% UPRO" },
+    { state: "DEFENSIVE",    alloc: "50% UPRO" },
+    { state: "CASH",         alloc: "0% (all cash)" },
+  ],
+  step2_upro_tqqq_6state: [
+    { state: "BULL_100",         alloc: "75% UPRO + 25% TQQQ" },
+    { state: "BULL_100_UPRO",    alloc: "75% UPRO + cash" },
+    { state: "BULL_TRIMMED",     alloc: "50% UPRO" },
+    { state: "DEFENSIVE_UPRO",   alloc: "25% UPRO" },
+    { state: "DEFENSIVE_TQQQ",   alloc: "12% TQQQ" },
+    { state: "CASH",             alloc: "0% (all cash)" },
+  ],
+};
+
+function StateMachineCard({ currentState, step }: { currentState: string; step: string }) {
+  const allocations = STATE_ALLOCATIONS[step] ?? [];
+  return (
+    <Card padding="p-4">
+      <SectionTitle sub="Current strategy state and the allocation table for every state.">
+        State Machine
+      </SectionTitle>
+      <div className="mt-3 flex flex-col sm:flex-row items-start gap-4">
+        <div className="shrink-0">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-ink-500">Current State</div>
+          <div className="mt-1 inline-flex items-center px-3 py-1.5 rounded-md bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-500/40 text-accent-700 dark:text-accent-300 text-base font-semibold tabular">
+            {currentState}
+          </div>
+        </div>
+
+        {allocations.length > 0 ? (
+          <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+            {allocations.map((row) => (
+              <div
+                key={row.state}
+                className={`px-3 py-2 rounded-md border text-xs ${
+                  row.state === currentState
+                    ? "border-accent-400 bg-accent-50/60 dark:bg-accent-900/20"
+                    : "border-ink-100 dark:border-ink-800 bg-white dark:bg-ink-900"
+                }`}
+              >
+                <div className="font-mono text-ink-700 dark:text-ink-200">{row.state}</div>
+                <div className="mt-0.5 text-ink-500 dark:text-ink-400 tabular">{row.alloc}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-ink-500 dark:text-ink-400 italic">
+            Allocation table for this strategy not registered in the UI yet.
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ── StateTimelineBar ───────────────────────────────────────────────────────
+//
+// Renders the same coloured proportional bar Ravi's live dashboard shows under
+// "State Timeline". Each contiguous run in the state machine becomes a
+// horizontal segment whose width is proportional to its days-in-state.
+
+const STATE_COLORS: Record<string, string> = {
+  BULL_100:            "#22c55e",
+  BULL_TRIMMED:        "#84cc16",
+  DEFENSIVE:           "#f59e0b",
+  DEFENSIVE_UPRO:      "#f59e0b",
+  DEFENSIVE_TQQQ:      "#f97316",
+  CASH:                "#94a3b8",
+};
+
+function StateTimelineBar({
+  timeline,
+}: {
+  timeline: { state: string; start?: string; end?: string; days: number; pct: number }[];
+}) {
+  // Roll up total days-in-state for the legend row below the bar.
+  const totals = new Map<string, number>();
+  let grand = 0;
+  for (const seg of timeline) {
+    totals.set(seg.state, (totals.get(seg.state) ?? 0) + seg.days);
+    grand += seg.days;
+  }
+  const legend = Array.from(totals.entries())
+    .map(([state, days]) => ({ state, days, pct: grand ? (days / grand) * 100 : 0 }))
+    .sort((a, b) => b.days - a.days);
+
+  return (
+    <div className="mt-2">
+      <div className="w-full h-6 flex rounded overflow-hidden bg-ink-100 dark:bg-ink-800 border border-ink-200 dark:border-ink-800">
+        {timeline.map((seg, i) => (
+          <div
+            key={i}
+            style={{
+              flexBasis: `${seg.pct}%`,
+              backgroundColor: STATE_COLORS[seg.state] ?? "#4a9eff",
+            }}
+            title={`${seg.state} · ${seg.days} days · ${seg.pct.toFixed(1)}%${seg.start ? ` · ${seg.start} → ${seg.end}` : ""}`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ink-600 dark:text-ink-300">
+        {legend.map((row) => (
+          <span key={row.state} className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block w-3 h-3 rounded-sm"
+              style={{ backgroundColor: STATE_COLORS[row.state] ?? "#4a9eff" }}
+            />
+            <span className="font-mono">{row.state}</span>
+            <span className="text-ink-500">{row.pct.toFixed(1)}%</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── TradeStatsCard ─────────────────────────────────────────────────────────
+//
+// Mirrors the "Trade History & Stats" section on Ravi's dashboard: Win Rate,
+// Best Trade, Worst Trade, and the SPY B&H benchmark return.
+
+function TradeStatsCard({
+  stats,
+  totalTrades,
+}: {
+  stats: {
+    win_rate_pct?: number | null;
+    best_trade_pct?: number | null;
+    worst_trade_pct?: number | null;
+    spy_bh_return_pct?: number | null;
+    round_trip_count?: number;
+  };
+  totalTrades: number;
+}) {
+  const items = [
+    {
+      label: "Total trades",
+      value: String(totalTrades),
+      tone: "neutral" as const,
+    },
+    {
+      label: "Round trips",
+      value: stats.round_trip_count != null ? String(stats.round_trip_count) : "-",
+      tone: "neutral" as const,
+    },
+    {
+      label: "Win rate",
+      value: stats.win_rate_pct != null ? `${stats.win_rate_pct}%` : "-",
+      tone: (stats.win_rate_pct ?? 0) >= 50 ? ("pos" as const) : ("neutral" as const),
+    },
+    {
+      // Sign-based tone so an all-losing run's Best trade doesn't look green
+      // and an all-winning run's Worst trade doesn't look red. Mirrors the
+      // SPY B&H return item below.
+      label: "Best trade",
+      value: fmtPct(stats.best_trade_pct),
+      tone: (stats.best_trade_pct ?? 0) >= 0 ? ("pos" as const) : ("neg" as const),
+    },
+    {
+      label: "Worst trade",
+      value: fmtPct(stats.worst_trade_pct),
+      tone: (stats.worst_trade_pct ?? 0) >= 0 ? ("pos" as const) : ("neg" as const),
+    },
+    {
+      label: "SPY B&H return",
+      value: fmtPct(stats.spy_bh_return_pct),
+      tone: (stats.spy_bh_return_pct ?? 0) >= 0 ? ("pos" as const) : ("neg" as const),
+    },
+  ];
+  return (
+    <Card padding="p-4">
+      <SectionTitle sub="Round-trip trade statistics vs SPY buy-and-hold benchmark.">
+        Trade stats
+      </SectionTitle>
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {items.map((it) => (
+          <div key={it.label} className="rounded-md border border-ink-100 dark:border-ink-800 bg-white dark:bg-ink-900 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-ink-500">{it.label}</div>
+            <div
+              className={`mt-0.5 text-sm font-semibold tabular ${
+                it.tone === "pos"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : it.tone === "neg"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-ink-900 dark:text-ink-50"
+              }`}
+            >
+              {it.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 }

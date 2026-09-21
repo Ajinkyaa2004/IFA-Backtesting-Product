@@ -31,7 +31,7 @@ export default function AdminBacktestUploadPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Which source produces the backtest — either hand-crafted JSON (manual
+  // Which source produces the backtest - either hand-crafted JSON (manual
   // delivery, works for any strategy shape) or Ravi's VAM engine (works only
   // for VAM-compatible RSI/VIX strategies). Both modes hit the same client's
   // Backtests list and audit trail, just different persistence pipelines.
@@ -41,10 +41,10 @@ export default function AdminBacktestUploadPage() {
   const [json, setJson] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);
 
-  // VAM-mode state — lazily populated the first time the user switches to it
+  // VAM-mode state - lazily populated the first time the user switches to it
   const [vamStrategies, setVamStrategies] = useState<VamStrategy[] | null>(null);
   const [vamSymbols, setVamSymbols] = useState<VamSymbol[]>([]);
-  const [vamStep, setVamStep] = useState<string>("step1");
+  const [vamStep, setVamStep] = useState<string>("step1_upro_4state");
   const [vamSchema, setVamSchema] = useState<VamStepSchema | null>(null);
   const [vamParams, setVamParams] = useState<Record<string, unknown>>({});
   const [vamSchemaLoading, setVamSchemaLoading] = useState(false);
@@ -70,7 +70,7 @@ export default function AdminBacktestUploadPage() {
     setStrategyId("");
   }, [clientId]);
 
-  // Clear violations / success whenever JSON changes — stale feedback is worse than no feedback
+  // Clear violations / success whenever JSON changes - stale feedback is worse than no feedback
   const onJsonChange = (next: string) => {
     setJson(next);
     if (violations) setViolations(null);
@@ -79,7 +79,7 @@ export default function AdminBacktestUploadPage() {
 
   // When admin links to a specific strategy, rewrite the JSON's strategy.name so the
   // backtest row in the list shows the actual strategy name, not the example template's
-  // default ("EMA 20/50 Crossover with RSI Confirmation"). Only touches strategy.name —
+  // default ("EMA 20/50 Crossover with RSI Confirmation"). Only touches strategy.name -
   // leaves version/type/params alone since those are inputs the admin still has to set
   // to match the actual backtest run.
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function AdminBacktestUploadPage() {
       parsed.strategy = { ...(parsed.strategy ?? {}), name: linked.name };
       setJson(JSON.stringify(parsed, null, 2));
     } catch {
-      // JSON not parseable yet — skip silently, preview already shows the syntax error
+      // JSON not parseable yet - skip silently, preview already shows the syntax error
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strategyId]);
@@ -190,7 +190,7 @@ export default function AdminBacktestUploadPage() {
         setVamStrategies(vs);
         setVamSymbols(syms);
         const implemented = vs.filter((s) => s.implemented);
-        if (implemented.length && !implemented.some((s) => s.id === "step1")) {
+        if (implemented.length && !implemented.some((s) => s.id === "step1_upro_4state")) {
           setVamStep(implemented[0].id);
         }
       } catch (e) {

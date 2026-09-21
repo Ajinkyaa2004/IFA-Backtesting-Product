@@ -50,3 +50,13 @@ logs/
 *.local.*
 storage-local/
 backend/tests/screenshots/
+
+# Local infra kept out of tracked repo
+docker-compose.override.yml
+docker-compose.prod.yml.bak.*
+
+# Ravi's VAM engine ships as a separate deployable — too big for git
+vam-engine/
+
+# Alerter state file (per-VPS runtime data)
+/var/lib/ifa/

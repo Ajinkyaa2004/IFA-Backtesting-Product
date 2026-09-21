@@ -1,0 +1,19 @@
+[Unit]
+Description=IFA Portal health check (disk, RAM, containers, cert, renewals, VAM engine)
+Documentation=https://github.com/insightfusionanalytics/backtest-engine
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ifa-backtest-product/scripts/ifa-healthcheck.sh
+User=root
+# Read-only root filesystem except where we log; defence in depth.
+ProtectSystem=strict
+ReadWritePaths=/var/log /var/run
+# The script only needs to read /proc, run docker CLI, and read the config.
+PrivateTmp=true
+NoNewPrivileges=true
+# Health cron output is captured to journalctl too, so we can grep across time.
+StandardOutput=journal
+StandardError=journal

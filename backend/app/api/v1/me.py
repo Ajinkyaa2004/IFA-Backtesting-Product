@@ -52,12 +52,15 @@ class EngagementSummary(BaseModel):
     # → None (step is skipped for manual). Frontend consumes this to render
     # the Engine ready step.
     engine_status: str | None
-    # WhatsApp group for delivery + comms (meeting 2026-07-09). Optional —
+    # WhatsApp group for delivery + comms (meeting 2026-07-09). Optional -
     # admin pastes after creating the group out-of-band. Null means no
     # group yet, in which case the client dashboard hides the CTA.
     whatsapp_group_link: str | None = None
+    # Optional external product URL - e.g. Ravi's standalone dashboard on
+    # Render. When set, the Overview shows an "Open your product" link card.
+    product_url: str | None = None
     # Service catalog fields (meeting 2026-07-09). Portal serves multiple
-    # service types now — the dashboard framing + lifecycle stepper adapts
+    # service types now - the dashboard framing + lifecycle stepper adapts
     # to whichever service this engagement is for.
     service_code: str | None = None
     service_name: str | None = None
@@ -80,7 +83,7 @@ class MeOut(BaseModel):
     email: str
     role: str
     status: str
-    # Self-serve signup gate — separate from `status` so the frontend can
+    # Self-serve signup gate - separate from `status` so the frontend can
     # route a pending user to /pending or a rejected user to /rejected
     # instead of dumping them on the login form.
     signup_status: str = "approved"
@@ -105,14 +108,18 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
         client = db.query(Client).filter(Client.id == user.client_id).first()
         if client:
             vam_enabled = bool(client.vam_enabled)
-            # Assemble tier usage — cheap 2 counts, keeps the /me response
+            # Assemble tier usage - cheap 2 counts, keeps the /me response
             # a one-stop shop for the frontend header + tier card.
             cfg = tier_config.get_tier_config(client.tier)
             m_start, m_end = tier_config.month_bounds()
+            # Exclude admin-seeded demo backtests from the monthly tier quota.
+            # The Backtest.is_demo doc-comment says these never count toward
+            # any usage metric - only real runs the client triggered do.
             bt_used = (
                 db.query(Backtest)
                 .filter(
                     Backtest.client_id == client.id,
+                    Backtest.is_demo.is_(False),
                     Backtest.created_at >= m_start,
                     Backtest.created_at < m_end,
                 )
@@ -141,7 +148,7 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                 month_ends_at=m_end,
             )
 
-            # Engagement summary — one row per client (Chirag Item #1).
+            # Engagement summary - one row per client (Chirag Item #1).
             engagement_summary: EngagementSummary | None = None
             eng = db.query(Engagement).filter(Engagement.client_id == client.id).first()
             if eng:
@@ -151,13 +158,20 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     and (user.acked_scope_version or 0) < eng.scope_version
                 )
                 # Lifecycle stepper signals (Chirag Section 6).
+                # The seeded demo backtest is delivered at signup approval so it
+                # would otherwise flip "First backtest" green before the client
+                # has done anything - filter it out.
                 has_completed_bt = (
                     db.query(Backtest)
-                    .filter(Backtest.client_id == client.id, Backtest.status == "completed")
+                    .filter(
+                        Backtest.client_id == client.id,
+                        Backtest.status == "completed",
+                        Backtest.is_demo.is_(False),
+                    )
                     .first()
                     is not None
                 )
-                # Engine status — real value from the engines table (Item #3).
+                # Engine status - real value from the engines table (Item #3).
                 # Manual engagements skip the step entirely; otherwise we
                 # query the engine row directly. If engine_id is set but the
                 # row is missing (shouldn't happen), fall back to 'dev'.
@@ -165,10 +179,14 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                 if eng.engine_assignment == "manual":
                     engine_status_str = None
                 elif eng.engine_id is None:
-                    engine_status_str = "dev"
+                    # No engine assigned yet - render as an unstarted step
+                    # (LifecycleStepper treats null as 'upcoming'). Returning
+                    # 'dev' here made the stepper show the amber spinner
+                    # before any engineer had been assigned.
+                    engine_status_str = None
                 else:
                     engine_row = db.query(Engine.status).filter(Engine.id == eng.engine_id).first()
-                    engine_status_str = engine_row[0] if engine_row else "dev"
+                    engine_status_str = engine_row[0] if engine_row else None
                 # Resolve service info if the engagement has one. Backfill made
                 # every existing engagement point at 'backtesting'; new ones set
                 # it explicitly in the engagement editor.
@@ -189,6 +207,7 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
                     has_completed_backtest=has_completed_bt,
                     engine_status=engine_status_str,
                     whatsapp_group_link=eng.whatsapp_group_link,
+                    product_url=eng.product_url,
                     service_code=svc.code if svc else None,
                     service_name=svc.name if svc else None,
                     service_icon=svc.icon if svc else None,
@@ -212,15 +231,22 @@ def get_me(user: User = Depends(current_user), db: Session = Depends(get_db)):
     latest_id = None
     if latest and user.role == "client":
         latest_id = str(latest.id)
-        accepted = (
+        # Per Anmol's rule (2026-09 content-audit doc): publishing a new T&C
+        # version must NOT invalidate a signature that already exists. Clients
+        # who accepted ANY prior version are grandfathered; only clients who
+        # have never accepted a T&C get prompted. That way rolling out v2.0
+        # doesn't re-prompt every v1.0 signer.
+        #
+        # If we ever need to force re-acceptance for a truly material change,
+        # add an admin action that clears TermsAcceptance rows (or introduces
+        # a per-version "requires_reack" flag). Today we optimize for
+        # "keep existing clients out of a re-signature flow."
+        any_acceptance = (
             db.query(TermsAcceptance)
-            .filter(
-                TermsAcceptance.user_id == user.id,
-                TermsAcceptance.terms_version_id == latest.id,
-            )
+            .filter(TermsAcceptance.user_id == user.id)
             .first()
         )
-        needs_tnc = accepted is None
+        needs_tnc = any_acceptance is None
 
     return MeOut(
         id=str(user.id),

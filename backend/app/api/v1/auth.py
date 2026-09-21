@@ -27,7 +27,7 @@ class LoginOut(BaseModel):
     role: str
 
 
-# 20/min per IP — a legitimate user won't fat-finger 20 times a minute, and a
+# 20/min per IP - a legitimate user won't fat-finger 20 times a minute, and a
 # wrong password rejects in ~200ms so at cap a credential stuffer only gets
 # ~1200 tries/hour before nginx also declines. Request is required by
 # slowapi to extract client IP.
@@ -59,14 +59,16 @@ def login(request: Request, payload: LoginIn, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.firebase_uid == uid, User.deleted_at.is_(None)).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not provisioned")
+        # 404 keeps the semantics in step with /me and lets the frontend
+        # classifier route to the "account not set up" screen. See deps.py.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not provisioned")
     if user.status != "active":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User suspended")
 
     # Suspended-client gate (audit LT2). If the client the user belongs
     # to is suspended, refuse the login even though the User row itself
     # is still 'active'. Without this an admin can suspend a client and
-    # they'd still sign in and reach the dashboard — the suspension
+    # they'd still sign in and reach the dashboard - the suspension
     # would only take effect on the NEXT admin action against them.
     if user.role == "client" and user.client_id:
         client = db.query(Client).filter(Client.id == user.client_id).first()
@@ -93,6 +95,10 @@ class SignupIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     company: str = Field(min_length=1, max_length=200)
     phone: str = Field(min_length=4, max_length=40)
+    # ISO 3166-1 alpha-2 country code the client selected on signup. Optional
+    # for backward compatibility with any pre-split client that only sent the
+    # combined phone string. Empty / None → we skip the metadata line.
+    country: str | None = Field(default=None, min_length=2, max_length=2)
     purpose: str | None = Field(default=None, max_length=1000)
     # Optional Upwork project / contract reference. Lands in
     # signup_metadata so admin sees it on the pending signup card and
@@ -161,7 +167,7 @@ def signup(
     # email already exists we do not create a duplicate.
     existing_by_uid = db.query(User).filter(User.firebase_uid == uid).first()
     if existing_by_uid:
-        # Someone hitting /signup again with a token they already used —
+        # Someone hitting /signup again with a token they already used -
         # return their current signup_status so the frontend can route.
         return SignupOut(
             ok=True,
@@ -189,6 +195,10 @@ def signup(
             "name": payload.name,
             "company": payload.company,
             "phone": payload.phone,
+            # ISO country code the client picked in the country-code split
+            # (audit C4). Kept alongside phone so admin sees the market at a
+            # glance in the pending-signup drawer without regex-parsing phone.
+            "country": payload.country,
             "purpose": payload.purpose,
             "upwork_ref": payload.upwork_ref,
         },
@@ -233,7 +243,7 @@ def logout(user: User = Depends(current_user)):
     try:
         fb_auth.revoke_refresh_tokens(user.firebase_uid)
     except Exception as e:
-        # Don't refuse logout if the Firebase call fails — the client-side
+        # Don't refuse logout if the Firebase call fails - the client-side
         # signOut still drops the local credentials. But log it loudly so
         # we notice ops issues.
         logger.warning("Failed to revoke Firebase refresh tokens for {}: {}", user.id, e)

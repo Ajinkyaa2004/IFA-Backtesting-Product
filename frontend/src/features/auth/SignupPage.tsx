@@ -6,10 +6,10 @@
  *   2. Firebase createUserWithEmailAndPassword mints a fresh account
  *   3. We POST the resulting ID token + profile fields to /auth/signup
  *   4. Backend creates a User row with signup_status='pending_approval'
- *   5. On success we navigate to /pending — the client waits there until an
+ *   5. On success we navigate to /pending - the client waits there until an
  *      admin approves (they receive an email when it happens).
  *
- * We deliberately DO NOT set the freshly-signed-up user on the auth store —
+ * We deliberately DO NOT set the freshly-signed-up user on the auth store -
  * they should NOT reach the dashboard until admin approves. If the user
  * closes the tab and comes back later, LoginPage handles the "already
  * signed up, still pending" case by routing them to /pending.
@@ -23,6 +23,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { submitSignup } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { useAuth } from "../../store/auth";
+import IFALogo from "../../components/IFALogo";
+import { COUNTRY_CODES, DEFAULT_COUNTRY_ISO } from "./countryCodes";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -53,6 +55,10 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
+  // Phone captured as (country dial code + digits) so we know exactly what
+  // country a lead is in without regex-parsing the field. Combined at submit
+  // as "+<dial><digits>" to keep the backend's phone contract stable.
+  const [countryIso, setCountryIso] = useState(DEFAULT_COUNTRY_ISO);
   const [phone, setPhone] = useState("");
   const [purpose, setPurpose] = useState("");
   // Optional. Feeds audit BE15 (Client.source tagging) once we act on it -
@@ -103,7 +109,7 @@ export default function SignupPage() {
       credRef = cred;
 
       // 2. Set displayName so the Firebase console shows something useful.
-      //    Best-effort — a failure here doesn't block the signup.
+      //    Best-effort - a failure here doesn't block the signup.
       try {
         await updateProfile(cred.user, { displayName: name.trim() });
       } catch {
@@ -113,18 +119,25 @@ export default function SignupPage() {
       // 3. Hand the ID token to the backend. It verifies + creates a
       //    pending User row and fires the admin notification email.
       const idToken = await cred.user.getIdToken();
+      // Combine dial code + digits into E.164-shaped "+<dial><digits>". Strip
+      // any leading zeros / non-digits from what the user typed - browsers
+      // sometimes accept spaces or dashes and the backend stores what we send.
+      const dial = (COUNTRY_CODES.find((c) => c.iso === countryIso)?.dial) ?? "";
+      const digits = phone.replace(/\D/g, "").replace(/^0+/, "");
+      const composedPhone = digits ? `+${dial}${digits}` : "";
       await submitSignup({
         id_token: idToken,
         name: name.trim(),
         company: company.trim(),
-        phone: phone.trim(),
+        phone: composedPhone,
+        country: countryIso,
         purpose: purpose.trim() || null,
         upwork_ref: upworkRef.trim() || null,
         // Honeypot value - real users never touch this input.
         website: website.trim() || null,
       });
 
-      // 4. Sign the user OUT — Firebase auto-logged them in when the
+      // 4. Sign the user OUT - Firebase auto-logged them in when the
       //    account was created, but we don't want them to reach any
       //    protected route yet. Route them back to /login with a
       //    success banner instead. They'll sign in later once the
@@ -144,7 +157,7 @@ export default function SignupPage() {
     } catch (err: unknown) {
       // If Firebase created the account but the backend call failed the
       // classic MVP bug (audit FE4) was to leave the Firebase user
-      // stranded — the email was 'already in use', the DB had no row,
+      // stranded - the email was 'already in use', the DB had no row,
       // login returned 403 'not provisioned', and the user was stuck.
       // We have a fresh credential in hand right after createUser, so
       // Firebase permits us to delete the user without re-auth.
@@ -172,11 +185,9 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 p-8">
           <div className="flex items-center gap-3 mb-5">
-            <span className="size-9 rounded-xl bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 flex items-center justify-center font-semibold text-sm">
-              IFA
-            </span>
+            <IFALogo sizeClass="size-9" />
             <div>
-              <div className="text-base font-semibold tracking-tight">Backtest Engine</div>
+              <div className="text-base font-semibold tracking-tight">Client Portal</div>
               <div className="text-[11px] text-ink-500 uppercase tracking-wider">
                 Set up your workspace
               </div>
@@ -254,15 +265,40 @@ export default function SignupPage() {
               <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
                 <Phone size={12} /> Phone
               </label>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 w-full h-10 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
-                autoComplete="tel"
-                placeholder="+91 98xxx xxxxx"
-              />
+              {/*
+                Two fields on one row: a country-code select (label = flag +
+                +dial) sized to its content, and a phone-digits input filling
+                the rest. Kept side-by-side on every viewport - stacking them
+                on mobile hides the country context under the phone label and
+                trips people typing +91 into the digits field by habit.
+              */}
+              <div className="mt-1 flex gap-2">
+                <select
+                  value={countryIso}
+                  onChange={(e) => setCountryIso(e.target.value)}
+                  aria-label="Country code"
+                  className="h-10 px-2 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40 shrink-0 max-w-[8.5rem]"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.iso} value={c.iso}>
+                      {c.flag} +{c.dial} {c.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="flex-1 min-w-0 h-10 px-3 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40"
+                  autoComplete="tel-national"
+                  inputMode="numeric"
+                  placeholder="Phone number"
+                />
+              </div>
+              <div className="mt-1 text-[10.5px] text-ink-400">
+                Digits only. We add the country code automatically.
+              </div>
             </div>
             <div>
               <label className="text-xs font-medium text-ink-600 dark:text-ink-300 flex items-center gap-1.5">
@@ -273,7 +309,7 @@ export default function SignupPage() {
                 onChange={(e) => setPurpose(e.target.value)}
                 rows={2}
                 className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 focus:outline-none focus:ring-2 focus:ring-accent-500/40 resize-y"
-                placeholder="Swing-trading backtests on Nifty midcaps…"
+                placeholder="Swing-trading backtests on large-cap universe…"
               />
             </div>
             <div>
@@ -343,7 +379,7 @@ export default function SignupPage() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={14} /> Request access
+                  <CheckCircle2 size={14} /> Request my workspace
                 </>
               )}
             </button>

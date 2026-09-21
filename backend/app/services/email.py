@@ -78,7 +78,7 @@ _BASE_STYLE = """
 _HEADER = """
 <div style="border-bottom: 3px solid #0ea5e9; padding-bottom: 12px; margin-bottom: 24px;">
   <div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-              color: #64748b; font-weight: 600;">IFA Backtest Engine</div>
+              color: #64748b; font-weight: 600;">IFA Client Portal</div>
   <div style="font-size: 18px; font-weight: 600; margin-top: 4px;">
     Insight Fusion Analytics
   </div>
@@ -88,7 +88,7 @@ _HEADER = """
 _FOOTER = """
 <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0 16px;" />
 <div style="font-size: 12px; color: #94a3b8;">
-  This message was sent by the IFA Backtest Engine portal.
+  This message was sent by the IFA Client Portal.
   If you did not expect this email, you can safely ignore it.
 </div>
 """.strip()
@@ -127,7 +127,7 @@ def send_admin_signup_notification(
     subject = f"New signup request - {name} ({email})"
 
     text = (
-        f"A new client has requested access to the IFA Backtest Engine portal.\n\n"
+        f"A new client has requested access to the IFA Client Portal.\n\n"
         f"Name: {name}\n"
         f"Email: {email}\n"
         f"Company: {company or '-'}\n"

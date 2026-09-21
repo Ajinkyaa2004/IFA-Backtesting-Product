@@ -20,6 +20,7 @@ import { api } from "../lib/api";
 import { initialDarkMode, setDarkMode } from "../lib/darkMode";
 import { useAuth } from "../store/auth";
 import { useSidebarOverride } from "../store/sidebarOverride";
+import IFALogo from "./IFALogo";
 import ImpersonationBanner from "./ImpersonationBanner";
 import NotificationBell from "./NotificationBell";
 import SupportFooter from "./SupportFooter";
@@ -78,7 +79,7 @@ export default function Layout() {
     .toUpperCase() ?? "IFA";
 
   /*
-   * Sidebar body — same JSX used in the desktop fixed rail (>= lg) AND
+   * Sidebar body - same JSX used in the desktop fixed rail (>= lg) AND
    * inside the mobile off-canvas drawer. Extracted so a NavLink click on
    * mobile navigates via one source of truth; duplicating it would risk
    * the two lists drifting.
@@ -87,15 +88,13 @@ export default function Layout() {
     <>
       <div className="h-14 px-5 flex items-center justify-between gap-2.5 border-b border-ink-200 dark:border-ink-800 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900">
-            IFA
-          </span>
+          <IFALogo sizeClass="size-7" />
           <div className="min-w-0">
             <div className="text-sm font-semibold tracking-tight leading-tight truncate">
-              Backtest Engine
+              Client Portal
             </div>
             <div className="text-[10px] text-ink-500 dark:text-ink-400 tracking-wide uppercase">
-              Client Portal
+              Insight Fusion Analytics
             </div>
           </div>
         </div>
@@ -249,10 +248,8 @@ export default function Layout() {
               <Menu size={17} />
             </button>
             <div className="lg:hidden flex items-center gap-2.5 min-w-0">
-              <span className="size-7 rounded-lg flex items-center justify-center font-semibold text-[11px] bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 shrink-0">
-                IFA
-              </span>
-              <span className="text-sm font-semibold truncate hidden sm:inline">Backtest Engine</span>
+              <IFALogo sizeClass="size-7" />
+              <span className="text-sm font-semibold truncate hidden sm:inline">Client Portal</span>
             </div>
 
             <div className="flex-1" />

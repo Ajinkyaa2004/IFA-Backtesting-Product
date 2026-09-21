@@ -7,7 +7,7 @@ Run:
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -35,6 +35,27 @@ TNC_V1_CLAUSES = [
     {"id": "c8", "title": "Governing law", "body": "This agreement is governed by the laws of the Republic of India. Disputes are subject to the courts of Mumbai.", "required": True},
 ]
 
+# T&C v2.0 - approved by Anmol 2026-09 per the content-audit doc. Shorter,
+# plainer, Upwork-compatible. Every clause is required so the UI is still a
+# simple "tick each box" flow. Ids c1..c7 chosen deliberately to NOT collide
+# with v1.0's c1..c8 semantically - v2 is a fresh set, not a diff of v1.
+#
+# Deployment semantics (matches audit note in Anmol's report):
+#   - New clients see v2.0 on first sign-in and accept it.
+#   - Existing clients who already accepted v1.0 stay accepted - the
+#     `engagements.accepted_tnc_version_id` FK is version-locked, not
+#     "latest-version", so the /me `needs_tnc_acceptance` gate stays False
+#     for them. See app/api/v1/me.py for the check.
+TNC_V2_CLAUSES = [
+    {"id": "c1", "title": "What we do",              "body": "Insight Fusion Analytics performs backtests, research and code delivery based on the strategy documents and requests you submit through this portal.", "required": True},
+    {"id": "c2", "title": "Confidentiality",         "body": "Your strategy documents, parameters, results and code are confidential. We do not share them with other clients or reuse them for anyone else.",       "required": True},
+    {"id": "c3", "title": "Data",                    "body": "Market data comes from licensed vendors. We check it with reasonable care but cannot guarantee it is complete or error-free.",                          "required": True},
+    {"id": "c4", "title": "Results are hypothetical","body": "Backtest results are not a record of real trading and do not predict future performance. Nothing in this portal is investment advice.",                 "required": True},
+    {"id": "c5", "title": "Payment",                 "body": "For Upwork engagements, all payment goes through Upwork. For direct engagements, payment terms are in your written quote.",                              "required": True},
+    {"id": "c6", "title": "Your account",            "body": "Keep your sign-in private. Tell us if you think it has been used by someone else.",                                                                       "required": True},
+    {"id": "c7", "title": "Governing law",           "body": "These terms are governed by the laws of India. For Upwork engagements, Upwork's dispute process applies first.",                                          "required": True},
+]
+
 
 def ensure_firebase_user(email: str, password: str) -> str:
     init_firebase()
@@ -56,7 +77,7 @@ def seed(db: Session) -> None:
     if not tnc:
         tnc = TermsVersion(
             version="v1.0",
-            body="IFA Backtest Engine - Engagement Terms v1.0",
+            body="IFA Client Portal - Engagement Terms v1.0",
             clauses=TNC_V1_CLAUSES,
             effective_from=now,
         )
@@ -65,6 +86,32 @@ def seed(db: Session) -> None:
         logger.info("Inserted T&C v1.0 ({})", tnc.id)
     else:
         logger.info("T&C v1.0 already exists ({})", tnc.id)
+
+    # 1b. Terms v2.0 - the current published version. Idempotent: only insert
+    # if a row keyed on version="v2.0" doesn't already exist. Effective_from is
+    # bumped 1 second after v1.0 so listings ordered by effective_from
+    # asc/desc always agree on which is newer even on a same-tick seed.
+    #
+    # We deliberately DO NOT touch any existing engagement's
+    # accepted_tnc_version_id - clients who accepted v1.0 keep their
+    # v1.0 signature and are NOT re-prompted. The /me needs_tnc_acceptance
+    # gate compares against the engagement's stored version, not "latest".
+    tnc_v2 = db.query(TermsVersion).filter(TermsVersion.version == "v2.0").first()
+    if not tnc_v2:
+        # effective_from must be strictly greater than v1.0's so
+        # `ORDER BY effective_from DESC LIMIT 1` picks v2.0 as the current.
+        v2_effective = tnc.effective_from + timedelta(seconds=1)
+        tnc_v2 = TermsVersion(
+            version="v2.0",
+            body="IFA Client Portal - Engagement Terms v2.0",
+            clauses=TNC_V2_CLAUSES,
+            effective_from=v2_effective,
+        )
+        db.add(tnc_v2)
+        db.flush()
+        logger.info("Inserted T&C v2.0 ({})", tnc_v2.id)
+    else:
+        logger.info("T&C v2.0 already exists ({})", tnc_v2.id)
 
     # 2. Main admin
     admin_uid = ensure_firebase_user(settings.MAIN_ADMIN_EMAIL, settings.MAIN_ADMIN_INITIAL_PASSWORD)
@@ -116,7 +163,7 @@ def seed(db: Session) -> None:
     else:
         logger.info("Demo client user already exists ({})", client_user.id)
 
-    # 5. Demo backtest — uses the locked v1.0 schema example file
+    # 5. Demo backtest - uses the locked v1.0 schema example file
     _seed_demo_backtest(db, client)
 
     db.commit()
@@ -167,6 +214,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
             name=example["strategy"]["name"],
             code=example["backtest_id"],
             status="completed",
+            is_demo=True,  # never counts toward tier usage or "First backtest" step
             assumptions=example["assumptions"],
             metrics=example["metrics"],
             completed_at=datetime.now(timezone.utc),
@@ -188,7 +236,7 @@ def _seed_demo_backtest(db: Session, client: Client) -> None:
     # ── 3 more FULLY-POPULATED example backtests. Each is a mutated copy of
     # example.json with a different strategy name, symbol set, date range, and
     # slightly altered metrics so the report page shows meaningful variety.
-    # Kills the "Example real strategies preloaded" Todoist item — the list is
+    # Kills the "Example real strategies preloaded" Todoist item - the list is
     # now demo-ready without hand-crafting every field.
     variants = [
         {

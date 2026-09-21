@@ -47,14 +47,21 @@ def _load_vam_schema() -> dict:
     return json.loads(_VAM_SCHEMA_PATH.read_text())
 
 
-# Friendly labels for the backtests.name column — what the client actually
+# Friendly labels for the backtests.name column - what the client actually
 # sees in their list. Keep these compact; the params + engine response carry
 # the full detail.
 _STEP_LABELS: dict[str, str] = {
-    "step1": "VAM Core (step 1)",
-    "step2": "VAM + UPRO leverage (step 2)",
-    "step3": "VAM step 3",
-    "step4_svix": "VAM + SVIX short-vol (step 4 SVIX)",
+    # Ravi's 5 native strategy IDs (the currently deployed vam-engine).
+    "step1_upro_4state":       "VAM Step 1 - UPRO 4-state",
+    "step2_upro_tqqq_6state":  "VAM Step 2 - UPRO + TQQQ 6-state",
+    "v3_7state_optimized":     "VAM v3 - 7-state optimized",
+    "v5_leveraged":            "VAM v5 - Leveraged",
+    "v5b_nonleveraged":        "VAM v5b - Non-leveraged",
+    # Legacy step IDs kept so any pre-existing envelope validates.
+    "step1":          "VAM Core (step 1)",
+    "step2":          "VAM + UPRO leverage (step 2)",
+    "step3":          "VAM step 3",
+    "step4_svix":     "VAM + SVIX short-vol (step 4 SVIX)",
     "step4_combined": "VAM Combined (step 4)",
 }
 

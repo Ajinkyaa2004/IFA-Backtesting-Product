@@ -1,11 +1,11 @@
 /**
- * Admin — Pending Signups queue.
+ * Admin - Pending Signups queue.
  *
  * Lists every user with signup_status='pending_approval'. Admin picks one,
  * fills in tier + engagement type + company name, and clicks Approve or
  * Reject. Backend creates the Client + Engagement rows and emails the client.
  *
- * Approvals + rejections are per-signup — no bulk operations, on purpose:
+ * Approvals + rejections are per-signup - no bulk operations, on purpose:
  * each signup is a business decision that deserves a look.
  */
 
@@ -53,7 +53,7 @@ const ENGAGEMENT_TYPES = [
 ] as const;
 
 /**
- * Native relative-time formatter — no dependency needed. Same output shape
+ * Native relative-time formatter - no dependency needed. Same output shape
  * as date-fns' formatDistanceToNow (e.g. "3 minutes ago", "yesterday").
  */
 function formatRelative(iso: string): string {
@@ -247,7 +247,15 @@ function SignupRow({
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[12px]">
             <MetaItem icon={<Building2 size={11} />} label="Company" value={meta.company || "-"} />
-            <MetaItem icon={<Phone size={11} />} label="Phone" value={meta.phone || "-"} />
+            <MetaItem
+              icon={<Phone size={11} />}
+              label="Phone"
+              value={
+                meta.country
+                  ? `${meta.phone || "-"} · ${meta.country}`
+                  : (meta.phone || "-")
+              }
+            />
             {meta.upwork_ref ? (
               <MetaItem
                 icon={<Layers size={11} />}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Run IFA Portal health check every 15 minutes
+Documentation=https://github.com/insightfusionanalytics/backtest-engine
+
+[Timer]
+# Fire 2 minutes after boot so we don't false-alarm during container startup.
+OnBootSec=2min
+# Then every 15 min for the life of the machine.
+OnUnitActiveSec=15min
+Unit=ifa-healthcheck.service
+Persistent=true
+# Add a small random jitter so a fleet of machines doesn't stampede at
+# exactly XX:00 - not strictly needed for a single VPS but future-proof.
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target

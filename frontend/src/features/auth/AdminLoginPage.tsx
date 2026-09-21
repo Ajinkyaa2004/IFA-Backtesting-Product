@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    // See LoginPage for the two-phase rationale — we must NOT signOut on
+    // See LoginPage for the two-phase rationale - we must NOT signOut on
     // a pre-signIn failure or the next attempt's signIn races with the
     // stale signOut and the new session gets ripped out.
     let signedIn = false;
@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
               <Shield size={16}/>
             </span>
             <div>
-              <div className="text-base font-semibold tracking-tight">Backtest Engine</div>
+              <div className="text-base font-semibold tracking-tight">Client Portal</div>
               <div className="text-[11px] text-ink-500 uppercase tracking-wider">Admin Console</div>
             </div>
           </div>

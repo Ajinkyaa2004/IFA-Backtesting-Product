@@ -155,6 +155,7 @@ export type SignupMetadata = {
   name?: string;
   company?: string;
   phone?: string;
+  country?: string | null;
   purpose?: string | null;
   upwork_ref?: string | null;
 };
@@ -458,6 +459,8 @@ export type SignupPayload = {
   name: string;
   company: string;
   phone: string;
+  /** ISO 3166-1 alpha-2 country code from the signup country dropdown. */
+  country?: string | null;
   purpose?: string | null;
   /** Optional. Upwork project name or contract id - lands in
    *  signup_metadata.upwork_ref so admin knows to keep quotes off the
@@ -1194,14 +1197,36 @@ export type VamMarker = {
   text?: string;
 };
 
+
+export type VamStateTimelineSegment = {
+  state: string;
+  start?: string;
+  end?: string;
+  days: number;
+  pct: number;
+};
+
+export type VamTradeStats = {
+  win_rate_pct?: number | null;
+  best_trade_pct?: number | null;
+  worst_trade_pct?: number | null;
+  spy_bh_return_pct?: number | null;
+  round_trip_count?: number;
+};
+
 export type VamChartData = {
   equity?: VamTimeValuePoint[];
   spy?: VamTimeValuePoint[];
+  spy_bh?: VamTimeValuePoint[];
   sma50?: VamTimeValuePoint[];
   sma200?: VamTimeValuePoint[];
   vix?: VamTimeValuePoint[];
   svix?: VamTimeValuePoint[];
+  rsi?: VamTimeValuePoint[];
+  drawdown?: VamTimeValuePoint[];
   markers?: VamMarker[];
+  state_timeline?: VamStateTimelineSegment[];
+  current_state?: string | null;
 };
 
 export type VamTradeAction = {
@@ -1260,6 +1285,9 @@ export type VamPersistedBacktest = {
     metrics: VamMetrics;
     trades: VamTradeAction[];
     chart_data: VamChartData;
+    trade_stats?: VamTradeStats;
+    daily_log?: Record<string, unknown>[];
+    data_source?: string;
     [extra: string]: unknown;
   };
 };

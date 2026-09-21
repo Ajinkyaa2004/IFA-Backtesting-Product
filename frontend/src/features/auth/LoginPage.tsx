@@ -6,6 +6,7 @@ import { auth } from "../../lib/firebase";
 import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
 import { useAuth } from "../../store/auth";
+import IFALogo from "../../components/IFALogo";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function LoginPage() {
@@ -38,7 +39,7 @@ export default function LoginPage() {
     // to tear down. Calling signOut unconditionally on a failed Firebase
     // signIn caused a race: the in-flight signOut from a wrong-password
     // attempt would resolve AFTER the next good signIn, ripping out the
-    // freshly-minted session. Selenium caught this — see VAM-suite finding.
+    // freshly-minted session. Selenium caught this - see VAM-suite finding.
     let signedIn = false;
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -54,7 +55,7 @@ export default function LoginPage() {
         return;
       }
       setMe(me);
-      // Self-serve signup gate — a returning client whose approval is still
+      // Self-serve signup gate - a returning client whose approval is still
       // pending (or was rejected) needs to land on the correct waiting/
       // rejected screen instead of the dashboard.
       if (me.signup_status === "pending_approval") {
@@ -69,7 +70,7 @@ export default function LoginPage() {
       else navigate("/dashboard");
     } catch (err: unknown) {
       // Only tear down the Firebase session if we actually established one
-      // (i.e. signIn succeeded but a downstream call — fetchMe, role check —
+      // (i.e. signIn succeeded but a downstream call - fetchMe, role check -
       // failed). For pre-signIn failures (wrong password, network error)
       // there's nothing to sign out and calling signOut unconditionally
       // races with the next submit's signIn. Sweep finding #16 + selenium.
@@ -77,7 +78,7 @@ export default function LoginPage() {
         // POST-signIn failure: classify so we route to the dedicated
         // AuthErrorScreen instead of dumping a confusing "Internal server
         // error" on the login form. The App.tsx listener has also seen this
-        // failure via its own fetchMe and set authError to the same reason —
+        // failure via its own fetchMe and set authError to the same reason -
         // we just need to navigate off /login so Protected can render the
         // AuthErrorScreen. Deployment-smoke caught this regression.
         const reason = classifyAuthGateError(err);
@@ -90,7 +91,7 @@ export default function LoginPage() {
           navigate("/");
           return;
         }
-        // 401 / unknown — sign out + show inline error
+        // 401 / unknown - sign out + show inline error
         try { await signOut(auth); } catch { /* ignore */ }
         setMe(null);
       }
@@ -104,12 +105,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white dark:bg-ink-900 rounded-2xl shadow-pop border border-ink-200 dark:border-ink-800 p-8">
         <div className="flex items-center gap-3 mb-6">
-          <span className="size-9 rounded-xl bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 flex items-center justify-center font-semibold text-sm">
-            IFA
-          </span>
+          <IFALogo sizeClass="size-9" />
           <div>
-            <div className="text-base font-semibold tracking-tight">Backtest Engine</div>
-            <div className="text-[11px] text-ink-500 uppercase tracking-wider">Client Portal</div>
+            <div className="text-base font-semibold tracking-tight">Client Portal</div>
+            <div className="text-[11px] text-ink-500 uppercase tracking-wider">Insight Fusion Analytics</div>
           </div>
         </div>
 
@@ -199,16 +198,16 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-4 text-[11px] text-ink-400 text-center">
-          Don't have an account?{" "}
+          Don't have a workspace yet?{" "}
           <Link
             to="/signup"
             className="text-accent-700 dark:text-accent-300 hover:underline font-medium"
           >
-            Request access →
+            Request my workspace →
           </Link>
         </p>
         <p className="mt-3 text-[11px] text-ink-400 text-center">
-          IFA team member? <a href="/admin/login" className="text-accent-700 dark:text-accent-300 hover:underline">Sign in to admin console →</a>
+          IFA team member? <a href="/admin/login" className="text-accent-700 dark:text-accent-300 hover:underline">Sign in to the admin console →</a>
         </p>
       </div>
       <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} initialEmail={email} />

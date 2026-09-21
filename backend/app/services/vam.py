@@ -1,22 +1,30 @@
 """VAM (Volatility-Adjusted Momentum) engine client.
 
-Wraps the backtestravi.insightfusionanalytics.com REST API. One shared IFA
-account is used for all our backend-initiated calls; the token is cached
-in-process and refreshed lazily.
+Adapter over Ravi's ravi_vam FastAPI engine. Ravi's engine has:
+  - no auth (deployed on our private docker network as vam-engine:8000)
+  - GET /api/strategies returning {[strategy_id]: config}
+  - GET /api/strategies/{strategy_id} returning full config with params dict
+  - GET /api/data-source (source badge only)
+  - POST /api/backtest with body {strategy_id, params, initial_capital}
+    returning {daily_log, trades, metrics, data_source}
 
-Threading model: a single `asyncio.Lock` guards the login flow so concurrent
-requests can't trigger multiple parallel logins. Reads of the cached token
-itself are atomic Python dict assignments - no lock needed on the hot path.
+Our platform expects a VAM engine that exposes:
+  - Bearer-auth on every call
+  - GET /api/strategies returning [{id, name, implemented}]
+  - GET /api/strategies/{step_id}/schema returning {parameters: [...]}
+  - GET /api/data/symbols and /api/data/info
+  - POST /api/backtest/run with body params dict merged with {"step": id}
+    returning {metrics, trades, chart_data}
+
+This module bridges the two shapes so we don't have to fork Ravi's engine.
 
 Failure modes (all surfaced as VAMError subclasses):
-  * VAMConfigError   — VAM_ADMIN_EMAIL / VAM_ADMIN_PASSWORD not set
-  * VAMAuthError     — login failed (bad creds, or VAM rejected our token twice)
-  * VAMValidationError — VAM returned 422 with field-level violations
-  * VAMUpstreamError — anything else (5xx, timeout, transport error)
+  * VAMConfigError     - VAM_BASE_URL not set (the auth env vars are ignored now)
+  * VAMValidationError - Ravi returned 422/500 that we could classify as bad input
+  * VAMUpstreamError   - anything else (5xx, timeout, transport error)
 
-The client retries ONCE on a 401 (assumes our cached token expired) by forcing
-a re-login. A second 401 raises VAMAuthError so the caller can surface "engine
-auth failed - check VAM_ADMIN_PASSWORD".
+VAMAuthError is retained for backward compatibility but is never raised now
+(kept so callers that catch it don't break).
 """
 from __future__ import annotations
 
@@ -33,23 +41,19 @@ from app.core.config import get_settings
 
 # ── Circuit breaker ────────────────────────────────────────────────────────
 #
-# When the VAM engine is fully offline (500 5xx in a row) we don't want every
+# When the VAM engine is fully offline (5xx in a row) we don't want every
 # incoming client request to sit for 15s waiting on httpx timeout. The breaker
 # tracks consecutive upstream failures and, past a threshold, short-circuits
 # subsequent calls with an immediate VAMUpstreamError until a cooldown passes.
-# On the first attempt after cooldown we allow ONE probe; success closes it,
-# failure re-opens with a fresh cooldown.
 
-_CB_FAIL_THRESHOLD = 5           # consecutive failures to trip
-_CB_COOLDOWN_S     = 30.0        # how long to stay open before allowing a probe
-_CB_HALF_OPEN_MAX_INFLIGHT = 1   # only one probe at a time
+_CB_FAIL_THRESHOLD = 5
+_CB_COOLDOWN_S     = 30.0
 
 
 class _CircuitBreaker:
     def __init__(self):
         self._consec_failures = 0
         self._opened_at: float | None = None
-        self._probe_lock = asyncio.Lock()
 
     def state(self) -> str:
         if self._opened_at is None:
@@ -66,7 +70,6 @@ class _CircuitBreaker:
                 "Retry in a few seconds.",
                 status_code=503,
             )
-        # closed or half_open — allowed to proceed
 
     def record_success(self) -> None:
         if self._opened_at is not None:
@@ -83,7 +86,6 @@ class _CircuitBreaker:
             )
             self._opened_at = time.time()
         elif self.state() == "half_open":
-            # Probe failed — reopen with fresh cooldown.
             logger.warning("VAM circuit breaker: half-open probe failed, re-opening")
             self._opened_at = time.time()
 
@@ -92,21 +94,16 @@ _cb = _CircuitBreaker()
 
 
 def _should_retry(status_code: int | None, attempt: int, max_attempts: int) -> bool:
-    """Retry on transient errors: 5xx (except 501/505) and connection errors
-    (status_code=None). Don't retry client errors (4xx) or the terminal attempt.
-    """
     if attempt + 1 >= max_attempts:
         return False
     if status_code is None:
-        return True  # transport error / connection reset - always retry
+        return True
     if 500 <= status_code < 600 and status_code not in (501, 505):
         return True
     return False
 
 
 def _backoff_seconds(attempt: int) -> float:
-    """Exponential backoff with jitter: 0.4, 0.8, 1.6, ... + up to 200ms jitter.
-    """
     base = 0.4 * (2 ** attempt)
     return base + random.uniform(0, 0.2)
 
@@ -119,11 +116,11 @@ class VAMError(Exception):
 
 
 class VAMConfigError(VAMError):
-    """VAM credentials are not configured."""
+    """VAM_BASE_URL not configured."""
 
 
 class VAMAuthError(VAMError):
-    """Login failed, or a re-login still produced 401."""
+    """Retained for backward compatibility; never raised now (Ravi's engine has no auth)."""
 
 
 class VAMValidationError(VAMError):
@@ -142,88 +139,36 @@ class VAMUpstreamError(VAMError):
         self.status_code = status_code
 
 
+# ── Static data lineage (no /api/data/symbols on Ravi's engine) ─────────────
+#
+# Hardcoded from the DataBento CSVs bundled with ravi_vam. Update the ranges
+# if we ingest fresher data. Used by list_symbols() and get_data_info().
+
+_DATABENTO_SYMBOLS: list[dict[str, str]] = [
+    {"symbol": "SPY",  "start": "2020-01-02", "end": "2025-12-30"},
+    {"symbol": "QQQ",  "start": "2020-01-02", "end": "2025-12-30"},
+    {"symbol": "UPRO", "start": "2018-05-01", "end": "2025-12-30"},
+    {"symbol": "TQQQ", "start": "2020-01-02", "end": "2025-12-30"},
+    {"symbol": "SHY",  "start": "2018-05-01", "end": "2025-12-30"},
+    {"symbol": "GLD",  "start": "2018-05-01", "end": "2025-12-30"},
+    {"symbol": "TLT",  "start": "2018-05-01", "end": "2025-12-30"},
+    {"symbol": "VIX",  "start": "1990-01-02", "end": "2026-03-20"},
+]
+
+
 # ── Client ─────────────────────────────────────────────────────────────────
 
 
 class VAMClient:
-    """Async client for the VAM backtesting API.
+    """Async client for Ravi's VAM engine, exposing the API shape our platform expects."""
 
-    Single-instance-per-process pattern: see `get_vam_client()` below.
-    """
-
-    # Refresh the token this many seconds before its declared expiry.
-    # VAM's expires_in_seconds tends to be in the hours range, so 5 min of headroom
-    # is plenty without burning tokens unnecessarily.
-    _TOKEN_REFRESH_HEADROOM_S = 300
-
-    # Backtest runs can take 10-30s on the free tier; allow plenty of room.
     _BACKTEST_TIMEOUT_S = 90.0
     _DEFAULT_TIMEOUT_S = 15.0
-
-    def __init__(self, base_url: str, email: str, password: str):
-        self._base_url = base_url.rstrip("/")
-        self._email = email
-        self._password = password
-        self._token: str | None = None
-        self._token_expires_at: float = 0.0  # unix timestamp
-        self._login_lock = asyncio.Lock()
-
-    # ---- Auth ----
-
-    async def _login(self, client: httpx.AsyncClient) -> None:
-        """Fetch a fresh token from POST /api/auth/login and cache it.
-
-        Must be called with self._login_lock held.
-        """
-        try:
-            resp = await client.post(
-                f"{self._base_url}/api/auth/login",
-                json={"email": self._email, "password": self._password},
-                timeout=self._DEFAULT_TIMEOUT_S,
-            )
-        except httpx.RequestError as e:
-            raise VAMUpstreamError(f"VAM login transport error: {e}") from e
-
-        if resp.status_code != 200:
-            # Don't log password; do log status + a short body excerpt for diagnosis.
-            body_preview = resp.text[:200]
-            logger.warning("VAM login returned {}: {}", resp.status_code, body_preview)
-            raise VAMAuthError(
-                f"VAM login failed: HTTP {resp.status_code} - check VAM_ADMIN_EMAIL/PASSWORD"
-            )
-
-        data = resp.json()
-        self._token = data["token"]
-        # `expires_in_seconds` is documented in their LoginResponse schema.
-        # Default to 1 hour if absent (graceful).
-        expires_in = int(data.get("expires_in_seconds") or 3600)
-        self._token_expires_at = time.time() + expires_in
-        logger.info(
-            "VAM login OK for {}: token cached for ~{}s (refresh headroom {}s)",
-            self._email,
-            expires_in,
-            self._TOKEN_REFRESH_HEADROOM_S,
-        )
-
-    async def _ensure_token(self, client: httpx.AsyncClient) -> str:
-        """Return a valid token, logging in (or refreshing) if needed."""
-        now = time.time()
-        if self._token and now < self._token_expires_at - self._TOKEN_REFRESH_HEADROOM_S:
-            return self._token
-
-        async with self._login_lock:
-            # Re-check under lock — another coroutine may have refreshed while we waited.
-            if self._token and now < self._token_expires_at - self._TOKEN_REFRESH_HEADROOM_S:
-                return self._token
-            await self._login(client)
-        assert self._token is not None
-        return self._token
-
-    # ---- HTTP plumbing ----
-
-    # Retry policy — applied to transient upstream failures (5xx + connection
-    # errors). 4xx client errors and 422 validation errors are NOT retried.
     _MAX_ATTEMPTS = 3
+
+    def __init__(self, base_url: str, email: str = "", password: str = ""):
+        # email/password kept in the signature for backward compat; unused.
+        self._base_url = base_url.rstrip("/")
 
     async def _request(
         self,
@@ -232,33 +177,24 @@ class VAMClient:
         *,
         json: dict | None = None,
         timeout: float | None = None,
-        _is_retry: bool = False,
     ) -> Any:
-        """Perform an authenticated HTTP request with retry-with-backoff on
-        transient upstream failures + a circuit breaker for total outages.
+        """Perform an unauthenticated HTTP request with retry + circuit breaker.
 
-        Retries 5xx and connection errors up to _MAX_ATTEMPTS with exponential
-        backoff (0.4s, 0.8s, 1.6s + jitter). 401 triggers a re-login and one
-        immediate retry (unchanged from earlier behaviour). Validation errors
-        (422), auth errors, and client-side 4xx do NOT retry.
-
-        Returns the parsed JSON body on 2xx.
-        Raises VAMAuthError / VAMValidationError / VAMUpstreamError on failure.
+        Ravi's engine has no auth layer, so we don't manage tokens. Retries 5xx
+        and connection errors up to _MAX_ATTEMPTS with exponential backoff.
+        422 is surfaced as VAMValidationError; other 4xx as VAMUpstreamError.
         """
-        _cb.before_call()  # short-circuit if breaker open
+        _cb.before_call()
         timeout = timeout or self._DEFAULT_TIMEOUT_S
 
         last_exc: VAMUpstreamError | None = None
         for attempt in range(self._MAX_ATTEMPTS):
             async with httpx.AsyncClient() as client:
-                token = await self._ensure_token(client)
-                headers = {"Authorization": f"Bearer {token}"}
                 try:
                     resp = await client.request(
                         method,
                         f"{self._base_url}{path}",
                         json=json,
-                        headers=headers,
                         timeout=timeout,
                     )
                 except httpx.RequestError as e:
@@ -275,22 +211,19 @@ class VAMClient:
                         f"VAM transport error on {method} {path} after {attempt + 1} attempts: {e}"
                     ) from e
 
-                # 401 → force re-login and retry ONCE (breaker doesn't count this).
-                if resp.status_code == 401 and not _is_retry:
-                    logger.info("VAM returned 401 on {} {} - forcing re-login + retry", method, path)
-                    self._token = None
-                    self._token_expires_at = 0.0
-                    return await self._request(method, path, json=json, timeout=timeout, _is_retry=True)
-
-                if resp.status_code == 401:
-                    _cb.record_success()  # 401 isn't an upstream fault - engine responded
-                    raise VAMAuthError("VAM rejected our token even after re-login")
-
                 if resp.status_code == 422:
-                    _cb.record_success()  # 422 = valid engine response, just bad input
+                    _cb.record_success()
                     detail = self._extract_violations(resp)
                     raise VAMValidationError(
                         f"VAM rejected payload on {method} {path}", violations=detail
+                    )
+
+                if resp.status_code == 404:
+                    _cb.record_success()
+                    body_preview = resp.text[:200]
+                    raise VAMUpstreamError(
+                        f"VAM {resp.status_code} on {method} {path}: {body_preview}",
+                        status_code=resp.status_code,
                     )
 
                 if not resp.is_success:
@@ -313,21 +246,21 @@ class VAMClient:
                     raise last_exc
 
                 _cb.record_success()
+                if resp.headers.get("content-type", "").startswith("text/"):
+                    return resp.text
                 return resp.json()
 
-        # Should only reach here if the retry loop exhausted without raising.
         if last_exc:
             raise last_exc
         raise VAMUpstreamError("VAM call failed after all retries", status_code=None)
 
     @staticmethod
     def _extract_violations(resp: httpx.Response) -> list[dict]:
-        """Normalize FastAPI's 422 body shape into [{path, message}]."""
+        """Normalize a 422 body into [{path, message}]. Handles FastAPI shape."""
         try:
             body = resp.json()
         except ValueError:
             return [{"path": "(root)", "message": resp.text[:200]}]
-        # FastAPI default: {"detail": [{"loc": [...], "msg": "...", "type": "..."}]}
         raw = body.get("detail") if isinstance(body, dict) else None
         if isinstance(raw, list):
             return [
@@ -342,43 +275,299 @@ class VAMClient:
             return [{"path": "(root)", "message": raw}]
         return [{"path": "(root)", "message": str(body)[:200]}]
 
-    # ---- Public API ----
+    # ---- Public API (platform-facing shape) ----
 
     async def list_strategies(self) -> list[dict]:
-        """GET /api/strategies - list of {id, name, implemented}."""
-        return await self._request("GET", "/api/strategies")
+        """Return [{id, name, implemented}] - flattened from Ravi's dict-of-configs."""
+        raw = await self._request("GET", "/api/strategies")
+        if not isinstance(raw, dict):
+            return []
+        out: list[dict] = []
+        for sid, cfg in raw.items():
+            if not isinstance(cfg, dict):
+                continue
+            out.append({
+                "id": sid,
+                "name": cfg.get("name") or sid,
+                "implemented": True,
+            })
+        return out
 
     async def get_step_schema(self, step_id: str) -> dict:
-        """GET /api/strategies/{step_id}/schema - parameter schema for one step."""
-        return await self._request("GET", f"/api/strategies/{step_id}/schema")
+        """Return {step_id, parameters: [...]} shaped for our frontend VamParamForm.
+
+        Transforms Ravi's params dict (metadata keyed by param name) into a
+        list of parameter descriptors with typed `type` fields.
+        """
+        cfg = await self._request("GET", f"/api/strategies/{step_id}")
+        if not isinstance(cfg, dict):
+            return {"step_id": step_id, "parameters": []}
+        params_dict = cfg.get("params") or {}
+        parameters: list[dict] = []
+        for name, meta in params_dict.items():
+            if not isinstance(meta, dict):
+                continue
+            default = meta.get("default")
+            step_size = meta.get("step")
+            # Choose type: int if default+step both look integral, else float
+            if isinstance(default, int) and not isinstance(default, bool) and (
+                isinstance(step_size, int) or step_size is None
+            ):
+                typ = "int"
+            else:
+                typ = "float"
+            parameters.append({
+                "name": name,
+                "type": typ,
+                "default": default,
+                "min": meta.get("min"),
+                "max": meta.get("max"),
+                "description": meta.get("label") or meta.get("group") or "",
+            })
+        return {"step_id": step_id, "parameters": parameters}
 
     async def list_symbols(self) -> list[dict]:
-        """GET /api/data/symbols - minimal {symbol, start, end} per available symbol."""
-        return await self._request("GET", "/api/data/symbols")
+        """Static list — Ravi's engine doesn't expose /api/data/symbols."""
+        return list(_DATABENTO_SYMBOLS)
 
     async def get_data_info(self) -> dict:
-        """GET /api/data/info - full per-symbol lineage for the Data Sources modal."""
-        return await self._request("GET", "/api/data/info")
+        """Expand /api/data-source into the lineage shape our Data Sources modal reads."""
+        src = await self._request("GET", "/api/data-source")
+        return {
+            "source": src.get("source"),
+            "label": src.get("label"),
+            "is_fallback": src.get("is_fallback"),
+            "symbols": list(_DATABENTO_SYMBOLS),
+        }
 
     async def get_profile(self) -> dict:
-        """GET /api/auth/profile - VAM-side profile (the IFA admin account).
-
-        Useful as a debug probe / health badge: 200 here means our token works.
-        """
-        return await self._request("GET", "/api/auth/profile")
+        """Health-probe substitute for Ravi's engine (no /api/auth/profile)."""
+        src = await self._request("GET", "/api/data-source")
+        return {
+            "ok": True,
+            "account": "vam-engine (internal)",
+            "data_source": src.get("source"),
+            "data_label": src.get("label"),
+        }
 
     async def run_backtest(self, params: dict) -> dict:
-        """POST /api/backtest/run - the engine. params must include `step`.
+        """POST /api/backtest on Ravi's engine, then reshape response for our platform.
 
-        Returns the full VAM response: {cached, metrics, trades, chart_data}.
-        Use the longer backtest timeout because runs can take 10-30s.
+        Input: `params` includes {"step": <strategy_id>, "initial_capital"?: ...}
+               plus every tunable knob (vixThreshold, uproSplit, ...).
+        Output: {metrics, trades, chart_data} — daily_log is condensed into
+                chart_data equity/spy/sma/vix series.
         """
-        return await self._request(
+        working = dict(params)  # don't mutate caller's dict
+        strategy_id = working.pop("step", None)
+        initial_capital = working.pop("initial_capital", 100_000.0)
+
+        body = {
+            "strategy_id": strategy_id,
+            "params": working,
+            "initial_capital": initial_capital,
+        }
+        raw = await self._request(
             "POST",
-            "/api/backtest/run",
-            json=params,
+            "/api/backtest",
+            json=body,
             timeout=self._BACKTEST_TIMEOUT_S,
         )
+
+        if not isinstance(raw, dict):
+            raise VAMUpstreamError("VAM engine returned non-object response")
+
+        daily_log = raw.get("daily_log") or []
+        trades = raw.get("trades") or []
+        metrics = raw.get("metrics") or {}
+
+        chart_data = self._build_chart_data(daily_log, trades)
+        trade_stats = self._build_trade_stats(
+            trades,
+            chart_data["equity"],
+            chart_data["spy_bh"],
+        )
+
+        return {
+            "metrics": metrics,
+            "trades": trades,
+            "chart_data": chart_data,
+            "trade_stats": trade_stats,
+            # Preserve daily_log too; some clients may want the raw series.
+            "daily_log": daily_log,
+            "data_source": raw.get("data_source"),
+        }
+
+    @staticmethod
+    def _build_chart_data(daily_log: list[dict], trades: list[dict]) -> dict:
+        """Convert Ravi's daily_log rows into lightweight-charts-compatible series
+        and derived analytics: SPY buy-and-hold, drawdown, state timeline.
+        Mirrors what backtestravi.insightfusionanalytics.com's dashboard renders,
+        so the platform's VAM detail page can match feature-for-feature.
+        """
+
+        def _series(field: str) -> list[dict]:
+            out = []
+            for row in daily_log:
+                v = row.get(field)
+                d = row.get("date")
+                if d is not None and v is not None:
+                    out.append({"time": d, "value": v})
+            return out
+
+        # ── SPY Buy & Hold (normalized to same starting NAV as strategy) ────
+        equity = _series("portfolio_value")
+        spy = _series("spy_close")
+        spy_bh: list[dict] = []
+        if equity and spy:
+            initial_capital = equity[0]["value"]
+            spy_base = spy[0]["value"]
+            if spy_base:
+                for pt in spy:
+                    spy_bh.append({
+                        "time": pt["time"],
+                        "value": initial_capital * pt["value"] / spy_base,
+                    })
+
+        # ── Drawdown from peak (%) ───────────────────────────────────────
+        drawdown: list[dict] = []
+        peak = 0.0
+        for pt in equity:
+            v = pt["value"]
+            peak = max(peak, v)
+            if peak > 0:
+                drawdown.append({
+                    "time": pt["time"],
+                    "value": (v - peak) / peak * 100.0,
+                })
+
+        # ── Trade markers, enriched with state_to text ────────────────────
+        # Skip trades without a real execution_date - schema requires string
+        # for chart_data.markers[].time and lightweight-charts would break
+        # on None anyway.
+        markers: list[dict] = []
+        for t in trades:
+            when = t.get("execution_date")
+            if not isinstance(when, str) or not when:
+                continue
+            action = str(t.get("action") or "")
+            is_buy = "BUY" in action.upper()
+            state_to = t.get("state_to") or ""
+            text = state_to if state_to else action
+            markers.append({
+                "time": when,
+                "position": "belowBar" if is_buy else "aboveBar",
+                "color": "#22c55e" if is_buy else "#ef4444",
+                "shape": "arrowUp" if is_buy else "arrowDown",
+                "text": text,
+            })
+
+        # ── State timeline (contiguous runs) ─────────────────────────────
+        state_timeline: list[dict] = []
+        total_rows = len(daily_log)
+        if total_rows:
+            current_state: str | None = None
+            run_start: str | None = None
+            run_count = 0
+            for row in daily_log:
+                s = row.get("state")
+                d = row.get("date")
+                if s is None or d is None:
+                    continue
+                if current_state is None:
+                    current_state = s
+                    run_start = d
+                    run_count = 1
+                elif s == current_state:
+                    run_count += 1
+                else:
+                    state_timeline.append({
+                        "state": current_state,
+                        "start": run_start,
+                        "end": d,
+                        "days": run_count,
+                        "pct": round(run_count / total_rows * 100.0, 2),
+                    })
+                    current_state = s
+                    run_start = d
+                    run_count = 1
+            if current_state is not None and run_start is not None:
+                state_timeline.append({
+                    "state": current_state,
+                    "start": run_start,
+                    "end": daily_log[-1].get("date"),
+                    "days": run_count,
+                    "pct": round(run_count / total_rows * 100.0, 2),
+                })
+
+        # ── Current state (last row's state) ─────────────────────────────
+        current_state = None
+        if daily_log:
+            current_state = daily_log[-1].get("state")
+
+        return {
+            "equity":         equity,
+            "spy":            spy,
+            "spy_bh":         spy_bh,
+            "sma50":          _series("spy_sma_def"),
+            "sma200":         _series("spy_sma_kill"),
+            "vix":            _series("vix"),
+            # Ravi's daily_log uses `spy_rsi_14` (RSI period baked into name).
+            # If a future run exposes a generic `spy_rsi` field we fall back to it.
+            "rsi":            _series("spy_rsi_14") or _series("spy_rsi"),
+            "drawdown":       drawdown,
+            "markers":        markers,
+            "state_timeline": state_timeline,
+            "current_state":  current_state,
+        }
+
+    @staticmethod
+    def _build_trade_stats(
+        trades: list[dict],
+        equity: list[dict],
+        spy_bh: list[dict],
+    ) -> dict:
+        """Aggregate win rate + best/worst trade + SPY B&H return for the trade-stats card."""
+        # Pair BUY -> next SELL as one round trip. Ravi's engine emits both,
+        # per instrument (UPRO / TQQQ). Use trade_value_dollars if present,
+        # else fall back to exec_price × implied shares from portfolio delta.
+        round_trip_returns: list[float] = []
+        pending_buys: dict[str, dict] = {}  # instrument -> BUY row
+        for t in trades:
+            action = str(t.get("action") or "").upper()
+            instr = str(t.get("instrument") or "")
+            if "BUY" in action:
+                pending_buys[instr] = t
+            elif "SELL" in action and instr in pending_buys:
+                buy = pending_buys.pop(instr)
+                buy_price = buy.get("exec_price")
+                sell_price = t.get("exec_price")
+                if buy_price and sell_price and buy_price > 0:
+                    round_trip_returns.append((sell_price - buy_price) / buy_price * 100.0)
+
+        win_rate_pct = None
+        best_trade_pct = None
+        worst_trade_pct = None
+        if round_trip_returns:
+            wins = sum(1 for r in round_trip_returns if r > 0)
+            win_rate_pct = round(wins / len(round_trip_returns) * 100.0, 1)
+            best_trade_pct = round(max(round_trip_returns), 2)
+            worst_trade_pct = round(min(round_trip_returns), 2)
+
+        spy_bh_return_pct = None
+        if len(spy_bh) >= 2 and spy_bh[0]["value"]:
+            spy_bh_return_pct = round(
+                (spy_bh[-1]["value"] - spy_bh[0]["value"]) / spy_bh[0]["value"] * 100.0,
+                2,
+            )
+
+        return {
+            "win_rate_pct": win_rate_pct,
+            "best_trade_pct": best_trade_pct,
+            "worst_trade_pct": worst_trade_pct,
+            "spy_bh_return_pct": spy_bh_return_pct,
+            "round_trip_count": len(round_trip_returns),
+        }
 
 
 # ── Single-instance factory ────────────────────────────────────────────────
@@ -390,21 +579,21 @@ _instance: VAMClient | None = None
 def get_vam_client() -> VAMClient:
     """Return the process-wide VAMClient, lazily constructed from settings.
 
-    Raises VAMConfigError if credentials are not set.
+    Raises VAMConfigError if VAM_BASE_URL is unset.
     """
     global _instance
     if _instance is not None:
         return _instance
     settings = get_settings()
-    if not settings.vam_configured:
+    base_url = getattr(settings, "VAM_BASE_URL", None)
+    if not base_url:
         raise VAMConfigError(
-            "VAM credentials not configured. Set VAM_ADMIN_EMAIL + VAM_ADMIN_PASSWORD "
-            "in your environment."
+            "VAM_BASE_URL is not configured. Set it in your environment."
         )
     _instance = VAMClient(
-        base_url=settings.VAM_BASE_URL,
-        email=settings.VAM_ADMIN_EMAIL,
-        password=settings.VAM_ADMIN_PASSWORD,
+        base_url=base_url,
+        email=getattr(settings, "VAM_ADMIN_EMAIL", "") or "",
+        password=getattr(settings, "VAM_ADMIN_PASSWORD", "") or "",
     )
     return _instance
 

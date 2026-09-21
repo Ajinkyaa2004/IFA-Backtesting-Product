@@ -32,7 +32,18 @@
       "description": "Discriminator so the frontend knows to use the VAM-native renderer."
     },
     "step": {
-      "enum": ["step1", "step2", "step3", "step4_svix", "step4_combined"],
+      "enum": [
+        "step1",
+        "step2",
+        "step3",
+        "step4_svix",
+        "step4_combined",
+        "step1_upro_4state",
+        "step2_upro_tqqq_6state",
+        "v3_7state_optimized",
+        "v5_leveraged",
+        "v5b_nonleveraged"
+      ],
       "description": "The VAM strategy variant that produced this result."
     },
     "params": {
@@ -46,52 +57,159 @@
     },
     "client": {
       "type": "object",
-      "required": ["client_id", "client_name"],
+      "required": [
+        "client_id",
+        "client_name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "client_id": { "type": "string", "format": "uuid" },
-        "client_name": { "type": "string" }
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_name": {
+          "type": "string"
+        }
       }
     },
     "triggered_by": {
       "type": "object",
       "description": "Audit info - who initiated this run.",
-      "required": ["actor_type", "actor_id"],
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
       "additionalProperties": false,
       "properties": {
-        "actor_type": { "enum": ["admin", "client"] },
-        "actor_id":   { "type": "string", "format": "uuid" },
-        "actor_email": { "type": "string" }
+        "actor_type": {
+          "enum": [
+            "admin",
+            "client"
+          ]
+        },
+        "actor_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "actor_email": {
+          "type": "string"
+        }
       }
     },
     "engine_response": {
       "type": "object",
       "description": "Verbatim response body from VAM /api/backtest/run. Shape preserved as-is - DO NOT reshape fields, DO NOT pair flat trade actions into round-trips. This is the canonical artifact for what VAM produced. Top-level fields below match VAM's contract (inferred from the dashboard's JS client).",
-      "required": ["metrics", "trades", "chart_data"],
+      "required": [
+        "metrics",
+        "trades",
+        "chart_data"
+      ],
       "additionalProperties": true,
       "properties": {
-        "cached": { "type": "boolean" },
+        "cached": {
+          "type": "boolean"
+        },
         "metrics": {
           "type": "object",
           "description": "VAM's flat metrics block. Some fields appear only on certain steps (alpha_vs_spy_pct, etc.) - additionalProperties is open.",
           "additionalProperties": true,
           "properties": {
-            "final_value": { "type": ["number", "null"] },
-            "total_return_pct": { "type": ["number", "null"] },
-            "cagr_pct": { "type": ["number", "null"] },
-            "sharpe": { "type": ["number", "null"] },
-            "sharpe_ratio": { "type": ["number", "null"] },
-            "sortino": { "type": ["number", "null"] },
-            "sortino_ratio": { "type": ["number", "null"] },
-            "calmar": { "type": ["number", "null"] },
-            "calmar_ratio": { "type": ["number", "null"] },
-            "max_drawdown_pct": { "type": ["number", "null"] },
-            "max_drawdown_date": { "type": ["string", "null"] },
-            "total_trades": { "type": ["integer", "null"] },
-            "years": { "type": ["number", "null"] },
-            "start_date": { "type": ["string", "null"] },
-            "end_date": { "type": ["string", "null"] },
-            "alpha_vs_spy_pct": { "type": ["number", "null"] }
+            "final_value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "total_return_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "cagr_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sharpe": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sharpe_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sortino": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sortino_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "calmar": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "calmar_ratio": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "max_drawdown_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "max_drawdown_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "total_trades": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "years": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "start_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end_date": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "alpha_vs_spy_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
           }
         },
         "trades": {
@@ -101,15 +219,52 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "execution_date": { "type": "string" },
-              "action": { "type": "string", "description": "Contains BUY or SELL; not a strict enum (VAM may compose actions)" },
-              "instrument": { "type": "string" },
-              "state_from": { "type": ["string", "null"] },
-              "state_to": { "type": ["string", "null"] },
-              "exec_price": { "type": ["number", "null"] },
-              "trade_value_dollars": { "type": ["number", "null"] },
-              "portfolio_value_at_close": { "type": ["number", "null"] },
-              "trigger_reason": { "type": ["string", "null"] }
+              "execution_date": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "description": "Contains BUY or SELL; not a strict enum (VAM may compose actions)"
+              },
+              "instrument": {
+                "type": "string"
+              },
+              "state_from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state_to": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exec_price": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "trade_value_dollars": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "portfolio_value_at_close": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "trigger_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           }
         },
@@ -118,24 +273,66 @@
           "description": "VAM's chart series, ready to feed into lightweight-charts. Series are arrays of {time, value} (or marker objects). Missing series are simply absent on steps that don't produce them (e.g. svix only on step4_svix).",
           "additionalProperties": true,
           "properties": {
-            "equity":  { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
-            "spy":     { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
-            "sma50":   { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
-            "sma200":  { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
-            "vix":     { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
-            "svix":    { "type": "array", "items": { "$ref": "#/$defs/timeValuePoint" } },
+            "equity": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
+            "spy": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
+            "sma50": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
+            "sma200": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
+            "vix": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
+            "svix": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/timeValuePoint"
+              }
+            },
             "markers": {
               "type": "array",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
-                "required": ["time"],
+                "required": [
+                  "time"
+                ],
                 "properties": {
-                  "time":     { "type": "string" },
-                  "position": { "type": "string" },
-                  "color":    { "type": "string" },
-                  "shape":    { "type": "string" },
-                  "text":     { "type": "string" }
+                  "time": {
+                    "type": "string"
+                  },
+                  "position": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "shape": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -147,11 +344,19 @@
   "$defs": {
     "timeValuePoint": {
       "type": "object",
-      "required": ["time", "value"],
+      "required": [
+        "time",
+        "value"
+      ],
       "additionalProperties": false,
       "properties": {
-        "time":  { "type": "string", "description": "ISO date or 'YYYY-MM-DD'; lightweight-charts accepts both" },
-        "value": { "type": "number" }
+        "time": {
+          "type": "string",
+          "description": "ISO date or 'YYYY-MM-DD'; lightweight-charts accepts both"
+        },
+        "value": {
+          "type": "number"
+        }
       }
     }
   }

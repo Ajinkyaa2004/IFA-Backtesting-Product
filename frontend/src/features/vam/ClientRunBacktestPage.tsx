@@ -11,9 +11,9 @@
  *
  * Failure modes surfaced to the user (not just logged):
  *   - 503 (engine not configured) → "Engine offline" banner
- *   - 429 (rate limit)            → "You've hit your quota — try again in Ns"
+ *   - 429 (rate limit)            → "You've hit your quota - try again in Ns"
  *   - 422 (bad params)            → "VAM rejected:" + violations list
- *   - 502 (engine error)          → "Engine error — please retry"
+ *   - 502 (engine error)          → "Engine error - please retry"
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -60,7 +60,7 @@ export default function ClientRunBacktestPage() {
   const [myStrategies, setMyStrategies] = useState<Strategy[]>([]);
   const [bootError, setBootError] = useState<string | null>(null);
 
-  const [step, setStep] = useState<string>("step1");
+  const [step, setStep] = useState<string>("step1_upro_4state");
   const [schema, setSchema] = useState<VamStepSchema | null>(null);
   const [schemaLoading, setSchemaLoading] = useState(false);
 
@@ -87,9 +87,9 @@ export default function ClientRunBacktestPage() {
         setVamStrategies(vs);
         setVamSymbols(vsym);
         setMyStrategies(mine);
-        // If the default step (step1) isn't implemented, pick the first implemented one
+        // If the default step (step1_upro_4state) isn't implemented, pick the first implemented one.
         const implemented = vs.filter((s) => s.implemented);
-        if (implemented.length && !implemented.some((s) => s.id === "step1")) {
+        if (implemented.length && !implemented.some((s) => s.id === "step1_upro_4state")) {
           setStep(implemented[0].id);
         }
       } catch (e: unknown) {
@@ -187,7 +187,7 @@ export default function ClientRunBacktestPage() {
       </div>
 
       <Card>
-        <SectionTitle sub="Each strategy variant has its own parameters. Step 1 is the core; later steps add sleeves (UPRO leverage, SVIX short-vol).">
+        <SectionTitle sub="Step 1 is UPRO-only. Step 2 adds a TQQQ sleeve. v3/v5/v5b are alternative regime models. Each has its own tunable parameters.">
           1. Strategy variant
         </SectionTitle>
         {vamStrategies === null ? (
