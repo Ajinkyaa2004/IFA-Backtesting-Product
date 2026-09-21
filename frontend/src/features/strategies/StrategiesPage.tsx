@@ -307,7 +307,7 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       }
     >
       <p className="text-sm text-ink-600 dark:text-ink-300 mb-4">
-        Attach a PDF or DOCX (max 25MB) describing your strategy. We'll review and reach out within one business day.
+        Attach a PDF, DOCX, TXT, or ZIP (max 25MB) describing your strategy. We'll review and reach out within one business day.
         If a strategy with the same name already exists, this creates a new version - history is preserved.
       </p>
 
@@ -322,12 +322,12 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             {file ? file.name : "Drop your file here, or browse"}
           </div>
           <div className="text-xs text-ink-500 dark:text-ink-400 mt-1">
-            {file ? `${(file.size / 1024).toFixed(0)} KB · ${file.type || "unknown"}` : "PDF, DOCX, TXT · up to 25 MB"}
+            {file ? `${(file.size / 1024).toFixed(0)} KB · ${file.type || "unknown"}` : "PDF, DOCX, TXT, ZIP · up to 25 MB"}
           </div>
           <input
             type="file"
             className="hidden"
-            accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            accept=".pdf,.doc,.docx,.txt,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip,application/x-zip-compressed,application/octet-stream"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </div>

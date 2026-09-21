@@ -24,8 +24,15 @@ ALLOWED_MIME = {
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
+    "application/zip",
+    "application/x-zip-compressed",
+    # Some browsers send an empty or generic MIME for .zip; the extension
+    # allowlist below is the source of truth. Keeping octet-stream out of
+    # ALLOWED_MIME so unrelated binaries can't slip through by MIME alone
+    # — but the payload's mime_type is only checked if it's non-empty, so
+    # a client sending "" (no mime) still lands here and is gated by ext.
 }
-ALLOWED_EXTS = {".pdf", ".doc", ".docx", ".txt"}
+ALLOWED_EXTS = {".pdf", ".doc", ".docx", ".txt", ".zip"}
 MAX_FILENAME_LEN = 200
 _SAFE_CHAR_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -49,7 +56,7 @@ def _sanitize_filename(raw: str) -> str:
     if ext_lower not in ALLOWED_EXTS:
         raise HTTPException(
             status_code=415,
-            detail=f"Unsupported file extension: {ext or '(none)'}. Allowed: pdf, doc, docx, txt.",
+            detail=f"Unsupported file extension: {ext or '(none)'}. Allowed: pdf, doc, docx, txt, zip.",
         )
     # Collapse any run of non-safe chars into single "_" — preserves
     # readability without letting shell/URL metacharacters through.
