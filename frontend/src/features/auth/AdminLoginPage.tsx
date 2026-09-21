@@ -1,7 +1,7 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield } from "lucide-react";
+import IFALogo from "../../components/IFALogo";
 import { auth } from "../../lib/firebase";
 import { classifyAuthGateError, fetchMe } from "../../lib/api";
 import { friendlyAuthError } from "../../lib/authErrors";
@@ -70,9 +70,7 @@ export default function AdminLoginPage() {
 
         <div className="p-8">
           <div className="flex items-center gap-3 mb-6">
-            <span className="size-9 rounded-xl bg-accent-600 text-white flex items-center justify-center">
-              <Shield size={16}/>
-            </span>
+            <IFALogo sizeClass="size-9" className="ring-2 ring-accent-600" />
             <div>
               <div className="text-base font-semibold tracking-tight">Client Portal</div>
               <div className="text-[11px] text-ink-500 uppercase tracking-wider">Admin Console</div>

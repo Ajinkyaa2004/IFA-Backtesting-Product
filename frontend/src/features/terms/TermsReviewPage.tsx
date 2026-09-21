@@ -77,7 +77,7 @@ export default function TermsReviewPage() {
               <p className="text-sm text-ink-600 dark:text-ink-300 mb-6">
                 These are the terms you accepted when you first signed in.
                 They apply to every engagement, backtest, and deliverable
-                on the IFA Backtest Engine portal.
+                on the IFA Client Portal.
               </p>
 
               <ol className="space-y-5">

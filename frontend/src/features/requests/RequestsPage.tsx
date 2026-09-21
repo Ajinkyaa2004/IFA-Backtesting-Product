@@ -157,7 +157,7 @@ function RequestForm({ type, onSubmitted }: { type: RequestType; onSubmitted: ()
             </select>
           </Field>
           <Field label="Universe">
-            <input className={`h-9 ${fieldCls}`} value={payload.universe ?? ""} onChange={(e) => set("universe", e.target.value)} placeholder="Nifty 50 / Smallcap 250 / custom" />
+            <input className={`h-9 ${fieldCls}`} value={payload.universe ?? ""} onChange={(e) => set("universe", e.target.value)} placeholder="Large-cap / small-cap / custom" />
           </Field>
           <Field label="Hypothesis" className="md:col-span-2">
             <textarea className={`py-2 min-h-[100px] ${fieldCls}`} value={payload.hypothesis ?? ""} onChange={(e) => set("hypothesis", e.target.value)} placeholder="What are you testing, and why?" />

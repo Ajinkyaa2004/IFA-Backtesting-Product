@@ -338,7 +338,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     kind: "backtest-engine",
     category: "systems",
     client: "In-house product",
-    title: "IFA Backtest Engine",
+    title: "IFA Client Portal",
     summary:
       "The client portal you are on: tier-gated backtests with immutable results, an admin console with an audit trail, and per-engagement quotes.",
     challenge:

@@ -69,7 +69,7 @@ export type ContentDoc = {
 
 export const CONTENT_DEFAULTS: ContentDoc = {
   welcome: {
-    headline: "Welcome to the IFA Backtest Engine",
+    headline: "Welcome to your IFA workspace",
     body: "We've preloaded a demo backtest so you can explore the full report view. When you're ready, upload your first strategy document or open a new request.",
     primary_cta_label: "Open demo report",
     secondary_cta_label: "Upload strategy",
@@ -126,7 +126,7 @@ export const CONTENT_DEFAULTS: ContentDoc = {
   support_footer: {
     hours: "10 AM – 7 PM IST · Mon–Fri",
     email: "insightfusionanalytics@gmail.com",
-    copyright: "© Insight Fusion Analytics · Backtest Engine v1.0",
+    copyright: "© Insight Fusion Analytics · Client Portal",
   },
   announcement: {
     visible: false,

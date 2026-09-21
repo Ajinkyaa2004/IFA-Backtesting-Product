@@ -10,22 +10,32 @@
 import {
   BarChart3,
   Coins,
+  FileSearch,
+  FlaskConical,
   Layers,
   LineChart,
+  Radar,
+  Rocket,
   Trophy,
   Video,
   Wrench,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
 const REGISTRY: Record<string, LucideIcon> = {
   BarChart3,
   Coins,
+  FileSearch,
+  FlaskConical,
   Layers,
   LineChart,
+  Radar,
+  Rocket,
   Trophy,
   Video,
   Wrench,
+  Zap,
 };
 
 export default function ServiceIcon({

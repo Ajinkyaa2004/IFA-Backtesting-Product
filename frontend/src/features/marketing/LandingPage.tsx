@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import SEOHead from "../../components/SEOHead";
 import CaseStudiesSection from "./CaseStudiesSection";
+import IFALogo from "../../components/IFALogo";
 
 // Runtime-configured site URL — swaps to any domain with an env change.
 // Fallback preserves old prod host so any transitional build keeps working.
@@ -231,9 +232,7 @@ function TopNav() {
     <nav className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-ink-950/80 border-b border-ink-100 dark:border-ink-900">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2 group" aria-label="IFA home">
-          <span className="size-8 rounded-lg bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 flex items-center justify-center font-semibold text-xs">
-            IFA
-          </span>
+          <IFALogo sizeClass="size-8" className="ring-1 ring-ink-200 dark:ring-ink-800" />
           <span className="font-semibold tracking-tight text-sm hidden sm:inline">
             Client Portal
           </span>
@@ -549,9 +548,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
-            <span className="size-8 rounded-lg bg-ink-900 dark:bg-ink-50 text-white dark:text-ink-900 flex items-center justify-center font-semibold text-xs">
-              IFA
-            </span>
+            <IFALogo sizeClass="size-8" className="ring-1 ring-ink-200 dark:ring-ink-800" />
             <span className="font-semibold tracking-tight">Insight Fusion Analytics</span>
           </div>
           <p className="text-ink-500 dark:text-ink-400 text-xs max-w-sm leading-relaxed">
