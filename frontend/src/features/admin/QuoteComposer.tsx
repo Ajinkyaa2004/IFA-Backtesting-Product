@@ -4,25 +4,36 @@
  * (Meeting 2026-07-09 — replaces the old tier-fixed pricing assumption.)
  *
  * Flow:
- *   1. Admin fills title + service + amount + optional description
+ *   1. Admin fills title + service + amount + optional description, and can
+ *      attach a proposal file (PDF / Word / Excel / PowerPoint / text)
  *   2. Save-as-draft OR send immediately
  *   3. Existing quotes for this client render as a list; each has status
- *      chip + send action for drafts
- *   4. Client sees `sent` quotes on their dashboard with accept/reject
+ *      chip + send action for drafts + its proposal files and revision
+ *      history (see QuoteProposalFiles)
+ *   4. Client sees `sent` quotes on their dashboard with accept/reject and
+ *      can download every revision of the proposal
  */
 
 import { useEffect, useState } from "react";
 import { DollarSign, Plus, Send } from "lucide-react";
 import { Button } from "../../components/ui";
 import {
+  DEFAULT_QUOTE_CURRENCY,
   type QuoteAdmin,
+  type QuoteCurrency,
   type Service,
   createQuoteForClient,
+  errorDetail,
   fetchQuotesForClient,
   fetchServices,
   sendQuote,
+  uploadQuoteFile,
 } from "../../lib/api";
 import { toast } from "../../store/toast";
+import { formatMoney } from "../../lib/format";
+import QuoteProposal, { ProposalFilePicker } from "./QuoteProposalFiles";
+
+const CURRENCY_SYMBOL: Record<QuoteCurrency, string> = { USD: "$", INR: "₹" };
 
 export default function QuoteComposer({ clientId }: { clientId: string }) {
   const [quotes, setQuotes] = useState<QuoteAdmin[]>([]);
@@ -34,9 +45,11 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
   // Compose form state
   const [title, setTitle] = useState("");
   const [serviceId, setServiceId] = useState<string>("");
-  const [amountRupees, setAmountRupees] = useState<string>("");
+  const [amountMajor, setAmountMajor] = useState<string>(""); // major units of `currency`
+  const [currency, setCurrency] = useState<QuoteCurrency>(DEFAULT_QUOTE_CURRENCY);
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [proposalFile, setProposalFile] = useState<File | null>(null);
 
   const refresh = () => {
     setLoading(true);
@@ -57,36 +70,60 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
   const resetForm = () => {
     setTitle("");
     setServiceId("");
-    setAmountRupees("");
+    setAmountMajor("");
+    setCurrency(DEFAULT_QUOTE_CURRENCY);
     setDescription("");
     setNotes("");
+    setProposalFile(null);
   };
 
-  const validAmount = /^\d+(\.\d{1,2})?$/.test(amountRupees) && Number(amountRupees) > 0;
+  const validAmount = /^\d+(\.\d{1,2})?$/.test(amountMajor) && Number(amountMajor) > 0;
   const canSave = title.trim().length >= 3 && validAmount;
 
   const save = async (thenSend: boolean) => {
     if (!canSave) return;
     setSaving(true);
+    // Three calls in order: create -> attach file -> send. A failure after
+    // the quote exists leaves it as a draft (send is the last step, so nothing
+    // has reached the client) and we say exactly which step failed.
+    let created: QuoteAdmin | null = null;
+    let step: "create" | "attach the file" | "send" = "create";
     try {
-      const q = await createQuoteForClient(clientId, {
+      created = await createQuoteForClient(clientId, {
         title: title.trim(),
         service_id: serviceId || null,
-        amount_inr: Math.round(Number(amountRupees) * 100),
+        amount_inr: Math.round(Number(amountMajor) * 100),
+        currency,
         description: description.trim() || null,
         notes: notes.trim() || null,
       });
+      if (proposalFile) {
+        step = "attach the file";
+        await uploadQuoteFile(created.id, proposalFile);
+      }
       if (thenSend) {
-        await sendQuote(q.id);
-        toast.success("Quote sent", `${q.code} - visible to client now.`);
+        step = "send";
+        await sendQuote(created.id);
+        toast.success("Quote sent", `${created.code} - visible to client now.`);
       } else {
-        toast.success("Draft saved", `${q.code}`);
+        toast.success("Draft saved", `${created.code}`);
       }
       resetForm();
       setComposing(false);
       refresh();
-    } catch (e: any) {
-      toast.error("Save failed", e?.response?.data?.detail ?? "Unknown error");
+    } catch (e) {
+      const detail = errorDetail(e, "Unknown error");
+      if (created) {
+        toast.error(
+          `${created.code} saved as a draft, but could not ${step}`,
+          `${detail} Nothing was sent to the client. Finish it from the list below.`,
+        );
+        resetForm();
+        setComposing(false);
+        refresh();
+      } else {
+        toast.error("Save failed", detail);
+      }
     } finally {
       setSaving(false);
     }
@@ -137,15 +174,27 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
-            <div className="relative">
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-500">₹</span>
-              <input
-                type="number"
-                value={amountRupees}
-                onChange={(e) => setAmountRupees(e.target.value)}
-                placeholder="Amount"
-                className="w-full h-8 pl-5 pr-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 tabular"
-              />
+            <div className="flex gap-1.5">
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as QuoteCurrency)}
+                aria-label="Currency"
+                className="h-8 w-[62px] shrink-0 px-1.5 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950"
+              >
+                <option value="USD">USD</option>
+                <option value="INR">INR</option>
+              </select>
+              <div className="relative min-w-0 flex-1">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-500">{CURRENCY_SYMBOL[currency]}</span>
+                <input
+                  type="number"
+                  value={amountMajor}
+                  onChange={(e) => setAmountMajor(e.target.value)}
+                  placeholder="Amount"
+                  aria-label={`Amount in ${currency}`}
+                  className="w-full h-8 pl-5 pr-2 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 tabular"
+                />
+              </div>
             </div>
           </div>
           <textarea
@@ -155,6 +204,12 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
             placeholder="Description - scope, deliverables, timeline (visible to client)"
             className="w-full px-2 py-1.5 text-xs rounded-md border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-950 resize-y"
           />
+          <div className="space-y-1">
+            <ProposalFilePicker file={proposalFile} onChange={setProposalFile} disabled={saving} />
+            <p className="text-[10px] text-ink-500 leading-snug">
+              Optional. PDF, Word, Excel, PowerPoint or text, up to 25 MB. Sending the quote delivers it to the client as revision 1; you can upload revised versions afterwards.
+            </p>
+          </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -197,10 +252,11 @@ export default function QuoteComposer({ clientId }: { clientId: string }) {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-semibold tabular">₹{(q.amount_inr / 100).toLocaleString("en-IN")}</div>
+                  <div className="font-semibold tabular">{formatMoney(q.amount_inr, q.currency)}</div>
                   <QuoteStatusChip status={q.status} />
                 </div>
               </div>
+              <QuoteProposal quote={q} onChanged={refresh} />
               {q.status === "draft" && (
                 <div className="mt-2 flex justify-end">
                   <button
