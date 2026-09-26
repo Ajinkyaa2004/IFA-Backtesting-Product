@@ -1,7 +1,7 @@
 {
-  "name": "IFA Backtest Engine",
-  "short_name": "IFA Backtest",
-  "description": "Insight Fusion Analytics — systematic strategy backtests for Indian markets.",
+  "name": "IFA Client Portal",
+  "short_name": "IFA Portal",
+  "description": "Insight Fusion Analytics client portal for systematic strategy backtests, live engine runs and audited delivery.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

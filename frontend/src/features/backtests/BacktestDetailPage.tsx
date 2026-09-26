@@ -99,9 +99,12 @@ export default function BacktestDetailPage() {
   }
   if (!bt) return <div className="text-sm text-ink-500">Loading…</div>;
 
-  // VAM-engine results have a completely different shape. Render the VAM-native
-  // view inside the same page header so the user still sees the back-link + name.
-  if (bt.engine === "vam" && bt.result) {
+  // VAM-engine results have a completely different shape. NEVER fall through
+  // to the manual "Awaiting delivery" renderer — that copy promises equity
+  // curve / drawdown / trade log the v1.0 shape produces, but VAM doesn't.
+  // A VAM row without a result is either in-flight or storage-errored and
+  // gets its own accurate empty state.
+  if (bt.engine === "vam") {
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-6 flex-wrap">
@@ -121,7 +124,31 @@ export default function BacktestDetailPage() {
             </div>
           </div>
         </div>
-        <VamBacktestDetail envelope={bt.result as VamPersistedBacktest} />
+        {bt.result ? (
+          <VamBacktestDetail envelope={bt.result as VamPersistedBacktest} />
+        ) : bt.result_status === "storage_error" ? (
+          <Card>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              This VAM result file couldn't be fetched from storage. Try
+              rerunning with the same parameters from the VAM tab, or contact
+              us if this keeps happening.
+            </p>
+          </Card>
+        ) : bt.result_status === "not_written" ? (
+          <Card>
+            <p className="text-sm text-ink-500 dark:text-ink-400">
+              This backtest is marked complete but no result file is attached
+              yet. Please contact us — this shouldn't normally happen.
+            </p>
+          </Card>
+        ) : (
+          <Card>
+            <p className="text-sm text-ink-500 dark:text-ink-400">
+              Backtest is running. This page will update automatically when
+              the engine returns. Runs typically take 10-30 seconds.
+            </p>
+          </Card>
+        )}
       </div>
     );
   }

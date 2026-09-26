@@ -7,9 +7,10 @@ import { usePolling } from "../../lib/usePolling";
 import { useAuth } from "../../store/auth";
 
 // Full status set — matches the 8-value CheckConstraint on backend Backtest.status.
-// Order chosen to flow left-to-right along the lifecycle so a client can scan
-// their pipeline: request → quote → build → deliver → wrap-up.
-const FILTERS = [
+// Only shown for engagements whose runs actually visit those states. VAM /
+// self-serve runs skip straight to completed so the intermediate chips return
+// zero rows forever and read as broken filters.
+const ALL_FILTERS = [
   "all",
   "draft",
   "quote_requested",
@@ -20,10 +21,15 @@ const FILTERS = [
   "revision_requested",
   "cancelled",
 ] as const;
-type Filter = (typeof FILTERS)[number];
+const SELF_SERVE_FILTERS = ["all", "completed", "cancelled"] as const;
+type Filter = (typeof ALL_FILTERS)[number];
 
 export default function BacktestsListPage() {
   const [filter, setFilter] = useState<Filter>("all");
+  // VAM-enabled clients only see runs in completed/cancelled — the
+  // quote/approval chips return zero rows for them and read as broken.
+  const vamEnabled = useAuth((s) => s.me?.vam_enabled ?? false);
+  const FILTERS = vamEnabled ? SELF_SERVE_FILTERS : ALL_FILTERS;
   const fetcher = useCallback(
     () => fetchBacktests(filter === "all" ? undefined : filter),
     [filter],
@@ -36,10 +42,8 @@ export default function BacktestsListPage() {
   const showEmpty = !loading && data !== null && rows.length === 0;
   const showErrorBanner = error !== null && data === null;
 
-  // "New backtest" is gated to clients whose IFA account has been granted access
-  // to Ravi's engine (Client.vam_enabled on the backend). Other clients keep
-  // seeing the list but not the CTA.
-  const vamEnabled = useAuth((s) => s.me?.vam_enabled ?? false);
+  // vamEnabled is defined above at line 26 — used for both the FILTERS choice
+  // and the "New backtest" CTA gate.
 
   return (
     <div className="space-y-6">
@@ -138,7 +142,13 @@ export default function BacktestsListPage() {
                 </tr>
               ))}
               {showEmpty && (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-ink-500">No backtests match this filter.</td></tr>
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-ink-500">
+                  {filter === "all"
+                    ? vamEnabled
+                      ? (<>You don't have any backtests yet. <Link to="/backtests/new" className="text-accent-700 dark:text-accent-300 hover:underline">Run your first one →</Link></>)
+                      : "You don't have any backtests yet."
+                    : "No backtests match this filter."}
+                </td></tr>
               )}
               {showErrorBanner && (
                 <tr><td colSpan={5} className="px-5 py-10 text-center">

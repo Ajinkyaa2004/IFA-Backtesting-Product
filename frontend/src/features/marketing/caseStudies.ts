@@ -413,6 +413,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     ],
     outcomes: ["One live view for internal desk use, with snapshots that go straight into a research note"],
     stack: ["FastAPI", "WebSockets", "React", "Recharts"],
+    href: "https://marketpulse.insightfusionanalytics.com",
   },
   {
     slug: "terms-audit-admin-console",
