@@ -234,12 +234,29 @@ export default function CaseStudiesSection() {
                   ))}
                 </div>
 
-                <span
-                  className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent-700 dark:text-accent-300 group-hover:underline"
-                  aria-hidden
-                >
-                  Read case study <ArrowRight size={12} />
-                </span>
+                <div className="mt-4 flex items-center gap-4">
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-medium text-accent-700 dark:text-accent-300 group-hover:underline"
+                    aria-hidden
+                  >
+                    Read case study <ArrowRight size={12} />
+                  </span>
+                  {/* When a case study has a public URL, expose a direct
+                      one-click "Try live" link. relative + z-10 lifts it
+                      above the card's stretched-click overlay so the link
+                      opens the demo instead of the modal. */}
+                  {s.href && (
+                    <a
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative z-10 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline"
+                    >
+                      Try live <ArrowRight size={12} />
+                    </a>
+                  )}
+                </div>
               </div>
             </article>
           ))}
